@@ -7,12 +7,14 @@
 // jour où elle fonctionne (pas de « # » avant son lot).
 
 export type Trigger = '@' | '#' | '/'
-export type Place = 'chat' | 'forum'
+/** « ! » : les commandes du chat (OctoGuard) et de Twitch, connues du SERVEUR seulement (C6). */
+export type HelpTrigger = Trigger | '!'
+export type Place = 'chat' | 'forum' | 'twitch'
 
 export interface CommandDef {
 	/** Identifiant stable (jamais affiché). */
 	id: string
-	trigger: Trigger
+	trigger: HelpTrigger
 	/** Ce qui s'écrit après la touche (`roll`), ou une clé i18n pour un nom traduit. */
 	name: string
 	nameKey?: string
@@ -20,9 +22,11 @@ export interface CommandDef {
 	args?: string
 	argsKey?: string
 	descKey: string
+	/** Variables de la description (« dans le chat Twitch de {{channel}} »). */
+	descVars?: Record<string, string>
 	exampleKey?: string
 	/** Famille, pour regrouper la liste du « / ». */
-	group: 'help' | 'call' | 'show' | 'play'
+	group: 'help' | 'call' | 'show' | 'play' | 'bang'
 	/** Autres noms acceptés (`/?`), trouvés aussi par la liste. Jamais rien en « ai » (réservé). */
 	aliases?: string[]
 	/** Action locale : la commande ne s'envoie pas, elle agit dans la page. */
@@ -30,6 +34,10 @@ export interface CommandDef {
 	where: Place[]
 	/** Réservé à l'équipe : montré à l'équipe seulement (le serveur refuse de toute façon). */
 	team?: boolean
+	/** « ! » : réservée à certains rôles (OctoGuard) ou aux modérateurs du chat Twitch. */
+	restricted?: boolean
+	/** « ! » d'OctoGuard : les seuls salons où elle marche. */
+	channels?: string[]
 	/** Mots-clés de recherche (clé i18n, mots séparés par des espaces). */
 	keywordsKey: string
 }
@@ -108,4 +116,18 @@ export function searchCommands(list: CommandDef[], query: string, tFn: (k: strin
 /** L'équipe, côté affichage (le serveur décide pour de vrai). */
 export function isTeamRole(role: string | null | undefined): boolean {
 	return role === 'owner' || role === 'admin' || role === 'moderator'
+}
+
+// ── « ! » (lot C6, D58) : ce que le serveur dit utilisable par la personne ──────────
+export interface BangCommandApi { name: string; source: 'octoguard' | 'twitch'; restricted: boolean; channels?: { id: string; name: string }[]; native?: boolean }
+
+/** Les commandes natives de Twitch dont l'aide connaît la description. */
+const TWITCH_NATIVE = new Set(['nodyx', 'uptime', 'commands', 'topclips', 'so', 'highlight', 'nextsound', 'ns'])
+
+/** La réponse de GET /commands/bang, en lignes de l'aide (jamais le texte d'une réponse). */
+export function bangToCommands(api: { commands?: BangCommandApi[]; twitch?: string | null } | null): CommandDef[] {
+	const channel = api?.twitch ?? ''
+	return (api?.commands ?? []).filter(c => /^[a-z0-9_-]{1,64}$/i.test(c.name)).map(c => c.source === 'octoguard'
+		? { id: `og-${c.name}`, trigger: '!' as const, name: c.name, descKey: 'cmd.bang_og', group: 'bang' as const, where: ['chat' as Place], restricted: c.restricted, channels: c.channels?.map(x => x.name), keywordsKey: 'cmd.kw_bang' }
+		: { id: `tw-${c.name}`, trigger: '!' as const, name: c.name, descKey: c.native && TWITCH_NATIVE.has(c.name) ? `cmd.bang_tw_${c.name}` : 'cmd.bang_tw_custom', descVars: { channel }, group: 'bang' as const, where: ['twitch' as Place], restricted: c.restricted, keywordsKey: 'cmd.kw_bang_twitch' })
 }

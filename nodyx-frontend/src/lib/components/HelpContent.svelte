@@ -8,31 +8,48 @@
 	// `onclose` : dans le panneau, une croix ferme ; `titleId` relie le titre au dialogue.
 	import { page } from '$app/state'
 	import { t, locale } from '$lib/i18n'
-	import { visibleCommands, searchCommands, nameOf, argsOf, isTeamRole, type CommandDef, type Trigger } from '$lib/commands'
+	import { onMount } from 'svelte'
+	import { PUBLIC_API_URL } from '$app/env/public'
+	import { visibleCommands, searchCommands, nameOf, argsOf, isTeamRole, bangToCommands, type CommandDef, type HelpTrigger, type Place } from '$lib/commands'
 
 	let { onclose, titleId = 'nx-help-title' }: { onclose?: () => void; titleId?: string } = $props()
 
 	const tFn = $derived($t)
 	const isTeam = $derived(isTeamRole((page.data as { user?: { role?: string } })?.user?.role))
-	const list = $derived(visibleCommands(isTeam))
+	// « ! » (C6, D58) : seulement les commandes qui marchent pour CETTE personne, que le
+	// serveur seul connaît (OctoGuard allumé, son rôle, ses salons ; chaîne Twitch reliée).
+	// Aucune : ni tuile ni section.
+	let bang = $state<CommandDef[]>([])
+	onMount(() => {
+		const token = (page.data as { token?: string })?.token
+		fetch(`${PUBLIC_API_URL}/api/v1/commands/bang`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+			.then(r => (r.ok ? r.json() : null))
+			.then(j => { bang = bangToCommands(j) })
+			.catch(() => {})
+	})
+	const list = $derived([...visibleCommands(isTeam), ...bang])
 
-	const SECTIONS: { k: Trigger; title: string; sub: string; tile: string; tileSub: string }[] = [
+	type Section = { k: HelpTrigger; title: string; sub: string; tile: string; tileSub: string }
+	const BASE_SECTIONS: Section[] = [
 		{ k: '@', title: 'cmd.sec_at_title', sub: 'cmd.sec_at_sub', tile: 'cmd.tile_at', tileSub: 'cmd.tile_at_sub' },
 		{ k: '#', title: 'cmd.sec_hash_title', sub: 'cmd.sec_hash_sub', tile: 'cmd.tile_hash', tileSub: 'cmd.tile_hash_sub' },
 		{ k: '/', title: 'cmd.sec_slash_title', sub: 'cmd.sec_slash_sub', tile: 'cmd.tile_slash', tileSub: 'cmd.tile_slash_sub' },
 	]
+	const BANG_SECTION: Section = { k: '!', title: 'cmd.sec_bang_title', sub: 'cmd.sec_bang_sub', tile: 'cmd.tile_bang', tileSub: 'cmd.tile_bang_sub' }
+	const SECTIONS = $derived(bang.length ? [...BASE_SECTIONS, BANG_SECTION] : BASE_SECTIONS)
+	const PILL: Record<Place, string> = { chat: 'cmd.pill_chat', forum: 'cmd.pill_forum', twitch: 'cmd.pill_twitch' }
 
 	let query = $state('')
-	let tab = $state<Trigger | 'all'>('all')
+	let tab = $state<HelpTrigger | 'all'>('all')
 	let searchEl: HTMLInputElement | null = $state(null)
 
 	const found = $derived(searchCommands(list, query, tFn))
-	const rowsOf = (k: Trigger) => found.filter(c => c.trigger === k && (tab === 'all' || tab === k))
+	const rowsOf = (k: HelpTrigger) => found.filter(c => c.trigger === k && (tab === 'all' || tab === k))
 	const shown = $derived(SECTIONS.reduce((n, s) => n + rowsOf(s.k).length, 0))
-	const countOf = (k: Trigger) => list.filter(c => c.trigger === k).length
+	const countOf = (k: HelpTrigger) => list.filter(c => c.trigger === k).length
 	const plural = (n: number, one: string, other: string) => tFn(new Intl.PluralRules($locale).select(n) === 'one' ? one : other, { count: n })
 
-	function pickTab(k: Trigger) { tab = tab === k ? 'all' : k }   // recliquer : tout revoir
+	function pickTab(k: HelpTrigger) { tab = tab === k ? 'all' : k }   // recliquer : tout revoir
 	function showAll() { tab = 'all'; query = ''; searchEl?.focus() }
 
 	/** Ce qui s'écrit : la touche, le nom, puis les arguments en plus discret. */
@@ -97,10 +114,11 @@
 									{@const h = head(c)}
 									<tr>
 										<td class="c-name"><code>{h.name}</code>{#if h.args}<span class="arg" class:sep={h.name.length > 1}>{h.args}</span>{/if}</td>
-										<td class="c-desc">{tFn(c.descKey)}{#if c.exampleKey}<span class="ex">{tFn(c.exampleKey)}</span>{/if}</td>
+										<td class="c-desc">{tFn(c.descKey, c.descVars)}{#if c.exampleKey}<span class="ex">{tFn(c.exampleKey)}</span>{/if}</td>
 										<td class="c-where">
 											{#if c.team}<span class="pill team">{tFn('cmd.pill_team')}</span>{/if}
-											{#each c.where as w (w)}<span class="pill">{tFn(w === 'chat' ? 'cmd.pill_chat' : 'cmd.pill_forum')}</span>{/each}
+											{#if c.restricted}<span class="pill team">{tFn(c.where.includes('twitch') ? 'cmd.pill_twitch_mods' : 'cmd.pill_restricted')}</span>{/if}
+											{#if c.channels?.length}{#each c.channels as ch, i (i)}<span class="pill">#{ch}</span>{/each}{:else}{#each c.where as w (w)}<span class="pill">{tFn(PILL[w])}</span>{/each}{/if}
 										</td>
 									</tr>
 								{/each}
