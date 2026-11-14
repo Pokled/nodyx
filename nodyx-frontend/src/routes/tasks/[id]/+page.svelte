@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { placeChips } from '$lib/actions/placeChips'
 	import { page } from '$app/state'
 	import { goto } from '$app/navigation'
 	import type { PageData } from './$types'
@@ -296,7 +297,7 @@
 						<!-- Description riche : HTML assaini côté serveur (écriture ET
 						     lecture), donc sûr à rendre. Bornée en hauteur sur la tuile. -->
 						{#if card.description}
-							<div class="task-card-desc mt-1.5 max-h-28 overflow-hidden text-xs leading-snug text-[var(--nx-text-muted)]">
+							<div class="task-card-desc mt-1.5 max-h-28 overflow-hidden text-xs leading-snug text-[var(--nx-text-muted)]" use:placeChips={{ html: card.description, token: token ?? null }}>
 								{@html card.description}
 							</div>
 						{/if}

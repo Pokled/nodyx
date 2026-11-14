@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { placeChips } from '$lib/actions/placeChips'
 	import { t, locale } from '$lib/i18n';
 	const tFn = $derived($t);
 	import { enhance } from '$app/forms';
@@ -166,7 +167,7 @@
 		{#if ev.description && ev.description !== '<p></p>'}
 			<div class="rounded-2xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/50 p-6">
 				<h2 class="text-sm font-semibold text-[var(--nx-text-muted)] uppercase tracking-wider mb-4">Description</h2>
-				<div class="nodyx-prose">
+				<div class="nodyx-prose" use:placeChips={{ html: ev.description, token: data.token ?? null }}>
 					{@html ev.description}
 				</div>
 			</div>

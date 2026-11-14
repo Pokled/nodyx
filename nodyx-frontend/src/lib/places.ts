@@ -25,6 +25,9 @@ export type Resolved = { ref: string; ok: true; kind: PlaceKind; title: string; 
 /** « # » en tête ou après une espace, puis jusqu'à 3 mots (« #soirée jeux »). */
 export const PLACE_TRIGGER = /(?:^|[\s(])#((?:[\p{L}\p{N}_.'’-]+ ?){0,3})$/u
 
+/** Une marque valide : sorte connue + uuid (même règle que le cœur, utils/sanitize). */
+export const PLACE_VALUE = /^(channel|event|thread|wiki|poll|board):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export const KIND_LABEL_KEYS: Record<PlaceKind, string> = {
 	channel: 'place.group_channel', event: 'place.group_event', thread: 'place.group_thread',
 	wiki: 'place.group_wiki', poll: 'place.group_poll', board: 'place.group_board',
@@ -63,6 +66,39 @@ export function applyPickedPlaces(text: string, picked: { ref: string; url: stri
 		out = out.slice(0, i) + placeHtml(p.ref, p.url, p.private ? neutral(p.kind) : p.label) + out.slice(i + needle.length)
 	}
 	return out
+}
+
+/**
+ * Un visiteur ANONYME peut-il lire cet endroit ? Un sujet du forum, un événement
+ * public, le sondage d'un sujet. Un salon, un tableau, une page du wiki, le sondage
+ * d'un salon ou un événement privé : réservés aux membres.
+ */
+export function isPublicPlace(p: Pick<Place, 'kind' | 'private' | 'url'>): boolean {
+	if (p.private) return false
+	return p.kind === 'thread' || p.kind === 'event' || (p.kind === 'poll' && p.url.startsWith('/forum/'))
+}
+
+/**
+ * Ce qu'on ÉCRIT dans un texte qui peut être lu de tous (forum, wiki, fil, événement) :
+ * le vrai nom seulement si l'endroit est lisible de tous, sinon un mot neutre
+ * (« #salon »), et jamais une adresse qui porte un nom (le wiki range ses pages par
+ * titre). Chaque lecteur autorisé voit ensuite le vrai nom grâce aux puces (placeChips) :
+ * une page publique, un moteur de recherche ou un aperçu de lien n'en voient rien.
+ */
+export function publicMark(p: Pick<Place, 'kind' | 'private' | 'url' | 'title'>, neutral: (kind: PlaceKind) => string): { label: string; url: string } {
+	if (isPublicPlace(p)) return { label: p.title, url: p.url }
+	return { label: neutral(p.kind), url: p.kind === 'wiki' ? '/wiki' : p.url }
+}
+
+/**
+ * Un endroit COLLÉ (copié depuis le chat ou depuis une page lue par un membre) :
+ * son texte peut être le vrai nom affiché par la puce, même pour un endroit réservé
+ * aux membres. On ne sait pas ici s'il est public : seul un sujet du forum l'est
+ * toujours, il garde son nom ; tous les autres prennent le mot neutre de leur sorte.
+ */
+export function pastedMark(kind: PlaceKind, text: string, url: string, neutral: (kind: PlaceKind | 'event_any') => string): { label: string; url: string } {
+	if (kind === 'thread') return { label: text.replace(/^#/, ''), url }
+	return { label: neutral(kind === 'event' ? 'event_any' : kind), url: kind === 'wiki' ? '/wiki' : url }
 }
 
 // ── Les noms des puces : une demande regroupée, gardée une minute ─────────────────

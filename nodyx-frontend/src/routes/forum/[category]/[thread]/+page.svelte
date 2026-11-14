@@ -46,6 +46,7 @@
 	import { precheckMessage, type Nudge } from '$lib/octoguard/nudge';
 	import LinkCards from '$lib/components/LinkCards.svelte'
 	import { mentionChips } from '$lib/actions/mentionChips'
+	import { placeChips } from '$lib/actions/placeChips'
 	// D40 : réponses réduites à leur carte (le message n'est QUE le lien)
 	let soleIds = $state(new Set<string>())
 	function setSole(id: string, sole: boolean) {
@@ -748,7 +749,7 @@
 					</form>
 				{:else}
 					<!-- Contenu HTML rendu -->
-					<div class="nodyx-prose" hidden={soleIds.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: data.token ?? null, me: user?.id ?? null }}>
+					<div class="nodyx-prose" hidden={soleIds.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: data.token ?? null, me: user?.id ?? null }} use:placeChips={{ html: post.content ?? '', token: data.token ?? null }}>
 						{@html post.content}
 					</div>
 					<!-- Cartes « Nodyx relié » : sujets, réponses, événements de cette instance -->

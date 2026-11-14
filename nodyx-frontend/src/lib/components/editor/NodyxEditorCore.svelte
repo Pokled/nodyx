@@ -12,6 +12,10 @@
 	import MentionWarnings from '$lib/components/MentionWarnings.svelte'
 	import { suggestMentions, insertLabel, refOf, refsIn, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions'
 	import { draftKey, readDraft, writeDraft, removeDraft } from '$lib/editorDrafts'
+	import PlaceList from '$lib/components/PlaceList.svelte'
+	import CommandHelp from '$lib/components/CommandHelp.svelte'
+	import { suggestPlaces, publicMark, pastedMark, placeFor, PLACE_TRIGGER, PLACE_VALUE, type Place, type PlaceKind } from '$lib/places'
+	import { placeIconSvg } from '$lib/actions/placeChips'
 
 	let {
 		name       = 'content',
@@ -756,6 +760,54 @@
 			renderText({ node }: any) { return '@' + node.attrs.label },
 		})
 
+		// ── « # » : un endroit de la communauté (SPECS/NODYX_COMMANDES_CDC.md, C5) ──
+		// Enregistré en <a href="…" data-place="<sorte>:<id>">#Nom</a>, la même marque
+		// que le chat. Un atome : on l'efface d'un coup. Lu AVANT la marque de lien
+		// (priorité 100), sinon le lien ordinaire l'avalerait et perdrait data-place.
+		const PlaceNode = Node.create({
+			name: 'place',
+			group: 'inline',
+			inline: true,
+			atom: true,
+			selectable: false,
+			addAttributes() {
+				return { ref: { default: null }, url: { default: '' }, label: { default: '' } }
+			},
+			parseHTML() {
+				return [{
+					tag: 'a[data-place]',
+					priority: 100,
+					getAttrs: (el: HTMLElement) => {
+						const ref = el.getAttribute('data-place') ?? ''
+						if (!PLACE_VALUE.test(ref)) return false
+						return { ref, url: el.getAttribute('href') ?? '', label: (el.textContent ?? '').replace(/^#/, '') }
+					},
+				}]
+			},
+			renderHTML({ node }: any) {
+				return ['a', { href: node.attrs.url, 'data-place': node.attrs.ref }, '#' + node.attrs.label]
+			},
+			renderText({ node }: any) { return '#' + node.attrs.label },
+			// Dans l'éditeur, la personne qui écrit voit la vraie puce (nom à jour, icône) ;
+			// le HTML enregistré, lui, garde le mot neutre d'un endroit réservé aux membres.
+			addNodeView() {
+				return ({ node }: any) => {
+					const dom = document.createElement('span')
+					dom.className = 'nx-place'
+					dom.contentEditable = 'false'
+					const kind = String(node.attrs.ref ?? '').split(':')[0] as PlaceKind
+					dom.append(placeIconSvg(kind), document.createTextNode(node.attrs.label))
+					placeFor(node.attrs.ref, token ?? null).then(r => {
+						if (!dom.isConnected && !dom.parentNode) return
+						dom.textContent = ''
+						if (r.ok) dom.append(placeIconSvg(r.kind), document.createTextNode(r.title))
+						else { dom.classList.add('nx-place-private'); dom.append(placeIconSvg('lock'), document.createTextNode(tFn('place.private'))) }
+					})
+					return { dom, ignoreMutation: () => true }
+				}
+			},
+		})
+
 		// Aperçu des cartes de liens Nodyx sous leur ligne (linkCardPreview.ts)
 		const LinkCardPreview = Extension.create({
 			name: 'nxLinkCardPreview',
@@ -785,17 +837,39 @@
 				NodyxTerm, TwitchLive,
 				LinkCardPreview,
 				MentionNode,
+				PlaceNode,
 			],
 			content: initialContent,
 			editorProps: {
 				// Liste des mentions ouverte : flèches, Entrée, Tab et Échap lui reviennent
 				handleKeyDown(_view: any, event: KeyboardEvent) {
+					// Liste des endroits ouverte : même règle
+					if (placeOpen && placeItems.length) {
+						if (event.key === 'ArrowDown') { placeActive = (placeActive + 1) % placeItems.length; return true }
+						if (event.key === 'ArrowUp') { placeActive = (placeActive - 1 + placeItems.length) % placeItems.length; return true }
+						if (event.key === 'Enter' || event.key === 'Tab') { pickPlace(placeItems[placeActive]); return true }
+						if (event.key === 'Escape') { closePlace(); return true }
+						return false
+					}
 					if (!mentionOpen || !mentionItems.length) return false
 					if (event.key === 'ArrowDown') { mentionActive = (mentionActive + 1) % mentionItems.length; return true }
 					if (event.key === 'ArrowUp') { mentionActive = (mentionActive - 1 + mentionItems.length) % mentionItems.length; return true }
 					if (event.key === 'Enter' || event.key === 'Tab') { pickMention(mentionItems[mentionActive]); return true }
 					if (event.key === 'Escape') { closeMention(); return true }
 					return false
+				},
+				// Un endroit collé : jamais le nom affiché par sa puce (pastedMark)
+				transformPastedHTML(pasted: string) {
+					if (!pasted.includes('data-place')) return pasted
+					const doc = new DOMParser().parseFromString(pasted, 'text/html')
+					doc.querySelectorAll<HTMLAnchorElement>('a[data-place]').forEach(a => {
+						const ref = a.getAttribute('data-place') ?? ''
+						if (!PLACE_VALUE.test(ref)) { a.removeAttribute('data-place'); return }
+						const m = pastedMark(ref.split(':')[0] as PlaceKind, a.textContent ?? '', a.getAttribute('href') ?? '', k => tFn(`place.neutral_${k}`))
+						a.setAttribute('href', m.url)
+						a.textContent = '#' + m.label
+					})
+					return doc.body.innerHTML
 				},
 				handlePaste(_view: any, event: ClipboardEvent) {
 					const files = imageFilesOf(event.clipboardData)
@@ -823,7 +897,7 @@
 				},
 			},
 			onCreate({ editor: e }) { ensureCodeColors(e) },
-			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); syncLinkBubble(); syncMention(); if (transaction.docChanged) ensureCodeColors(e) },
+			onTransaction({ editor: e, transaction }) { syncActive(); syncBubble(); syncLinkBubble(); syncMention(); syncPlace(); if (transaction.docChanged) ensureCodeColors(e) },
 			onUpdate({ editor: e }) {
 				html = e.getHTML()
 				charCount = e.storage.characterCount.characters()
@@ -905,6 +979,7 @@
 			bubbleVisible = false
 			linkHit = null
 			if (mentionOpen) closeMention()
+			if (placeOpen) closePlace()
 		}
 	}
 
@@ -1582,11 +1657,14 @@
 		if (!editor) return
 		const { state } = editor
 		const sel = state.selection
-		if (!sel.empty || editor.isActive('codeBlock') || !sel.$from.parent.isTextblock) { if (mentionOpen) closeMention(); return }
+		if (!sel.empty || editor.isActive('codeBlock') || !sel.$from.parent.isTextblock) { if (mentionOpen) closeMention(); else mentionSeq++; return }
 		const at = sel.$from
 		const before = at.parent.textBetween(Math.max(0, at.parentOffset - 40), at.parentOffset, undefined, '\ufffc')
 		const m = before.match(MENTION_TRIGGER)
-		if (!m) { if (mentionOpen) { mentionOpen = false; mentionItems = []; mentionSeq++ } ; mentionDismissedAt = -1; return }
+		// Plus de mention sous le curseur : on ferme ET on périme la recherche en vol.
+		// Sinon, en tapant vite, la réponse de la frappe d'avant arrivait APRÈS et
+		// rouvrait la liste sur une position périmée : choisir laissait un mot orphelin.
+		if (!m) { mentionOpen = false; mentionItems = []; mentionSeq++; mentionDismissedAt = -1; return }
 		const from = sel.from - m[1].length - 1
 		if (from === mentionDismissedAt) return        // fermée par Échap : on ne la rouvre pas sur la même mention
 		mentionFrom = from; mentionTo = sel.from; mentionQuery = m[1]
@@ -1610,6 +1688,66 @@
 			{ type: 'text', text: ' ' },
 		]).run()
 		mentionOpen = false; mentionItems = []; mentionSeq++
+	}
+
+	// ── « # » : propose les endroits (C5, même liste que le chat, D59) ─────────────
+	let placeOpen   = $state(false)
+	let placeItems  = $state<Place[]>([])
+	let placeActive = $state(0)
+	let placeQuery  = $state('')
+	let placeTop    = $state(0)
+	let placeLeft   = $state(0)
+	let placeFrom = 0, placeTo = 0, placeSeq = 0
+	let placeTimer: ReturnType<typeof setTimeout> | null = null
+	let placeDismissedAt = -1
+
+	function closePlace() { placeOpen = false; placeItems = []; placeSeq++; placeDismissedAt = placeFrom }
+
+	function syncPlace(): void {
+		if (!editor || !token) return
+		const sel = editor.state.selection
+		if (!sel.empty || editor.isActive('codeBlock') || editor.isActive('code') || !sel.$from.parent.isTextblock) { if (placeOpen) closePlace(); else placeSeq++; return }
+		const at = sel.$from
+		const before = at.parent.textBetween(Math.max(0, at.parentOffset - 60), at.parentOffset, undefined, '\ufffc')
+		const m = before.match(PLACE_TRIGGER)
+		if (!m) { placeOpen = false; placeItems = []; placeSeq++; placeDismissedAt = -1; return }   // même règle que les mentions
+		const from = sel.from - m[1].length - 1
+		if (from === placeDismissedAt) return        // fermée par Échap : on ne la rouvre pas au même endroit
+		placeFrom = from; placeTo = sel.from; placeQuery = m[1]
+		try {
+			const c = editor.view.coordsAtPos(from)
+			placeTop = c.bottom + 6; placeLeft = Math.min(c.left, window.innerWidth - 380)
+		} catch { /* position indisponible */ }
+		if (placeTimer) clearTimeout(placeTimer)
+		const seq = ++placeSeq
+		placeTimer = setTimeout(async () => {
+			const found = await suggestPlaces(placeQuery, token ?? null)
+			if (seq !== placeSeq) return
+			placeItems = found; placeActive = 0; placeOpen = found.length > 0
+		}, 150)
+	}
+
+	/**
+	 * Un texte de l'éditeur peut être lu de tous (forum, wiki, fil) : on n'y écrit le
+	 * vrai nom que d'un endroit lisible de tous (publicMark). Les membres voient le
+	 * vrai nom grâce aux puces, ici dans l'éditeur comme à la lecture.
+	 */
+	function pickPlace(p: Place | undefined): void {
+		if (!editor || !p) return
+		const mark = publicMark(p, k => tFn(`place.neutral_${k}`))
+		editor.chain().focus().insertContentAt({ from: placeFrom, to: placeTo }, [
+			{ type: 'place', attrs: { ref: p.ref, url: mark.url, label: mark.label } },
+			{ type: 'text', text: ' ' },
+		]).run()
+		placeOpen = false; placeItems = []; placeSeq++
+	}
+
+	/** Le « ? » sous l'éditeur : « Essayer » écrit la touche et ouvre sa liste. */
+	function tryTrigger(k: '@' | '#' | '/') {
+		if (!editor) return
+		const at = editor.state.selection.$from
+		const needSpace = at.parentOffset > 0 && !/\s$/.test(at.parent.textBetween(0, at.parentOffset, undefined, '\ufffc'))
+		editor.chain().focus().insertContent((needSpace ? ' ' : '') + k).run()
 	}
 
 	// ── D51 : avant l'envoi d'un formulaire, ce que les mentions vont faire ─────────
@@ -2130,6 +2268,12 @@
 	{/if}
 
 	<!-- ── Mentions : liste des propositions sous le « @ » ──────────────────── -->
+	{#if placeOpen && placeItems.length}
+	<div class="nx-mention-pop" style="top:{placeTop}px; left:{placeLeft}px;">
+		<PlaceList items={placeItems} active={placeActive} query={placeQuery} id="{name}-place-list" onpick={pickPlace} />
+	</div>
+	{/if}
+
 	{#if mentionOpen && mentionItems.length}
 	<div class="nx-mention-pop" style="top:{mentionTop}px; left:{mentionLeft}px;">
 		<MentionList items={mentionItems} active={mentionActive} query={mentionQuery} id="{name}-mention-list"
@@ -2181,8 +2325,11 @@
 
 	<!-- ── Footer: character count ─────────────────────────────────────── -->
 	{#if editor && !compact}
-	<div class="px-4 py-1.5 border-t border-gray-800 themed:border-[var(--nx-border)] flex justify-end">
-		<span class="text-xs text-gray-600 themed:text-[var(--nx-text-muted)]">{tFn(charCount > 1 ? 'editor.char_count_plural' : 'editor.char_count', { n: String(charCount) })}</span>
+	<div class="px-4 py-1.5 border-t border-gray-800 themed:border-[var(--nx-border)] flex items-center gap-3">
+		{#if token}
+		<div class="min-w-0 flex-1"><CommandHelp empty={charCount === 0} triggers={['@', '#']} ontry={tryTrigger} id="{name}-cmd-help" /></div>
+		{/if}
+		<span class="ml-auto shrink-0 text-xs text-gray-600 themed:text-[var(--nx-text-muted)]">{tFn(charCount > 1 ? 'editor.char_count_plural' : 'editor.char_count', { n: String(charCount) })}</span>
 	</div>
 	{/if}
 </div>

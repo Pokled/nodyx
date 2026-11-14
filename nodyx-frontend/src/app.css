@@ -1284,6 +1284,9 @@ select option {
   background: color-mix(in srgb, var(--nx-header-accent, #f59e0b) 15%, transparent);
   color: var(--nx-text); text-decoration: none; white-space: nowrap;
 }
+/* ProseMirror remet `white-space: normal` sur tout [contenteditable=false] : dans l'éditeur,
+   la puce se coupait entre son icône et son nom en fin de ligne. */
+.ProseMirror .nx-place[contenteditable="false"] { white-space: nowrap; }
 .nx-place:hover, .nx-place:focus-visible { background: color-mix(in srgb, var(--nx-header-accent, #f59e0b) 26%, transparent); outline: none; text-decoration: none; }
 .nx-place:focus-visible { box-shadow: 0 0 0 2px var(--nx-header-accent, #f59e0b); }
 .nx-place-i { display: inline-block; width: 13px; height: 13px; margin-right: 4px; vertical-align: -0.15em; fill: none; stroke: color-mix(in srgb, var(--nx-header-accent, #f59e0b) 75%, var(--nx-text, #fff)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

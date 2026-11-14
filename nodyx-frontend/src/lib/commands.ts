@@ -43,12 +43,12 @@ export const COMMANDS: CommandDef[] = [
 	{ id: 'at-grade', trigger: '@', name: '', argsKey: 'cmd.arg_grade', descKey: 'cmd.at_grade', exampleKey: 'cmd.at_grade_ex', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_grade' },
 	{ id: 'at-all', trigger: '@', name: '', nameKey: 'mention.g_tous', descKey: 'cmd.at_all', group: 'call', where: ['chat', 'forum'], team: true, keywordsKey: 'cmd.kw_at_all' },
 	// # : montrer un endroit (lot C4, D59). Le nom de l'endroit suit la touche.
-	{ id: 'show-channel', trigger: '#', name: '', argsKey: 'cmd.arg_channel', descKey: 'cmd.show_channel', exampleKey: 'cmd.show_channel_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_channel' },
-	{ id: 'show-event', trigger: '#', name: '', argsKey: 'cmd.arg_event', descKey: 'cmd.show_event', exampleKey: 'cmd.show_event_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_event' },
-	{ id: 'show-thread', trigger: '#', name: '', argsKey: 'cmd.arg_thread', descKey: 'cmd.show_thread', exampleKey: 'cmd.show_thread_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_thread' },
-	{ id: 'show-wiki', trigger: '#', name: '', argsKey: 'cmd.arg_wiki', descKey: 'cmd.show_wiki', exampleKey: 'cmd.show_wiki_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_wiki' },
-	{ id: 'show-poll', trigger: '#', name: '', argsKey: 'cmd.arg_poll', descKey: 'cmd.show_poll', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_poll' },
-	{ id: 'show-board', trigger: '#', name: '', argsKey: 'cmd.arg_board', descKey: 'cmd.show_board', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_board' },
+	{ id: 'show-channel', trigger: '#', name: '', argsKey: 'cmd.arg_channel', descKey: 'cmd.show_channel', exampleKey: 'cmd.show_channel_ex', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_channel' },
+	{ id: 'show-event', trigger: '#', name: '', argsKey: 'cmd.arg_event', descKey: 'cmd.show_event', exampleKey: 'cmd.show_event_ex', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_event' },
+	{ id: 'show-thread', trigger: '#', name: '', argsKey: 'cmd.arg_thread', descKey: 'cmd.show_thread', exampleKey: 'cmd.show_thread_ex', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_thread' },
+	{ id: 'show-wiki', trigger: '#', name: '', argsKey: 'cmd.arg_wiki', descKey: 'cmd.show_wiki', exampleKey: 'cmd.show_wiki_ex', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_wiki' },
+	{ id: 'show-poll', trigger: '#', name: '', argsKey: 'cmd.arg_poll', descKey: 'cmd.show_poll', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_poll' },
+	{ id: 'show-board', trigger: '#', name: '', argsKey: 'cmd.arg_board', descKey: 'cmd.show_board', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_board' },
 	// / : l'aide, EN TÊTE de la liste du « / » (ouvre le pop-up, rien n'est envoyé).
 	// Pas d'alias « aide » : « /ai » est RÉSERVÉ à une future commande d'IA (Jonathan, 14/11).
 	{ id: 'help', trigger: '/', name: 'help', aliases: ['?'], local: 'help', descKey: 'cmd.help_cmd', exampleKey: 'cmd.help_cmd_ex', group: 'help', where: ['chat'], keywordsKey: 'cmd.kw_help' },
