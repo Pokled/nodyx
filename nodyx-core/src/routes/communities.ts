@@ -147,6 +147,8 @@ export default async function communityRoutes(app: FastifyInstance) {
     }
 
     await CommunityModel.removeMember(community.id, request.user!.userId)
+    // Ses droits partent avec lui tout de suite (cache de 60 s sinon : un auteur parti gérait encore ses événements)
+    await invalidatePermissions(community.id)
     return reply.code(204).send()
   })
 

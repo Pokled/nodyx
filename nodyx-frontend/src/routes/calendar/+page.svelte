@@ -1,21 +1,24 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
+	import { displayZone } from '$lib/eventTime';
 	const tFn = $derived($t);
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	function formatDate(iso: string) {
-		return new Date(iso).toLocaleDateString([], {
-			weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+	// Dans la langue choisie dans Nodyx (et non celle du navigateur) ; une journée
+	// entière est une date de calendrier, affichée en UTC (la même pour tout le monde).
+	function formatDate(iso: string, allDay = false) {
+		return new Date(iso).toLocaleDateString($locale, {
+			weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...displayZone(allDay),
 		});
 	}
 	function formatTime(iso: string) {
-		return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+		return new Date(iso).toLocaleTimeString($locale, { hour: '2-digit', minute: '2-digit' });
 	}
 	function formatDateRange(ev: any): string {
-		if (ev.is_all_day) return formatDate(ev.starts_at);
+		if (ev.is_all_day) return formatDate(ev.starts_at, true);
 		const start = tFn('event.at', { date: formatDate(ev.starts_at), time: formatTime(ev.starts_at) });
 		if (!ev.ends_at) return start;
 		const sameDay = new Date(ev.starts_at).toDateString() === new Date(ev.ends_at).toDateString();
@@ -23,17 +26,14 @@
 	}
 
 	function isToday(ev: any): boolean {
-		const now = new Date();
-		const d   = new Date(ev.starts_at);
-		return d.getDate() === now.getDate() &&
-		       d.getMonth() === now.getMonth() &&
-		       d.getFullYear() === now.getFullYear();
+		const day = (d: Date, z: { timeZone?: string }) => d.toLocaleDateString('en-CA', z);
+		return day(new Date(ev.starts_at), displayZone(!!ev.is_all_day)) === day(new Date(), {});
 	}
 
 	const grouped = $derived(() => {
 		const map = new Map<string, any[]>();
 		for (const ev of data.events) {
-			const key = new Date(ev.starts_at).toLocaleDateString([], { month: 'long', year: 'numeric' });
+			const key = new Date(ev.starts_at).toLocaleDateString($locale, { month: 'long', year: 'numeric', ...displayZone(!!ev.is_all_day) });
 			if (!map.has(key)) map.set(key, []);
 			map.get(key)!.push(ev);
 		}
@@ -102,10 +102,10 @@
 							<!-- Date badge -->
 							<div class="cal-date-badge {isToday(ev) ? 'cal-date-badge--today' : ''}">
 								<span class="cal-date-month">
-									{new Date(ev.starts_at).toLocaleDateString([], { month: 'short' }).toUpperCase()}
+									{new Date(ev.starts_at).toLocaleDateString($locale, { month: 'short', ...displayZone(!!ev.is_all_day) }).toUpperCase()}
 								</span>
 								<span class="cal-date-day">
-									{new Date(ev.starts_at).getDate()}
+									{new Date(ev.starts_at).toLocaleDateString($locale, { day: 'numeric', ...displayZone(!!ev.is_all_day) })}
 								</span>
 							</div>
 
@@ -137,9 +137,9 @@
 										{#if ev.rsvp_enabled}
 											<span class="cal-meta-item">
 												<svg class="cal-meta-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-													<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
+													<path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path stroke-linecap="round" stroke-linejoin="round" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
 												</svg>
-												{ev.going_count} participant{ev.going_count !== 1 ? 's' : ''}
+												{tFn(new Intl.PluralRules($locale).select(ev.going_count) === 'one' ? 'event.going_one' : 'event.going_other', { count: String(ev.going_count) })}
 											</span>
 										{/if}
 										{#if ev.tags?.length > 0}

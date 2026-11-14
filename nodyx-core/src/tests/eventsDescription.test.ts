@@ -9,7 +9,7 @@ import { buildApp } from './helpers/buildApp'
 import jwt from 'jsonwebtoken'
 
 vi.mock('../config/database', () => ({
-  db: { query: vi.fn() },
+  db: { query: vi.fn(), connect: vi.fn() },
   redis: {
     get:    vi.fn(),
     setex:  vi.fn().mockResolvedValue('OK'),
@@ -22,6 +22,11 @@ vi.mock('../config/database', () => ({
   },
 }))
 vi.mock('../socket/io', () => ({ io: { emit: vi.fn() } }))
+// Droits (lot socle du 14/11) : membre simple par défaut ; un test peut en décider autrement
+vi.mock('../services/permissions', async (orig) => ({
+  ...(await orig<typeof import('../services/permissions')>()),
+  getAccess: vi.fn(async () => ({ role: 'member', rank: 0, permissions: [] })),
+}))
 vi.mock('../services/webhooks/announce', () => ({ announceCalendarEvent: vi.fn() }))
 // La recopie réelle télécharge l'image : on la remplace par ce qu'elle produit
 // quand elle réussit (une adresse /uploads/), pour tester le câblage, pas le réseau.
@@ -61,6 +66,7 @@ function captureWrites() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked((db as any).connect).mockImplementation(async () => ({ query: (...a: any[]) => (db.query as any)(...a), release: () => {} }))
   vi.mocked(redis.exists).mockImplementation((k: string) => Promise.resolve(k.startsWith('banned:') ? 0 : 1) as any)
 })
 

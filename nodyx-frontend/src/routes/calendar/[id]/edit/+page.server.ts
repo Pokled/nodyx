@@ -1,6 +1,7 @@
 import { redirect, fail, error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/api';
+import { isoFromForm, eventErrorKey } from '$lib/eventTime';
 
 export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const token = cookies.get('token');
@@ -27,14 +28,9 @@ export const actions: Actions = {
 		const title        = (form.get('title')       as string).trim();
 		const description  = (form.get('description') as string | null) ?? '';
 		const location     = (form.get('location')    as string | null)?.trim() || null;
-		const toISO = (v: string | null) => {
-			if (!v) return null;
-			if (v.includes('T') && !v.endsWith('Z')) return new Date(v).toISOString();
-			if (!v.includes('T')) return new Date(v + 'T00:00:00').toISOString();
-			return v;
-		};
-		const starts_at = toISO(form.get('starts_at') as string) as string;
-		const ends_at   = toISO(form.get('ends_at')   as string | null);
+		// L'instant calculé par le NAVIGATEUR (lib/eventTime) : le serveur, en UTC, ne devine plus le fuseau
+		const starts_at = isoFromForm(form, 'starts_at') as string;
+		const ends_at   = isoFromForm(form, 'ends_at');
 		const is_all_day   = form.get('is_all_day')   === 'true';
 		const is_public    = form.get('is_public')    !== 'false';
 		const rsvp_enabled = form.get('rsvp_enabled') === 'true';
@@ -75,7 +71,8 @@ export const actions: Actions = {
 
 		const json = await res.json();
 		if (!res.ok) {
-			if (json.code === 'COVER_URL_INVALID') return fail(res.status, { errorKey: 'event.cover_invalid' });
+			const errorKey = eventErrorKey(json);
+			if (errorKey) return fail(res.status, { errorKey });
 			return fail(res.status, { error: json.error });
 		}
 
