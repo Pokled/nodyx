@@ -11,6 +11,7 @@
 	import { toInternalPath } from '$lib/linkCards'
 	import { createSoleSet } from '$lib/linkCardsSole.svelte'
 	import { mentionChips } from '$lib/actions/mentionChips'
+	import { placeChips } from '$lib/actions/placeChips'
 	const sole = createSoleSet() // D40 : messages réduits à leur carte
 
 	const tFn = $derived($t)
@@ -559,7 +560,7 @@
 									</div>
 
 									{#if post.content}
-										<div class="post-text prose-feed" hidden={sole.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: token ?? null, me: (page.data as any)?.user?.id ?? null }}>{@html post.content}</div>
+										<div class="post-text prose-feed" hidden={sole.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: token ?? null, me: (page.data as any)?.user?.id ?? null }} use:placeChips={{ html: post.content ?? '', token: token ?? null }}>{@html post.content}</div>
 										<LinkCards html={post.content} {token} onsole={(v) => sole.set(post.id, v)} />
 									{/if}
 
@@ -690,7 +691,7 @@
 													</button>
 												{/if}
 											</div>
-											<div class="post-text prose-feed" hidden={sole.has(reply.id)} use:mentionChips={{ html: reply.content ?? '', token: token ?? null, me: (page.data as any)?.user?.id ?? null }}>{@html reply.content}</div>
+											<div class="post-text prose-feed" hidden={sole.has(reply.id)} use:mentionChips={{ html: reply.content ?? '', token: token ?? null, me: (page.data as any)?.user?.id ?? null }} use:placeChips={{ html: reply.content ?? '', token: token ?? null }}>{@html reply.content}</div>
 											<LinkCards html={reply.content ?? ''} {token} onsole={(v) => sole.set(reply.id, v)} />
 											{#if reply.media_url}
 												<div class="post-media">

@@ -18,6 +18,7 @@
 	import LinkCards from '$lib/components/LinkCards.svelte'
 	import { createSoleSet } from '$lib/linkCardsSole.svelte'
 	import { mentionChips } from '$lib/actions/mentionChips'
+	import { placeChips } from '$lib/actions/placeChips'
 	const sole = createSoleSet() // D40 : messages réduits à leur carte
 
 	const tFn = $derived($t)
@@ -859,7 +860,7 @@
 							role="link" tabindex="0"
 							onclick={(e) => { if (!(e.target as HTMLElement).closest('a, button')) goto(`/status/${post.id}`) }}
 							onkeydown={(e) => { if (e.key === 'Enter') goto(`/status/${post.id}`) }}>
-							<div class="profile-post-text nodyx-prose" hidden={sole.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: (page.data as any)?.token ?? null, me: (page.data as any)?.user?.id ?? null }}>{@html post.content}</div>
+							<div class="profile-post-text nodyx-prose" hidden={sole.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: (page.data as any)?.token ?? null, me: (page.data as any)?.user?.id ?? null }} use:placeChips={{ html: post.content ?? '', token: (page.data as any)?.token ?? null }}>{@html post.content}</div>
 							<LinkCards html={post.content ?? ''} token={(page.data as any)?.token ?? null} onsole={(v) => sole.set(post.id, v)} />
 							{#if post.media_url}
 								<img src={post.media_url} alt="" class="profile-post-media" loading="lazy" />

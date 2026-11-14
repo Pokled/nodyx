@@ -27,6 +27,7 @@
 	import LinkCards from '$lib/components/LinkCards.svelte'
 	import { createSoleSet } from '$lib/linkCardsSole.svelte'
 	import { mentionChips } from '$lib/actions/mentionChips'
+	import { placeChips } from '$lib/actions/placeChips'
 	const sole = createSoleSet() // D40 : messages réduits à leur carte
 
     const tFn = $derived($t)
@@ -274,7 +275,7 @@
                                 </div>
                             {/if}
                         </div>
-                        <div class="stage-msg break-words text-[13px]" style="color: rgb(209,213,219)" hidden={sole.has(msg.id)} use:mentionChips={{ html: msg.content ?? '', token: (page.data as any)?.token ?? null, me: (page.data as any)?.user?.id ?? null }}>
+                        <div class="stage-msg break-words text-[13px]" style="color: rgb(209,213,219)" hidden={sole.has(msg.id)} use:mentionChips={{ html: msg.content ?? '', token: (page.data as any)?.token ?? null, me: (page.data as any)?.user?.id ?? null }} use:placeChips={{ html: msg.content ?? '', token: (page.data as any)?.token ?? null }}>
                             {@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), emojis)}
                         </div>
                         <div class="stage-cards"><LinkCards html={msg.content ?? ''} token={(page.data as any)?.token ?? null} onsole={(v) => sole.set(msg.id, v)} /></div>
