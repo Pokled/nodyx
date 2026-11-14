@@ -10,6 +10,7 @@
  */
 
 import safeRegex from 'safe-regex'
+import { tallyMentions } from './mentionTally'
 import type {
   AutomodRuleRow,
   AutomodRuleParams,
@@ -141,6 +142,9 @@ export interface MatchContext {
   /** Auteur (détecteurs à état : inondation). */
   userId?: string
   now?:    number
+  /** Poids réel des mentions (les groupes valent les personnes prévenues),
+   *  calculé par le moteur. Absent : le détecteur compte lui-même dans le texte. */
+  mentionCount?: number
 }
 
 export interface MatchResult {
@@ -297,16 +301,17 @@ export const matchLinkDomain: Matcher = (ctx, params) => {
 
 // ─── Matcher 4 : mention_spam ────────────────────────────────────────────────
 
-// {1,32} : tolérant pour détecter le spam, même les "@a" en série
-const MENTION_RE = /@[a-zA-Z0-9_-]{1,32}/g
-
+// Le comptage vit dans mentionTally.ts : marques de mention (personnes et groupes)
+// et « @mot » écrits, lettres accentuées comprises (@équipe, @Zoé). Le poids réel
+// d'un groupe (les personnes qu'il prévient) est calculé par le moteur
+// (mentionWeight.ts) et arrive ici dans ctx.mentionCount.
 export const matchMentionSpam: Matcher = (ctx, params) => {
   try {
     const max = typeof params.max_mentions === 'number' ? params.max_mentions : 5
-    const mentions = ctx.content.match(MENTION_RE) ?? []
-    if (mentions.length <= max) return null
-    const sample = mentions.slice(0, 3).join(' ')
-    return { excerpt: `mentions=${mentions.length} ${sample}` }
+    const tally = tallyMentions(ctx.content)
+    const count = typeof ctx.mentionCount === 'number' ? ctx.mentionCount : tally.people + tally.words + tally.groups.length  // repli : chaque marque pèse 1
+    if (count <= max) return null
+    return { excerpt: `mentions=${count} ${tally.sample.join(' ')}`.trim() }
   } catch {
     return null
   }
@@ -341,7 +346,7 @@ const MATCHERS: Record<string, Matcher> = {
 }
 
 /** Évalue une règle contre un message. Retourne le match ou null. */
-export function matchRule(content: string, rule: AutomodRuleRow, extra: { userId?: string; now?: number } = {}): MatchResult | null {
+export function matchRule(content: string, rule: AutomodRuleRow, extra: { userId?: string; now?: number; mentionCount?: number } = {}): MatchResult | null {
   const fn = MATCHERS[rule.type]
   if (!fn) return null
   return fn({ content, ...extra }, rule.params ?? {})

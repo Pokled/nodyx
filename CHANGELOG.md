@@ -54,6 +54,11 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   une notification la marque bien comme lue (elle restait non lue côté serveur).
 - **Administration › Mentions.** Le seuil de confirmation des groupes, le texte des mentions
   effacées et l'affichage de l'heure de fin d'une pause, chacun expliqué par un exemple.
+- **OctoGuard compte les vraies mentions.** La règle « Spam de mentions » ne voyait pas `@équipe`
+  (à cause du « é ») et comptait un groupe pour une seule personne. Elle compte maintenant ce que
+  le message fait vraiment : une personne vaut 1, un groupe le nombre de personnes qu'il prévient
+  (`@équipe` à 12 personnes vaut 12), et les noms accentués sont lus. Partout où OctoGuard juge :
+  chat, forum (titre compris), wiki, « Tu es sûr ? » avant l'envoi et rejeu d'une règle sur 30 jours.
 
 ### Modération : une équipe, des droits, une file
 

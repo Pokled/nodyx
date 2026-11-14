@@ -30,6 +30,8 @@ import { matchRule } from './matchers'
 import { conditionsMet, isImmunized } from './pipeline'
 import { buildUserCtx, textForModeration } from './moderate'
 import { sanitizeChat } from '../../utils/chatSanitize'
+import { mentionWeight } from './mentionWeight'
+import { instanceCommunityId } from '../mentionPeople'
 import type { AutomodRuleRow, PipelineUserCtx } from './types'
 
 export type NudgeOutcome = 'hold' | 'refuse' | 'warn' | 'sanction'
@@ -66,7 +68,7 @@ export function outcomeFor(rule: Pick<AutomodRuleRow, 'action' | 'dry_run'>): Nu
 }
 
 /** Le jugement, pur : la liste des règles et le profil sont fournis. */
-export function judge(content: string, rules: AutomodRuleRow[], user: PipelineUserCtx, surface: 'chat' | 'forum'): Nudge | null {
+export function judge(content: string, rules: AutomodRuleRow[], user: PipelineUserCtx, surface: 'chat' | 'forum', extra: { mentionCount?: number } = {}): Nudge | null {
   // Le filtre du serveur (symboles haineux, motifs de l'admin) refuse avant tout
   if (!checkContent(content.replace(/<[^>]+>/g, ' '), { silent: true }).ok) return { outcome: 'refuse', kind: 'other' }
   for (const rule of rules) {
@@ -74,7 +76,7 @@ export function judge(content: string, rules: AutomodRuleRow[], user: PipelineUs
     if (isImmunized(rule, user)) continue
     if (!conditionsMet(rule, user)) continue
     if (rule.type === 'flood') continue             // se juge sur une suite de messages
-    const m = matchRule(content, rule)              // sans userId : aucune mémoire touchée
+    const m = matchRule(content, rule, { mentionCount: extra.mentionCount })  // sans userId : aucune mémoire touchée
     if (!m) continue
     // La première règle qui correspond décide, comme le moteur
     const outcome = outcomeFor(rule)
@@ -95,7 +97,13 @@ export async function precheck(userId: string, surface: 'chat' | 'forum', conten
     if (content.length + (title?.length ?? 0) > PRECHECK_MAX_CHARS) return null
     const text = textFor(surface, content, title)
     if (!text) return null
-    return judge(text, getRules(), await buildUserCtx(userId), surface)
+    const rules = getRules()
+    // Les mentions pèsent comme au vrai envoi : le moteur lit le HTML (marques
+    // de groupe comprises). Lu seulement si une règle de mentions existe.
+    const mentionCount = rules.some(r => r.type === 'mention_spam')
+      ? await mentionWeight(surface === 'chat' ? text : [title, content].filter(Boolean).join('\n'), await instanceCommunityId().catch(() => null), userId)
+      : undefined
+    return judge(text, rules, await buildUserCtx(userId), surface, { mentionCount })
   } catch (err) {
     console.warn('[octoguard:precheck] failed, no nudge:', err)
     return null

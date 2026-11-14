@@ -122,8 +122,11 @@ function htmlTextWithLinks(html: string): string {
   return out
 }
 
-/** Les textes d'une publication (titre, corps, bio…) sont examinés ensemble. */
-export async function moderateText(userId: string, surface: Surface, texts: Array<string | null | undefined>): Promise<ModerationVerdict> {
+/** Les textes d'une publication (titre, corps, bio…) sont examinés ensemble.
+ *  `opts.mentionTexts` : les mêmes textes, le corps donné en HTML et non en
+ *  extraction, pour compter les mentions (leurs marques n'existent que dans le
+ *  HTML : un groupe y pèse le nombre de personnes qu'il prévient). */
+export async function moderateText(userId: string, surface: Surface, texts: Array<string | null | undefined>, opts: { mentionTexts?: Array<string | null | undefined> } = {}): Promise<ModerationVerdict> {
   try {
     const content = texts.filter((t): t is string => !!t && t.trim().length > 0).join('\n')
     // Le bouclier anti-raid passe AVANT OctoGuard et marche même éteint (D21c) :
@@ -135,7 +138,8 @@ export async function moderateText(userId: string, surface: Surface, texts: Arra
     if (!isOctoGuardEnabled()) return { blocked: false }
     if (!content) return { blocked: false }
     const userCtx = await buildUserCtx(userId)
-    const res = await runPipeline({ content, userCtx, surface })
+    const mentionHtml = opts.mentionTexts?.filter((t): t is string => !!t && t.trim().length > 0).join('\n')
+    const res = await runPipeline({ content, userCtx, surface, mentionHtml })
     if (res.blocked) return { blocked: true, reason: res.reason ?? 'octoguard', i18n_key: res.i18n_key ?? 'octoguard.blocked' }
     // Retenir : seul le forum sait mettre un contenu de côté (avec le chat,
     // qui appelle le moteur directement). Profil, sondage et wiki n'ont pas de
