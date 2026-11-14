@@ -131,7 +131,7 @@ describe('routes', () => {
     expect((await put({ who: 'all', quiet_start: 1440, quiet_end: 0, quiet_tz: 'UTC' })).statusCode).toBe(400)
     expect((await put({ who: 'all', quiet_start: 1320, quiet_end: 480, quiet_tz: 'Pas/UnFuseau' })).statusCode).toBe(400)
     const ok = await put({ who: 'following', quiet_start: 1320, quiet_end: 480, quiet_tz: 'Europe/Paris' })
-    expect(ok.json().prefs).toEqual({ who: 'following', quiet_start: 1320, quiet_end: 480, quiet_tz: 'Europe/Paris' })
+    expect(ok.json().prefs).toEqual({ who: 'following', quiet_start: 1320, quiet_end: 480, quiet_tz: 'Europe/Paris', bursts: true })
   })
   it('sourdine : jamais soi-même ; sans compte : 401', async () => {
     const r = await (await app()).inject({ method: 'PUT', url: `/mutes/${KIM}`, headers: { Authorization: `Bearer ${tokenOf(KIM)}` } })

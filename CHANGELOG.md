@@ -41,6 +41,19 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   ou « est en pause », jamais la raison.
 - **Les grades en couleur.** Un grade mentionné prend sa couleur, suit son nom s'il change, et
   sa carte dit qui est dedans. `@ici` devient `@enligne` : les membres connectés.
+- **Le fantôme démasqué.** Si quelqu'un te mentionne puis efface lui-même son message dans les
+  10 minutes, tu es quand même prévenu (« … puis a supprimé son message ») et tu peux le
+  signaler à l'équipe. L'admin choisit si le texte effacé est gardé, et combien de temps (7, 30
+  ou 90 jours, ou pas du tout par défaut) ; chaque membre en est informé dans ses réglages. Une
+  suppression faite par l'équipe n'est jamais un fantôme.
+- **Les rafales regroupées.** Plusieurs mentions de la même personne au même endroit en 10
+  minutes deviennent une seule notification qui compte (« t'a mentionné 3 fois »), avec « Ne
+  plus recevoir ses mentions » à côté. Chacun peut désactiver le regroupement.
+- **Des notifications de mention claires.** Elles disent où (« dans #général »), par quel groupe,
+  si elles sont arrivées pendant les heures calmes, et « Voir » mène enfin au bon salon. Ouvrir
+  une notification la marque bien comme lue (elle restait non lue côté serveur).
+- **Administration › Mentions.** Le seuil de confirmation des groupes, le texte des mentions
+  effacées et l'affichage de l'heure de fin d'une pause, chacun expliqué par un exemple.
 
 ### Modération : une équipe, des droits, une file
 

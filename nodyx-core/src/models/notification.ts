@@ -48,10 +48,12 @@ export async function listForUser(
             u.username    AS actor_username,
             u.avatar      AS actor_avatar,
             t.title       AS thread_title,
-            t.category_id AS category_id
+            t.category_id AS category_id,
+            ch.name       AS channel_name
      FROM notifications n
      LEFT JOIN users   u ON u.id = n.actor_id
      LEFT JOIN threads t ON t.id = n.thread_id
+     LEFT JOIN channels ch ON ch.id::text = n.meta->>'channel_id'
      WHERE n.user_id = $1
      ORDER BY n.created_at DESC
      LIMIT $2`,

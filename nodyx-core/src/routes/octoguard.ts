@@ -1422,7 +1422,7 @@ export async function reportsPublicPlugin(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Private messages cannot be reported here', code: 'UNSUPPORTED_TARGET' })
     }
     // La cible doit exister, et on ne se signale pas soi-même
-    const target = await resolveReportTarget(body.target_type as ResolvableTarget, body.target_id)
+    const target = await resolveReportTarget(body.target_type as ResolvableTarget, body.target_id, { reporterId })
     if (!target) {
       return reply.code(404).send({ error: 'Content not found', code: 'NOT_FOUND' })
     }

@@ -5,13 +5,19 @@
 	import { unreadCountStore } from '$lib/socket';
 	import { goto } from '$app/navigation';
 	import { untrack } from 'svelte';
+	import { page } from '$app/state';
+	import { openReport } from '$lib/report';
+	import { GROUP_LABEL_KEYS } from '$lib/mentions';
 
 	const tFn = $derived($t)
 
 	async function markReadAndNavigate(notif: any) {
 		if (!notif.is_read) {
 			unreadCountStore.update(n => Math.max(0, n - 1))
-			fetch(`/api/v1/notifications/${notif.id}/read`, { method: 'PATCH' }).catch(() => {})
+			// Avec le jeton : sans lui, le cœur répondait 401 et la notification ne passait
+			// jamais à « lue » (trouvé le 14/11 en testant les mentions)
+			const token = (page.data as any)?.token as string | undefined
+			fetch(`/api/v1/notifications/${notif.id}/read`, { method: 'PATCH', headers: token ? { Authorization: `Bearer ${token}` } : {} }).catch(() => {})
 		}
 		goto(notifLink(notif))
 	}
@@ -65,7 +71,29 @@
 		if (n.type === 'shield_raised') return n.meta?.reason === 'auto' ? tFn('notifications.shield_raised_auto_label') : tFn('notifications.shield_raised_label', { name: n.meta?.by ?? '' })
 		if (n.type === 'shield_suggested') return tFn(n.meta?.trigger?.kind === 'held' ? 'notifications.shield_suggested_held_label' : 'notifications.shield_suggested_accounts_label', { n: n.meta?.trigger?.count ?? '' })
 		if (n.type === 'appeal_resolved') return tFn(n.meta?.outcome === 'overturned' ? 'notifications.appeal_overturned_label' : 'notifications.appeal_upheld_label')
+		// Mentions (SPECS/NODYX_MENTIONS_CDC.md, lot M3b) : fantôme, rafale, groupe
+		if (n.type === 'mention') {
+			if (n.meta?.ghost) return tFn('notifications.mention_ghost_label')
+			if ((n.meta?.count ?? 1) > 1) return tFn('notifications.mention_burst_label', { count: n.meta.count })
+			if (n.meta?.group) return tFn('notifications.mention_group_label', { group: '@' + (GROUP_LABEL_KEYS[n.meta.group] ? tFn(GROUP_LABEL_KEYS[n.meta.group]) : tFn('notifications.mention_group_grade')) })
+		}
 		return TYPE_LABEL[n.type] ?? n.type
+	}
+
+	// « Ne plus recevoir ses mentions » depuis une rafale (D55), avec « Annuler »
+	let mutedActors = $state(new Set<string>())
+	async function setMuteActor(actorId: string, on: boolean) {
+		const token = (page.data as any)?.token as string | undefined
+		const r = await fetch(`/api/v1/mentions/mutes/${actorId}`, { method: on ? 'PUT' : 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} }).catch(() => null)
+		if (!r?.ok) return
+		const next = new Set(mutedActors)
+		if (on) next.add(actorId); else next.delete(actorId)
+		mutedActors = next
+	}
+	function reportGhost(n: any) {
+		const isPost = !!n.meta?.post_id
+		openReport({ type: isPost ? 'post' : 'message', id: isPost ? n.meta.post_id : n.meta.message_id,
+			label: tFn('notifications.mention_ghost_report_label', { name: n.actor_username ?? '' }) })
 	}
 
 	function formatDate(iso: string) {
@@ -76,6 +104,8 @@
 	}
 
 	function notifLink(n: any): string {
+		// Une mention du chat mène à son salon (avant : nulle part)
+		if (n.type === 'mention' && n.meta?.channel_id && !n.meta?.ghost) return `/chat?channel=${n.meta.channel_id}`
 		if (n.category_id && n.thread_id) {
 			const cat    = n.category_slug ?? n.category_id;
 			const thread = n.thread_slug   ?? n.thread_id;
@@ -171,7 +201,18 @@
 							{#if notif.thread_title}
 								<span class="text-[var(--nx-text-muted)]"> « {notif.thread_title} »</span>
 							{/if}
+							{#if notif.type === 'mention' && notif.channel_name}
+								<span class="text-[var(--nx-text-muted)]"> {tFn('notifications.mention_in_channel', { channel: notif.channel_name })}</span>
+							{/if}
 						</p>
+						{#if notif.type === 'mention' && notif.meta?.ghost}
+							<p class="text-xs text-[var(--nx-text-muted)] mt-1 italic">{tFn(new Intl.PluralRules($locale).select(notif.meta.deleted_after_s ?? 0) === 'one' ? 'notifications.mention_ghost_detail_one' : 'notifications.mention_ghost_detail', { s: notif.meta.deleted_after_s ?? 0 })}</p>
+						{:else if notif.type === 'mention' && (notif.meta?.count ?? 1) > 1}
+							<p class="text-xs text-[var(--nx-text-muted)] mt-1">{tFn('notifications.mention_burst_detail')}</p>
+						{/if}
+						{#if notif.type === 'mention' && notif.meta?.quiet}
+							<p class="text-xs text-[var(--nx-text-muted)] mt-1">{tFn('notifications.mention_quiet_detail')}</p>
+						{/if}
 						<p class="text-xs text-[var(--nx-text-muted)] mt-0.5">{formatDate(notif.created_at)}</p>
 					</div>
 
@@ -194,6 +235,23 @@
 						{/if}
 						{#if (notif.type === 'ladder_pending' || notif.type === 'ladder_expired' || notif.type === 'ladder_engine_alert') && notif.meta?.user_id}
 							<a href="/admin/members/{notif.meta.user_id}" class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.open_file')}</a>
+						{/if}
+						{#if notif.type === 'mention' && notif.meta?.ghost && (notif.meta?.message_id || notif.meta?.post_id)}
+							<button onclick={() => reportGhost(notif)}
+								class="text-xs px-2 py-1 rounded-md border border-[var(--nx-border)] text-[var(--nx-text)] hover:border-[var(--nx-text-muted)]">{tFn('notifications.mention_ghost_report')}</button>
+						{/if}
+						{#if notif.type === 'mention' && (notif.meta?.count ?? 1) > 1 && notif.actor_id}
+							{#if mutedActors.has(notif.actor_id)}
+								<span class="text-xs text-[var(--nx-text-muted)]">{tFn('mention.card_muted')}
+									<button class="underline" onclick={() => setMuteActor(notif.actor_id, false)}>{tFn('mention.card_unmute')}</button></span>
+							{:else}
+								<button onclick={() => setMuteActor(notif.actor_id, true)}
+									class="text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] underline">{tFn('mention.card_mute')}</button>
+							{/if}
+						{/if}
+						{#if notif.type === 'mention' && notif.meta?.channel_id && !notif.meta?.ghost}
+							<button onclick={() => markReadAndNavigate(notif)}
+								class="text-xs text-[var(--nx-header-accent)] hover:text-[var(--nx-header-accent)]">{tFn('notifications.view')}</button>
 						{/if}
 						{#if notif.category_id && notif.thread_id}
 							<button

@@ -4,6 +4,8 @@
 import { FastifyInstance } from 'fastify'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth, optionalAuth } from '../middleware/auth'
+import { adminOnly } from '../middleware/adminOnly'
+import { retentionDays, RETENTION_CHOICES } from '../services/mentionGhosts'
 import { suggestPeople, peopleByIds, instanceCommunityId } from '../services/mentionPeople'
 import { describeGroups, confirmThreshold, groupCards, isTeam } from '../services/mentionGroups'
 import { getPrefs, setPrefs, recipientRules, accepts, isQuietNow, quietUntil, isValidTz, type Who } from '../services/mentionPrefs'
@@ -89,7 +91,8 @@ export default async function mentionsRoutes(app: FastifyInstance) {
   // ── Mes réglages (D54-D55) ────────────────────────────────────────────────
   app.get('/prefs', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
     reply.header('Cache-Control', 'private, no-store')
-    return reply.send({ prefs: await getPrefs(request.user!.userId) })
+    // La règle de l'instance sur les fantômes (Q1) : chacun sait si un texte effacé est gardé
+    return reply.send({ prefs: await getPrefs(request.user!.userId), policy: { ghost_retention_days: await retentionDays() } })
   })
 
   app.put('/prefs', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
@@ -100,11 +103,13 @@ export default async function mentionsRoutes(app: FastifyInstance) {
     if (!minute(b.quiet_start ?? null) || !minute(b.quiet_end ?? null)) return reply.code(400).send({ error: 'Heures invalides', code: 'MENTION_PREFS_INVALID' })
     const quietOn = b.quiet_start !== null && b.quiet_start !== undefined && b.quiet_end !== null && b.quiet_end !== undefined
     if (quietOn && !isValidTz(b.quiet_tz)) return reply.code(400).send({ error: 'Fuseau invalide', code: 'MENTION_PREFS_INVALID' })
+    if (b.bursts !== undefined && typeof b.bursts !== 'boolean') return reply.code(400).send({ error: 'Choix invalide', code: 'MENTION_PREFS_INVALID' })
     const prefs = {
       who: who as Who,
       quiet_start: quietOn ? b.quiet_start as number : null,
       quiet_end: quietOn ? b.quiet_end as number : null,
       quiet_tz: quietOn ? b.quiet_tz as string : null,
+      bursts: b.bursts !== false,
     }
     await setPrefs(request.user!.userId, prefs)
     return reply.send({ prefs })
@@ -142,5 +147,35 @@ export default async function mentionsRoutes(app: FastifyInstance) {
     if (!UUID.test(userId)) return reply.code(400).send({ error: 'Personne invalide', code: 'MENTION_MUTE_INVALID' })
     await db.query(`DELETE FROM user_mention_mutes WHERE user_id = $1 AND muted_user_id = $2`, [request.user!.userId, userId])
     return reply.send({ ok: true })
+  })
+
+  // ── Réglages de l'instance (admins) : seuil des groupes (D51), texte des fantômes
+  // (Q1), heure de fin d'une pause (Q2). Mêmes clés que celles lues par le cœur.
+  app.get('/admin/settings', { preHandler: [rateLimit, adminOnly] }, async (_request, reply) => {
+    const { rows } = await db.query<{ value: string }>(`SELECT value FROM instance_settings WHERE key = 'mentions_show_quiet_until'`)
+    reply.header('Cache-Control', 'private, no-store')
+    return reply.send({ settings: {
+      group_confirm: await confirmThreshold(),
+      ghost_retention_days: await retentionDays(),
+      show_quiet_until: rows[0]?.value === 'true',
+    } })
+  })
+
+  app.put('/admin/settings', { preHandler: [rateLimit, adminOnly] }, async (request, reply) => {
+    const b = (request.body ?? {}) as Record<string, unknown>
+    const n = b.group_confirm, d = b.ghost_retention_days, q = b.show_quiet_until
+    if (!Number.isInteger(n) || (n as number) < 2 || (n as number) > 500
+      || !(RETENTION_CHOICES as readonly unknown[]).includes(d) || typeof q !== 'boolean') {
+      return reply.code(400).send({ error: 'Réglage invalide', code: 'MENTION_SETTINGS_INVALID' })
+    }
+    for (const [key, value] of [['mentions_group_confirm', String(n)], ['mentions_ghost_retention_days', String(d)], ['mentions_show_quiet_until', String(q)]]) {
+      await db.query(
+        `INSERT INTO instance_settings (key, value) VALUES ($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [key, value])
+    }
+    // Durée raccourcie ou texte plus gardé : on efface tout de suite ce qui dépasse
+    const { purgeGhosts } = await import('../services/mentionGhosts')
+    await purgeGhosts().catch(() => {})
+    return reply.send({ settings: { group_confirm: n, ghost_retention_days: d, show_quiet_until: q } })
   })
 }
