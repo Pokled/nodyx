@@ -54,6 +54,15 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   une notification la marque bien comme lue (elle restait non lue côté serveur).
 - **Administration › Mentions.** Le seuil de confirmation des groupes, le texte des mentions
   effacées et l'affichage de l'heure de fin d'une pause, chacun expliqué par un exemple.
+- **Un « ? » sous la zone de saisie du chat.** Champ vide, une petite ligne rappelle `@` (appeler
+  quelqu'un) et `/` (faire une action) : cliquer l'écrit dans le champ. Le « ? » ouvre une aide avec
+  un exemple par touche, un bouton « Essayer » et les raccourcis clavier (en panneau du bas sur
+  téléphone). Pendant la frappe, la ligne montre les raccourcis d'envoi, comme avant.
+- **Taper « / » montre une vraie liste.** Les commandes avec leur explication, au clavier (flèches,
+  Tab, Entrée, Échap), comme la liste des mentions.
+- **Une page d'aide : « Tout ce que tu peux taper ».** Toutes les mentions et commandes avec un
+  exemple, une recherche (« dé » trouve `/roll`), un filtre par touche et les raccourcis clavier. Ce
+  qui est réservé à l'équipe n'apparaît qu'à l'équipe.
 - **OctoGuard compte les vraies mentions.** La règle « Spam de mentions » ne voyait pas `@équipe`
   (à cause du « é ») et comptait un groupe pour une seule personne. Elle compte maintenant ce que
   le message fait vraiment : une personne vaut 1, un groupe le nombre de personnes qu'il prévient

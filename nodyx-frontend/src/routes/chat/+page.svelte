@@ -15,6 +15,9 @@
 	import PollCard    from '$lib/components/PollCard.svelte';
 	import LinkCards   from '$lib/components/LinkCards.svelte';
 	import MentionList from '$lib/components/MentionList.svelte';
+	import CommandList from '$lib/components/CommandList.svelte';
+	import CommandHelp from '$lib/components/CommandHelp.svelte';
+	import { slashMatches, isTeamRole, type CommandDef, type Trigger } from '$lib/commands';
 	import MentionWarnings from '$lib/components/MentionWarnings.svelte';
 	import { mentionChips } from '$lib/actions/mentionChips';
 	import { suggestMentions, applyPickedMentions, insertLabel, refOf, refsIn, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions';
@@ -238,31 +241,45 @@
 	let showMentions       = $state(false);
 
 	/**
-	 * Les quatre commandes, listées quand l'utilisateur tape « / ».
+	 * La liste du « / » : la source unique `lib/commands.ts` (la même que la bulle
+	 * « ? » et la page /help). Elle n'apparaît que sur un « / » en tête, disparaît
+	 * dès qu'une commande complète est écrite (un espace), et Échap la referme
+	 * jusqu'à la prochaine frappe.
 	 *
-	 * Elles vivaient dans le placeholder du champ, ce qui posait deux problèmes.
-	 * Le premier, mesuré : « Message dans # {{channel}} · /roll /flip /8ball
-	 * /rps » fait 54 caractères et passe à DEUX lignes dès que le champ est en
-	 * dessous de 340px de large, ce qui déborde un textarea en `rows={1}` et
-	 * fait apparaître une barre de défilement parasite. Le second : on ne lit un
-	 * placeholder qu'avant d'écrire, or on cherche une commande au moment où on
-	 * la tape.
+	 * (Elles vivaient autrefois dans le placeholder : 54 caractères, deux lignes
+	 * sous 340px de large, et on ne lit un placeholder qu'avant d'écrire, alors
+	 * qu'on cherche une commande au moment où on la tape.)
 	 */
-	const COMMANDES = [
-		{ nom: 'roll',  args: '2d6',        cle: 'chat.cmd_help_roll' },
-		{ nom: 'flip',  args: '',           cle: 'chat.cmd_help_flip' },
-		{ nom: '8ball', args: '…',          cle: 'chat.cmd_help_8ball' },
-		{ nom: 'rps',   args: '🪨 📄 ✂️',   cle: 'chat.cmd_help_rps' },
-	];
+	const isTeam = $derived(isTeamRole((data as any)?.user?.role));
+	let cmdIndex     = $state(0);
+	let cmdDismissed = $state(false);
+	const slashTyped = $derived(inputText.startsWith('/') && !/\s/.test(inputText) ? inputText.slice(1) : null);
+	const suggestions = $derived(slashTyped === null ? [] : slashMatches(slashTyped, isTeam));
+	const showCommands = $derived(suggestions.length > 0 && !cmdDismissed);
 
-	// N'apparaît que sur un « / » en tête, et disparaît dès qu'une commande
-	// complète est écrite : la liste ne doit pas gêner la frappe.
-	const suggestions = $derived.by(() => {
-		const t = inputText;
-		if (!t.startsWith('/') || t.includes(' ')) return [];
-		const q = t.slice(1).toLowerCase();
-		return COMMANDES.filter(c => c.nom.startsWith(q));
-	});
+	function pickCommand(c: CommandDef) {
+		inputText = `/${c.name} `;
+		cmdDismissed = false;
+		const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
+		el?.focus();
+		ajusterHauteur(el);
+	}
+
+	/** « Essayer » et les touches sous le champ : écrit la touche et ouvre sa liste. */
+	async function tryTrigger(k: Trigger) {
+		const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
+		if (k === '/') {
+			// Une commande s'écrit en tête : on ne touche jamais à un brouillon
+			if (inputText.trim()) { el?.focus(); return; }
+			inputText = '/';
+		} else {
+			inputText = inputText && !/\s$/.test(inputText) ? `${inputText} @` : `${inputText}@`;
+		}
+		cmdDismissed = false; cmdIndex = 0;
+		await tick();
+		if (el) { el.focus(); el.setSelectionRange(inputText.length, inputText.length); }
+		void handleInput();
+	}
 	let mentionIndex       = $state(0);
 
 	// Reply/quote
@@ -998,6 +1015,17 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
+		// Liste du « / » : flèches, Tab, Entrée, Échap. Entrée sur une commande déjà
+		// écrite en entier (« /flip ») l'envoie, au lieu de la réécrire.
+		if (showCommands) {
+			if (e.key === 'ArrowDown') { e.preventDefault(); cmdIndex = (cmdIndex + 1) % suggestions.length; return; }
+			if (e.key === 'ArrowUp')   { e.preventDefault(); cmdIndex = (cmdIndex - 1 + suggestions.length) % suggestions.length; return; }
+			if (e.key === 'Escape')    { e.preventDefault(); cmdDismissed = true; return; }
+			const exact = suggestions.some(c => c.name === slashTyped);
+			if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !exact)) {
+				e.preventDefault(); const c = suggestions[cmdIndex]; if (c) pickCommand(c); return;
+			}
+		}
 		// @mention navigation
 		if (showMentions) {
 			if (e.key === 'ArrowDown')  { e.preventDefault(); mentionIndex = Math.min(mentionIndex + 1, mentionSuggestions.length - 1); return; }
@@ -1033,6 +1061,7 @@
 
 	async function handleInput() {
 		ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'))
+		cmdDismissed = false; cmdIndex = 0;
 
 		// Typing indicator (throttled) — server + P2P fast path
 		if (s && selectedChannel) {
@@ -1812,28 +1841,12 @@
 					</div>
 				{/if}
 
-				<!-- Aide aux commandes, à l'endroit et au moment où on la cherche :
-				     au-dessus du champ, dès qu'on tape « / ». Elle ne prend aucune
-				     place le reste du temps, contrairement au placeholder de 54
-				     caractères qu'elle remplace. -->
-				{#if suggestions.length > 0}
-					<div class="mb-1 flex flex-wrap gap-1.5 px-1">
-						{#each suggestions as c}
-							<button
-								type="button"
-								onclick={() => {
-									inputText = `/${c.nom} `;
-									const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
-									el?.focus();
-									ajusterHauteur(el);
-								}}
-								class="inline-flex items-center gap-1.5 px-2 py-1 border border-[color-mix(in_srgb,var(--nx-text)_8%,transparent)] bg-[color-mix(in_srgb,var(--nx-text)_3%,transparent)] hover:bg-[color-mix(in_srgb,var(--nx-text)_7%,transparent)] hover:border-[color-mix(in_srgb,var(--nx-accent)_50%,transparent)] transition-colors text-left"
-							>
-								<span class="text-xs font-semibold text-[var(--nx-accent-soft)]">/{c.nom}</span>
-								{#if c.args}<span class="text-[10px] text-[var(--nx-text-muted)]">{c.args}</span>{/if}
-								<span class="text-[11px] text-[var(--nx-text-muted)]">{tFn(c.cle)}</span>
-							</button>
-						{/each}
+				<!-- La liste du « / », au-dessus du champ, dès qu'on tape « / » en tête -->
+				{#if showCommands}
+					<div class="relative">
+						<div class="absolute bottom-full left-0 mb-1 z-30">
+							<CommandList items={suggestions} active={cmdIndex} typed={slashTyped ?? ''} id="chat-command-list" onpick={pickCommand} />
+						</div>
 					</div>
 				{/if}
 
@@ -1851,9 +1864,9 @@
 						oninput={handleInput}
 						role="combobox"
 						aria-autocomplete="list"
-						aria-expanded={showMentions && mentionSuggestions.length > 0}
-						aria-controls="chat-mention-list"
-						aria-activedescendant={showMentions && mentionSuggestions.length > 0 ? `chat-mention-list-${mentionIndex}` : undefined}
+						aria-expanded={(showMentions && mentionSuggestions.length > 0) || showCommands}
+						aria-controls={showCommands ? 'chat-command-list' : 'chat-mention-list'}
+						aria-activedescendant={showCommands ? `chat-command-list-${cmdIndex}` : showMentions && mentionSuggestions.length > 0 ? `chat-mention-list-${mentionIndex}` : undefined}
 						disabled={isRateLimited}
 					></textarea>
 					<!-- Toolbar -->
@@ -1905,7 +1918,8 @@
 						</button>
 					</div>
 				</div>
-				<p class="text-[10px] mt-1" style="color: var(--nx-text-muted)">{tFn('chat.composer_hint')}</p>
+				<!-- Sous le champ : les touches (champ vide, D54) ou les raccourcis d'envoi, et le « ? » -->
+				<CommandHelp empty={!inputText.trim()} triggers={['@', '/']} ontry={tryTrigger} hint={tFn('chat.composer_hint')} id="chat-cmd-help" />
 			</div>
 
 			{/if}<!-- end voice/text branch -->
