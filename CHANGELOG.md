@@ -68,6 +68,10 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
 - **`/help` ouvre l'aide.** En tête de la liste du « / », sous « Aide », avant les jeux. Le choisir,
   ou taper `/help` (ou `/?`) puis Entrée, ouvre l'aide par-dessus le chat : rien n'est envoyé dans
   le salon.
+- **Des dés honnêtes.** `/roll`, `/flip`, `/8ball` et `/rps` sont maintenant tirés par le serveur
+  de la communauté, plus par le navigateur. Le résultat porte la marque « Lancé par Nodyx » :
+  impossible à imiter, un « 12 au dé » écrit à la main ne l'a pas. Chacun le lit dans sa langue,
+  et un lancer ne se modifie pas (il se supprime). Les anciens lancers restent tels quels.
 - **Une page d'aide : « Tout ce que tu peux taper ».** Toutes les mentions et commandes avec un
   exemple, une recherche (« dé » trouve `/roll`), un filtre par touche et les raccourcis clavier. Ce
   qui est réservé à l'équipe n'apparaît qu'à l'équipe.

@@ -21,6 +21,8 @@ import { shieldGate, hasLink, shieldHoldRule } from '../services/octoguard/shiel
 import { getInstanceCommunityId } from '../middleware/adminOnly'
 import { getAccess, outranks, rankOf } from '../services/permissions'
 import { sanitizeChat } from '../utils/chatSanitize'
+import { parseGame, playGame, gameFallback, esc as escapeHtml } from '../services/chatGames'
+import { resolveServerLocale } from '../i18n/serverStrings'
 
 interface JwtPayload {
   userId:   string
@@ -354,6 +356,80 @@ export function registerSocketIO(server: Server): void {
     })
 
     // ── chat:send ─────────────────────────────────────────────────────────────
+    // ── Peut-on écrire dans ce salon ? ────────────────────────────────────────
+    // Les contrôles COMMUNS à chat:send et chat:command (lot C2) : un seul endroit,
+    // pour qu'aucun des deux chemins n'en oublie un. Salon rejoint, membre (double
+    // vérification en base contre les courses après expulsion), salon système,
+    // bannissement, sourdine, bouclier anti-raid. Émet `chat:blocked` quand il refuse.
+    type PostMember = { role: string; is_system_managed: boolean; grade_id: string | null; community_id: string; account_age_days: number }
+    async function canPostHere(channelId: string): Promise<{ member: PostMember; gate: Extract<Awaited<ReturnType<typeof shieldGate>>, { allow: true }> } | null> {
+      // Contrôle d'accès : le socket doit avoir rejoint ce canal via chat:join (qui vérifie membership)
+      if (!socket.rooms.has(`channel:${channelId}`)) return null
+      const { rows: memberCheck } = await db.query<PostMember>(
+        `SELECT cm.role, c.is_system_managed, cm.grade_id, c.community_id,
+                EXTRACT(EPOCH FROM (NOW() - u.created_at)) / 86400 AS account_age_days
+         FROM channels c
+         JOIN community_members cm ON c.community_id = cm.community_id
+         JOIN users u ON u.id = cm.user_id
+         WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
+        [channelId, userId]
+      ).catch(() => ({ rows: [] as PostMember[] }))
+      if (!memberCheck.length) return null
+
+      // Channel system-managed (ex: #streamer-events auto-créé) : seuls
+      // owners/admins/moderators peuvent y écrire. Les messages système
+      // (Streamer Hub, bots) bypass ce socket handler et passent par
+      // Channel.addMessage() direct, donc rien à filtrer pour eux ici.
+      if (memberCheck[0].is_system_managed && !['owner', 'admin', 'moderator'].includes(memberCheck[0].role)) {
+        socket.emit('chat:blocked', { reason: 'channel_read_only' })
+        return null
+      }
+
+      try {
+        // Check ban before writing message
+        const { rows: banCheck } = await db.query(
+          `SELECT 1 FROM community_bans cb
+           JOIN channels ch ON ch.community_id = cb.community_id
+           WHERE cb.user_id = $1 AND ch.id = $2 LIMIT 1`,
+          [userId, channelId]
+        )
+        if (banCheck.length > 0) return null
+
+        // Sourdine : vérifiée TOUJOURS, OctoGuard allumé ou non. Une sourdine
+        // posée par l'équipe est de la modération humaine ; jusqu'au
+        // 02/11/2026 elle n'était lue que si OctoGuard tournait, donc jamais
+        // (éteint partout depuis août) : elle ne faisait rien.
+        const muteState = await isUserMuted(userId, channelId)
+        if (muteState.muted) {
+          socket.emit('chat:blocked', {
+            reason:    'muted',
+            octoguard: {
+              i18n_key:    'octoguard.mute.active',
+              expires_at:  muteState.expires_at ?? null,
+              reason_text: muteState.reason ?? null,
+              channel_id:  muteState.channel_id ?? null,
+            },
+          })
+          return null
+        }
+
+        // Bouclier anti-raid (lot 6) : AVANT OctoGuard, et même OctoGuard éteint
+        // (D21c). Compte tout neuf : lecture seule. Tout le monde sauf l'équipe :
+        // un message toutes les 10 s, et un lien attend d'être relu (à l'appelant).
+        const gate = await shieldGate(userId, 'chat', { isNew: true })
+        if (!gate.allow) {
+          socket.emit('chat:blocked', {
+            reason:    gate.code === 'SHIELD_SLOW' ? 'shield_slow' : 'shield_new_account',
+            octoguard: { i18n_key: gate.i18n_key, expires_at: gate.until, retry_after_s: gate.retry_after_s ?? null },
+          })
+          return null
+        }
+        return { member: memberCheck[0], gate }
+      } catch {
+        return null   // erreur de base : on n'écrit rien
+      }
+    }
+
     socket.on('chat:send', async (data: { channelId: string; content: string; replyToId?: string | null }) => {
       const rateLimitMs = checkRateLimit(userId, 'chat:send')
       if (rateLimitMs) {
@@ -365,29 +441,6 @@ export function registerSocketIO(server: Server): void {
       if (content.length > 20000) return  // limite avant sanitization (DoS)
       if (replyToId !== undefined && replyToId !== null && !isUuid(replyToId)) return
 
-      // Contrôle d'accès : le socket doit avoir rejoint ce canal via chat:join (qui vérifie membership)
-      // Double-check DB pour éviter les races après expulsion de la communauté
-      if (!socket.rooms.has(`channel:${channelId}`)) return
-      const { rows: memberCheck } = await db.query<{ role: string; is_system_managed: boolean; grade_id: string | null; community_id: string; account_age_days: number }>(
-        `SELECT cm.role, c.is_system_managed, cm.grade_id, c.community_id,
-                EXTRACT(EPOCH FROM (NOW() - u.created_at)) / 86400 AS account_age_days
-         FROM channels c
-         JOIN community_members cm ON c.community_id = cm.community_id
-         JOIN users u ON u.id = cm.user_id
-         WHERE c.id = $1 AND cm.user_id = $2 LIMIT 1`,
-        [channelId, userId]
-      ).catch(() => ({ rows: [] as { role: string; is_system_managed: boolean; grade_id: string | null; community_id: string; account_age_days: number }[] }))
-      if (!memberCheck.length) return
-
-      // Channel system-managed (ex: #streamer-events auto-créé) : seuls
-      // owners/admins/moderators peuvent y écrire. Les messages système
-      // (Streamer Hub, bots) bypass ce socket handler et passent par
-      // Channel.addMessage() direct, donc rien à filtrer pour eux ici.
-      if (memberCheck[0].is_system_managed && !['owner', 'admin', 'moderator'].includes(memberCheck[0].role)) {
-        socket.emit('chat:blocked', { reason: 'channel_read_only' })
-        return
-      }
-
       const sanitized = sanitize(content.trim())
       if (!sanitized || sanitized.length > 10000) return
 
@@ -397,48 +450,14 @@ export function registerSocketIO(server: Server): void {
         return
       }
 
+      const allowed = await canPostHere(channelId)
+      if (!allowed) return
+      const memberCheck = [allowed.member]
+
       try {
-        // Check ban before writing message
-        const { rows: banCheck } = await db.query(
-          `SELECT 1 FROM community_bans cb
-           JOIN channels ch ON ch.community_id = cb.community_id
-           WHERE cb.user_id = $1 AND ch.id = $2 LIMIT 1`,
-          [userId, channelId]
-        )
-        if (banCheck.length > 0) return
-
-        // Sourdine : vérifiée TOUJOURS, OctoGuard allumé ou non. Une sourdine
-        // posée par l'équipe est de la modération humaine ; jusqu'au
-        // 02/11/2026 elle n'était lue que si OctoGuard tournait, donc jamais
-        // (éteint partout depuis août) : elle ne faisait rien.
+        // Un lien pendant le bouclier attend d'être relu (D21c)
         {
-          const muteState = await isUserMuted(userId, channelId)
-          if (muteState.muted) {
-            socket.emit('chat:blocked', {
-              reason:    'muted',
-              octoguard: {
-                i18n_key:    'octoguard.mute.active',
-                expires_at:  muteState.expires_at ?? null,
-                reason_text: muteState.reason ?? null,
-                channel_id:  muteState.channel_id ?? null,
-              },
-            })
-            return
-          }
-        }
-
-        // Bouclier anti-raid (lot 6) : AVANT OctoGuard, et même OctoGuard éteint
-        // (D21c). Compte tout neuf : lecture seule. Tout le monde sauf l'équipe :
-        // un message toutes les 10 s, et un lien attend d'être relu.
-        {
-          const gate = await shieldGate(userId, 'chat', { isNew: true })
-          if (!gate.allow) {
-            socket.emit('chat:blocked', {
-              reason:    gate.code === 'SHIELD_SLOW' ? 'shield_slow' : 'shield_new_account',
-              octoguard: { i18n_key: gate.i18n_key, expires_at: gate.until, retry_after_s: gate.retry_after_s ?? null },
-            })
-            return
-          }
+          const gate = allowed.gate
           if (gate.holdLinks && hasLink(sanitized)) {
             const held = await holdContent({
               kind: 'chat', authorId: userId, channelId,
@@ -575,6 +594,65 @@ export function registerSocketIO(server: Server): void {
       }
     })
 
+    // ── chat:command : les jeux tirés par le serveur (lot C2, D56) ─────────────
+    // Le client envoie le TEXTE de la commande (« /roll 2d6 ») ; le cœur la lit,
+    // tire avec crypto.randomInt et enregistre `game`. Seul ce chemin écrit
+    // `game` : c'est ce qui rend la marque « Lancé par Nodyx » impossible à imiter.
+    // Mêmes contrôles qu'un message (canPostHere), même compteur de débit.
+    socket.on('chat:command', async (data: { channelId: string; text: string; replyToId?: string | null }) => {
+      const rateLimitMs = checkRateLimit(userId, 'chat:send')
+      if (rateLimitMs) {
+        socket.emit('chat:rate_limited', { retryAfter: rateLimitMs })
+        return
+      }
+      const { channelId, text, replyToId } = data ?? {}
+      if (!isUuid(channelId) || !isString(text) || text.length > 2000) return
+      if (replyToId !== undefined && replyToId !== null && !isUuid(replyToId)) return
+      const parsed = parseGame(text)
+      if (!parsed) return
+
+      // La question de /8ball est le texte du membre : filtre de contenu et OctoGuard
+      // comme un message (un jeu ne sert pas à contourner une règle)
+      const question = parsed.kind === '8ball' ? (parsed.input as { question: string }).question : ''
+      if (question) {
+        const qCheck = checkHtmlContent(`<p>${escapeHtml(question)}</p>`)
+        if (!qCheck.ok) { socket.emit('chat:blocked', { reason: qCheck.reason }); return }
+      }
+
+      const allowed = await canPostHere(channelId)
+      if (!allowed) return
+
+      try {
+        if (question && isOctoGuardEnabled()) {
+          const og = await runPipeline({
+            content:  `<p>${escapeHtml(question)}</p>`,
+            userCtx:  { userId, role: allowed.member.role, gradeIds: allowed.member.grade_id ? [allowed.member.grade_id] : [], accountAgeDays: Number(allowed.member.account_age_days) },
+            surface:  'chat',
+            channelId,
+          })
+          // Retenir un jeu n'a pas de sens : il est refusé, comme une modification retenue
+          if (og.blocked || og.hold) {
+            socket.emit('chat:blocked', { reason: og.reason ?? 'octoguard', octoguard: { i18n_key: og.i18n_key ?? 'octoguard.blocked', event_id: og.event_id } })
+            return
+          }
+        }
+
+        const game = playGame(parsed)
+        const { rows: who } = await db.query<{ locale: string | null }>(`SELECT locale FROM users WHERE id = $1`, [userId])
+        const locale = resolveServerLocale(who[0]?.locale, process.env.NODYX_COMMUNITY_LANGUAGE)
+        const message = await ChannelModel.addMessage({
+          channel_id:  channelId,
+          author_id:   userId,
+          content:     gameFallback(game, username, locale),
+          reply_to_id: replyToId ?? null,
+          game,
+        })
+        if (io) io.to(`channel:${channelId}`).emit('chat:message', message)
+      } catch {
+        // Erreur de base (salon supprimé…) : rien n'est écrit
+      }
+    })
+
     // ── chat:typing ───────────────────────────────────────────────────────────
     // Throttled by client — just broadcast to others in the room
     socket.on('chat:typing', (channelId: string) => {
@@ -646,6 +724,12 @@ export function registerSocketIO(server: Server): void {
         // pas de réécrire ses anciens messages.
         const target = await ChannelModel.findMessageById(messageId)
         if (!target || target.author_id !== userId) return
+        // Un tirage du serveur ne se réécrit pas : sinon la marque « Lancé par
+        // Nodyx » resterait sur un texte inventé. Il se supprime.
+        if (target.is_game) {
+          socket.emit('chat:blocked', { reason: 'game_locked', code: 'GAME_MESSAGE_LOCKED' })
+          return
+        }
         const muteState = await isUserMuted(userId, target.channel_id)
         if (muteState.muted) {
           socket.emit('chat:blocked', { reason: 'muted', octoguard: { i18n_key: 'octoguard.mute.active', expires_at: muteState.expires_at ?? null } })
