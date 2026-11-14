@@ -219,6 +219,49 @@
 	let mentionSuggestions = $state<MentionSuggestion[]>([]);
 	// Mentions choisies dans la liste : deviennent des marques liées à la personne à l'envoi (D49)
 	let pickedMentions     = $state<{ ref: string; label: string }[]>([]);
+
+	// ── Brouillon par salon ─────────────────────────────────────────────────────
+	// Ce qu'on écrit est gardé pour CE salon, le temps de l'onglet (sessionStorage) :
+	// quitter le chat par un lien puis revenir, ou changer de salon et revenir, ne
+	// fait plus perdre son message. Les mentions choisies suivent (liées à la
+	// personne). Effacé à l'envoi. Stockage indisponible (navigation privée
+	// stricte) : rien n'est gardé, rien ne casse.
+	const DRAFT_KEY = (id: string) => `nodyx:chat-draft:${id}`;
+	type Draft = { text: string; picked: { ref: string; label: string }[] };
+	function readDraft(id: string): Draft | null {
+		try {
+			const raw = sessionStorage.getItem(DRAFT_KEY(id));
+			if (!raw) return null;
+			const d = JSON.parse(raw) as Draft;
+			return typeof d?.text === 'string' ? { text: d.text.slice(0, 2000), picked: Array.isArray(d.picked) ? d.picked.slice(0, 20) : [] } : null;
+		} catch { return null; }
+	}
+	function writeDraft(id: string, text: string, picked: Draft['picked']) {
+		try {
+			if (!text.trim()) sessionStorage.removeItem(DRAFT_KEY(id));
+			else sessionStorage.setItem(DRAFT_KEY(id), JSON.stringify({ text: text.slice(0, 2000), picked }));
+		} catch { /* stockage plein ou interdit : tant pis, rien ne casse */ }
+	}
+	let draftChannel: string | null = null;
+	// Le salon change : on range le brouillon du précédent, on reprend celui du nouveau
+	$effect(() => {
+		const id = selectedChannel?.id ?? null;
+		untrack(() => {
+			if (id === draftChannel) return;
+			if (draftChannel) writeDraft(draftChannel, inputText, pickedMentions);
+			draftChannel = id;
+			const d = id ? readDraft(id) : null;
+			inputText = d?.text ?? '';
+			pickedMentions = d?.picked ?? [];
+			void tick().then(() => ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input')));
+		});
+	});
+	// Chaque frappe : le brouillon du salon courant suit
+	$effect(() => {
+		const text = inputText, picked = pickedMentions;
+		const id = untrack(() => draftChannel);
+		if (id) writeDraft(id, text, picked);
+	});
 	let mentionSeq = 0;
 	// D51 : un grand groupe attend « Envoyer quand même » (le cœur refait ses contrôles)
 	let mentionGateBlocked = $state(false);

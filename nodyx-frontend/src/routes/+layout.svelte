@@ -47,6 +47,7 @@
 	import { activeCommunityNameStore, panelCollapsedStore, membersCollapsedStore } from '$lib/communityStore';
 	import { playMention, playDm } from '$lib/sounds';
 	import ReportDialog from '$lib/components/ReportDialog.svelte';
+	import HelpOverlay from '$lib/components/HelpOverlay.svelte';
 	const tFn = $derived($t)
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
@@ -1282,6 +1283,9 @@
 	token={data.token ?? null}
 	onClose={() => paletteOpen = false}
 />
+
+<!-- ── Aide « Tout ce que tu peux taper », par-dessus la page (lib/helpOverlay.ts) ── -->
+<HelpOverlay />
 
 <!-- ── Screen share hover preview ────────────────────────────────────────── -->
 {#if screenPreview}
