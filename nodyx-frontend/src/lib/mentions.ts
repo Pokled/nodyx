@@ -7,8 +7,18 @@ import { apiFetch } from '$lib/api'
 
 export interface MentionSuggestion {
 	id: string; username: string; display_name: string | null; avatar: string | null
-	reason: 'here' | 'frequent' | 'member'; last_at?: string; count?: number
+	reason: 'here' | 'frequent' | 'member' | 'group'; last_at?: string; count?: number
+	/** Groupe (reason = 'group') : « ici », « equipe », « moderation », « tous », « grade:<id> » */
+	key?: string
 }
+
+/** Clés de traduction du nom affiché des groupes intégrés (relu dans la langue du lecteur). */
+export const GROUP_LABEL_KEYS: Record<string, string> = {
+	ici: 'mention.g_ici', equipe: 'mention.g_equipe', moderation: 'mention.g_moderation', tous: 'mention.g_tous',
+}
+
+/** La référence d'une proposition : une personne « u:<id> » ou un groupe « g:<clé> ». */
+export const refOf = (s: MentionSuggestion) => s.reason === 'group' && s.key ? 'g:' + s.key : 'u:' + s.id
 export interface MentionPerson {
 	id: string; username?: string; display_name?: string | null; avatar?: string | null
 	grade?: { name: string; color: string | null } | null; gone?: true
@@ -21,11 +31,42 @@ export function fold(s: string): string {
 
 export const labelOf = (p: { username?: string; display_name?: string | null }) => p.display_name || p.username || ''
 
+/** Le nom à insérer : pour un groupe intégré, traduit dans la langue de celui qui écrit. */
+export function insertLabel(s: MentionSuggestion, tFn: (k: string) => string): string {
+	if (s.reason === 'group' && s.key && GROUP_LABEL_KEYS[s.key]) return tFn(GROUP_LABEL_KEYS[s.key])
+	return labelOf(s)
+}
+
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-/** La marque enregistrée : liée à l'identifiant, le texte n'est qu'un repli lisible. */
-export function mentionHtml(id: string, label: string): string {
-	return `<span data-mention="u:${esc(id)}">@${esc(label)}</span>`
+/** La marque enregistrée : liée à la personne ou au groupe, le texte n'est qu'un repli lisible. */
+export function mentionHtml(ref: string, label: string): string {
+	const r = ref.startsWith('u:') || ref.startsWith('g:') ? ref : 'u:' + ref
+	return `<span data-mention="${esc(r)}">@${esc(label)}</span>`
+}
+
+/** Les références mentionnées dans un contenu HTML (marques), sans doublon. */
+export function refsIn(html: string): string[] {
+	const out: string[] = []
+	for (const m of (html ?? '').matchAll(/data-mention="([ug]:[^"]{1,80})"/g)) if (!out.includes(m[1])) out.push(m[1])
+	return out.slice(0, 25)
+}
+
+export interface MentionPreview {
+	people: { id: string; state: 'ok' | 'not_member' }[]
+	groups: { key: string; count: number; label: string | null; forbidden: boolean; needs_confirm: boolean }[]
+	threshold: number
+}
+
+/** D51 : ce que les mentions vont faire, AVANT l'envoi (le cœur refait ses contrôles à l'envoi). */
+export async function previewMentions(refs: string[], token: string | null): Promise<MentionPreview | null> {
+	const people = refs.filter(r => r.startsWith('u:')).map(r => r.slice(2))
+	const groups = refs.filter(r => r.startsWith('g:')).map(r => r.slice(2))
+	if (!people.length && !groups.length) return null
+	try {
+		const r = await apiFetch(fetch, '/mentions/preview', { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: JSON.stringify({ people, groups }) })
+		return r.ok ? await r.json() : null
+	} catch { return null }
 }
 
 /** Le mot « @… » juste avant le curseur, s'il y en a un (début de ligne ou après un espace). */
@@ -36,7 +77,7 @@ export const MENTION_TRIGGER = /(?:^|[\s(])@([\p{L}\p{N}_.\-]{0,30})$/u
  * marques liées à la personne à l'envoi. Une mention effacée ou retapée à la main reste
  * du texte (le cœur la comprend encore comme « @pseudo »). Un passage par mention.
  */
-export function applyPickedMentions(text: string, picked: { id: string; label: string }[]): string {
+export function applyPickedMentions(text: string, picked: { ref: string; label: string }[]): string {
 	let out = text
 	for (const p of picked) {
 		const needle = '@' + p.label
@@ -44,7 +85,7 @@ export function applyPickedMentions(text: string, picked: { id: string; label: s
 		if (i < 0) continue
 		const after = out[i + needle.length]
 		if (after && /[\p{L}\p{N}_]/u.test(after)) continue   // « @Léa » dans « @Léanne » : pas elle
-		out = out.slice(0, i) + mentionHtml(p.id, p.label) + out.slice(i + needle.length)
+		out = out.slice(0, i) + mentionHtml(p.ref, p.label) + out.slice(i + needle.length)
 	}
 	return out
 }
