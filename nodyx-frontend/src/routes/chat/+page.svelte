@@ -17,7 +17,8 @@
 	import MentionList from '$lib/components/MentionList.svelte';
 	import CommandList from '$lib/components/CommandList.svelte';
 	import CommandHelp from '$lib/components/CommandHelp.svelte';
-	import { slashMatches, isTeamRole, type CommandDef, type Trigger } from '$lib/commands';
+	import { slashMatches, exactSlash, isTeamRole, type CommandDef, type Trigger } from '$lib/commands';
+	import { openHelpOverlay } from '$lib/helpOverlay';
 	import MentionWarnings from '$lib/components/MentionWarnings.svelte';
 	import { mentionChips } from '$lib/actions/mentionChips';
 	import { suggestMentions, applyPickedMentions, insertLabel, refOf, refsIn, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions';
@@ -300,7 +301,15 @@
 	const suggestions = $derived(slashTyped === null ? [] : slashMatches(slashTyped, isTeam));
 	const showCommands = $derived(suggestions.length > 0 && !cmdDismissed);
 
+	/** /help ou /? : ouvre l'aide par-dessus, rien n'est envoyé, le champ se vide. */
+	function openHelpFromCommand() {
+		inputText = '';
+		cmdDismissed = false;
+		openHelpOverlay(undefined, document.querySelector<HTMLTextAreaElement>('textarea#chat-input'));
+	}
+
 	function pickCommand(c: CommandDef) {
+		if (c.local === 'help') { openHelpFromCommand(); return; }
 		inputText = `/${c.name} `;
 		cmdDismissed = false;
 		const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
@@ -993,6 +1002,8 @@
 	}
 
 	async function sendMessage(force = false, mentionsConfirmed = false) {
+		// Une commande locale (/help) agit dans la page : elle ne part jamais dans le salon
+		if (exactSlash(inputText)?.local === 'help') { openHelpFromCommand(); return; }
 		if (!s || !selectedChannel || !inputText.trim()) return;
 		// D51 : un grand groupe demande une confirmation, donnée par le panneau d'avertissement
 		if (mentionGateBlocked && !mentionsConfirmed) return;
@@ -1064,7 +1075,7 @@
 			if (e.key === 'ArrowDown') { e.preventDefault(); cmdIndex = (cmdIndex + 1) % suggestions.length; return; }
 			if (e.key === 'ArrowUp')   { e.preventDefault(); cmdIndex = (cmdIndex - 1 + suggestions.length) % suggestions.length; return; }
 			if (e.key === 'Escape')    { e.preventDefault(); cmdDismissed = true; return; }
-			const exact = suggestions.some(c => c.name === slashTyped);
+			const exact = !!exactSlash(inputText);
 			if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !exact)) {
 				e.preventDefault(); const c = suggestions[cmdIndex]; if (c) pickCommand(c); return;
 			}

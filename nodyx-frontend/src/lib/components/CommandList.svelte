@@ -3,7 +3,7 @@
 	// même allure que celle des mentions. Elle ne gère ni le clavier ni la position :
 	// c'est le champ qui la pilote (flèches, Entrée, Tab, Échap).
 	import { t } from '$lib/i18n'
-	import { argsOf, type CommandDef } from '$lib/commands'
+	import { argsOf, fold, type CommandDef } from '$lib/commands'
 	import { openHelpOverlay } from '$lib/helpOverlay'
 
 	let { items, active = 0, typed = '', onpick, id = 'nx-command-list' }: {
@@ -14,19 +14,25 @@
 		id?: string
 	} = $props()
 
-	const GROUP_KEYS: Record<CommandDef['group'], string> = { call: 'cmd.group_call', play: 'cmd.group_play' }
+	/** Le nom qui correspond à ce qui est tapé (« /? » montre « /? », pas « /help »). */
+	const shownName = (c: CommandDef) => [c.name, ...(c.aliases ?? [])].find(n => fold(n).startsWith(fold(typed))) ?? c.name
+
+	const GROUP_KEYS: Record<CommandDef['group'], string> = { help: 'cmd.group_help', call: 'cmd.group_call', play: 'cmd.group_play' }
 </script>
 
 <div class="cl" role="listbox" {id} aria-label={$t('cmd.list_aria')}>
 	{#each items as c, i (c.id)}
+		{@const n = shownName(c)}
 		{#if i === 0 || items[i - 1].group !== c.group}<div class="cl-h" role="presentation">{$t(GROUP_KEYS[c.group])}</div>{/if}
 		<button type="button" class="cl-o" class:on={i === active} role="option" id="{id}-{i}" aria-selected={i === active}
 			onmousedown={(e) => { e.preventDefault(); onpick(c) }}>
-			<span class="cl-ico" aria-hidden="true">
+			<span class="cl-ico" class:cl-help={c.local === 'help'} aria-hidden="true">
+				{#if c.local === 'help'}?{:else}
 				<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/><circle cx="12" cy="12" r="1"/></svg>
+				{/if}
 			</span>
 			<span class="cl-t">
-				<span class="cl-n"><code>/{#if typed}<mark>{c.name.slice(0, typed.length)}</mark>{/if}{c.name.slice(typed.length)}</code>{#if argsOf(c, $t)}<span class="cl-a">{argsOf(c, $t)}</span>{/if}</span>
+				<span class="cl-n"><code>/{#if typed}<mark>{n.slice(0, typed.length)}</mark>{/if}{n.slice(typed.length)}</code>{#if argsOf(c, $t)}<span class="cl-a">{argsOf(c, $t)}</span>{/if}</span>
 				<span class="cl-w">{$t(c.descKey)}</span>
 			</span>
 		</button>
@@ -45,6 +51,7 @@
 	.cl-o { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; border-radius: 8px; padding: 6px 8px; cursor: pointer; color: inherit; }
 	.cl-o.on, .cl-o:hover { background: color-mix(in srgb, var(--nx-header-accent) 14%, transparent); }
 	.cl-ico { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; background: color-mix(in srgb, var(--nx-text) 7%, transparent); color: var(--nx-text-muted); }
+	.cl-help { font-weight: 800; font-size: 14px; background: color-mix(in srgb, var(--nx-header-accent) 18%, transparent); color: color-mix(in srgb, var(--nx-header-accent) 72%, var(--nx-text)); }
 	.cl-ico svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 	.cl-t { display: flex; flex-direction: column; min-width: 0; }
 	.cl-n { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

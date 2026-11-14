@@ -65,6 +65,9 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   perdre (il s'efface à l'envoi).
 - **Taper « / » montre une vraie liste.** Les commandes avec leur explication, au clavier (flèches,
   Tab, Entrée, Échap), comme la liste des mentions.
+- **`/help` ouvre l'aide.** En tête de la liste du « / », sous « Aide », avant les jeux. Le choisir,
+  ou taper `/help` (ou `/?`) puis Entrée, ouvre l'aide par-dessus le chat : rien n'est envoyé dans
+  le salon.
 - **Une page d'aide : « Tout ce que tu peux taper ».** Toutes les mentions et commandes avec un
   exemple, une recherche (« dé » trouve `/roll`), un filtre par touche et les raccourcis clavier. Ce
   qui est réservé à l'équipe n'apparaît qu'à l'équipe.
