@@ -14,6 +14,8 @@
 	let quietOn = $state(false)
 	let quietStart = $state(22 * 60)
 	let quietEnd = $state(8 * 60)
+	let bursts = $state(true)
+	let retention = $state(0)
 	let mutes = $state<Muted[]>([])
 	let loaded = $state(false)
 	let saved = $state(false)
@@ -29,6 +31,8 @@
 				apiFetch(fetch, '/mentions/mutes', { headers: auth() }).then(r => r.json()),
 			])
 			who = p.prefs?.who ?? 'all'
+			bursts = p.prefs?.bursts !== false
+			retention = Number(p.policy?.ghost_retention_days) || 0
 			if (p.prefs?.quiet_start !== null && p.prefs?.quiet_start !== undefined) {
 				quietOn = true; quietStart = p.prefs.quiet_start; quietEnd = p.prefs.quiet_end
 			}
@@ -42,7 +46,7 @@
 		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 		const r = await apiFetch(fetch, '/mentions/prefs', {
 			method: 'PUT', headers: auth(),
-			body: JSON.stringify({ who, quiet_start: quietOn ? quietStart : null, quiet_end: quietOn ? quietEnd : null, quiet_tz: quietOn ? tz : null }),
+			body: JSON.stringify({ who, quiet_start: quietOn ? quietStart : null, quiet_end: quietOn ? quietEnd : null, quiet_tz: quietOn ? tz : null, bursts }),
 		}).catch(() => null)
 		if (!r?.ok) { error = $t('mention.settings_error'); return }
 		saved = true
@@ -97,6 +101,14 @@
 	</div>
 
 	<div class="ms-row">
+		<h4>{$t('mention.settings_bursts')}</h4>
+		<label class="ms-radio">
+			<input type="checkbox" bind:checked={bursts} onchange={() => void save()} />
+			<span>{$t('mention.settings_bursts_label')}<small>{$t('mention.settings_bursts_desc')}</small></span>
+		</label>
+	</div>
+
+	<div class="ms-row">
 		<h4>{$t('mention.settings_mutes')}</h4>
 		<p class="ms-sd">{$t('mention.settings_mutes_desc')}</p>
 		{#if mutes.length}
@@ -114,6 +126,9 @@
 		{/if}
 	</div>
 
+	<p class="ms-policy">
+		{retention > 0 ? $t('mention.settings_policy_kept', { days: retention }) : $t('mention.settings_policy_not_kept')}
+	</p>
 	<p class="ms-team">
 		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
 		{$t('mention.settings_team_note')}
@@ -150,5 +165,6 @@
 	.ms-empty { margin: 0; font-size: 13px; color: var(--nx-text-faint); }
 	.ms-team { display: flex; gap: 7px; align-items: center; font-size: 12px; color: var(--nx-text-muted); margin: 6px 0 0; }
 	.ms-team svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+	.ms-policy { margin: 4px 0 0; font-size: 12px; color: var(--nx-text-muted); background: color-mix(in srgb, var(--nx-text) 4%, transparent); border-radius: 8px; padding: 8px 10px; }
 	.ms-error { margin: 8px 0 0; font-size: 12.5px; color: var(--nx-bad); }
 </style>

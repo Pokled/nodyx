@@ -326,6 +326,11 @@ const start = async () => {
       pingTimeout:  4000,
     })
     setIO(io)
+    // Fantômes des mentions (D53) : textes gardés effacés au bout de la durée choisie
+    // par l'admin, faits effacés au bout de six mois. Au démarrage puis toutes les 6 h.
+    const purgeMentionGhosts = () => { void import('./services/mentionGhosts').then(m => m.purgeGhosts()).catch(() => {}) }
+    purgeMentionGhosts()
+    setInterval(purgeMentionGhosts, 6 * 3600 * 1000).unref()
     registerSocketIO(io)
     registerOverlayNamespace(io)
     console.log('⚡ Socket.IO prêt')

@@ -70,6 +70,29 @@ export async function notifyMentions(opts: {
       : {}
     if (group) meta.group = group
     if (quiet) meta.quiet = true
+    // Rafale (D55) : déjà une mention non lue du même auteur, au même endroit, depuis moins
+    // de 10 minutes → on la COMPTE au lieu d'en créer une autre ; ni son ni téléphone.
+    if (!group && rule?.prefs.bursts !== false) {
+      const same = where.kind === 'chat' ? `meta->>'channel_id' = $3` : `thread_id = $3::uuid`
+      const { rows: prev } = await db.query<{ id: string }>(
+        `SELECT id FROM notifications
+         WHERE user_id = $1 AND actor_id = $2 AND type = 'mention' AND is_read = false
+           AND created_at > NOW() - INTERVAL '10 minutes' AND ${same} AND COALESCE(meta->>'ghost', '') <> 'true'
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId, actorId, where.kind === 'chat' ? where.channelId : where.threadId]).catch(() => ({ rows: [] as { id: string }[] }))
+      if (prev[0]) {
+        // La rafale garde l'identifiant de SON PREMIER message : effacer un message suivant
+        // ne la transforme pas en fantôme (mentionGhosts lui donne sa propre notification)
+        await db.query(
+          `UPDATE notifications SET meta = COALESCE(meta, '{}'::jsonb)
+             || jsonb_build_object('count', COALESCE((meta->>'count')::int, 1) + 1, 'last_at', NOW())
+           WHERE id = $1`,
+          [prev[0].id]).catch(() => {})
+        if (io) io.to(`user:${userId}`).emit('notification:new', { unreadCount: await NotificationModel.getUnreadCount(userId).catch(() => 0) })
+        sent++
+        continue
+      }
+    }
     try {
       await NotificationModel.create({
         user_id: userId, type: 'mention', actor_id: actorId,

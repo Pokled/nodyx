@@ -35,7 +35,12 @@ export function toPlainText(html: string | null | undefined): string {
  * Retrouve la cible d'un signalement. null si elle n'existe pas (ou plus) :
  * on ne signale pas un identifiant inventé.
  */
-export async function resolveReportTarget(type: ReportTargetType, id: string): Promise<ReportTarget | null> {
+/**
+ * La cible d'un signalement. `reporterId` : un message ou une réponse EFFACÉS restent
+ * signalables par une personne qu'ils mentionnaient (fantôme, D53) ; l'équipe reçoit le
+ * texte seulement si l'instance a choisi de le garder, sinon le seul fait.
+ */
+export async function resolveReportTarget(type: ReportTargetType, id: string, opts: { reporterId?: string } = {}): Promise<ReportTarget | null> {
   switch (type) {
     case 'post': {
       const { rows } = await db.query<{ author_id: string; content: string; title: string; thread_ref: string; cat_ref: string; community_id: string }>(
@@ -44,7 +49,7 @@ export async function resolveReportTarget(type: ReportTargetType, id: string): P
          FROM posts p JOIN threads t ON t.id = p.thread_id JOIN categories c ON c.id = t.category_id
          WHERE p.id = $1`, [id])
       const r = rows[0]
-      if (!r) return null
+      if (!r) return ghostTarget(id, opts.reporterId)
       return { authorId: r.author_id, communityId: r.community_id, snapshot: toPlainText(r.content), label: r.title, link: `/forum/${r.cat_ref}/${r.thread_ref}#post-${id}` }
     }
     case 'thread': {
@@ -64,7 +69,7 @@ export async function resolveReportTarget(type: ReportTargetType, id: string): P
          FROM channel_messages m JOIN channels ch ON ch.id = m.channel_id
          WHERE m.id = $1`, [id])
       const r = rows[0]
-      if (!r || r.is_deleted) return null
+      if (!r || r.is_deleted) return ghostTarget(id, opts.reporterId)
       return { authorId: r.author_id, communityId: r.community_id, snapshot: toPlainText(r.content), label: `#${r.name}`, link: `/chat?channel=${r.channel_id}` }
     }
     case 'user': {
@@ -75,4 +80,25 @@ export async function resolveReportTarget(type: ReportTargetType, id: string): P
       return { authorId: r.id, communityId: null, snapshot: toPlainText(r.bio), label: r.username, link: `/users/${encodeURIComponent(r.username)}` }
     }
   }
+}
+
+/** Un message effacé « fantôme », signalé par une personne qu'il mentionnait. */
+async function ghostTarget(id: string, reporterId: string | undefined): Promise<ReportTarget | null> {
+  if (!reporterId) return null
+  const { ghostFor } = await import('./mentionGhosts')
+  const g = await ghostFor(id, reporterId)
+  if (!g || !g.author_id) return null
+  if (g.source === 'chat' && g.channel_id) {
+    const { rows } = await db.query<{ name: string; community_id: string }>(`SELECT name, community_id FROM channels WHERE id = $1`, [g.channel_id])
+    if (!rows[0]) return null
+    return { authorId: g.author_id, communityId: rows[0].community_id, snapshot: g.content ?? '', label: `#${rows[0].name}`, link: `/chat?channel=${g.channel_id}` }
+  }
+  if (g.thread_id) {
+    const { rows } = await db.query<{ title: string; thread_ref: string; cat_ref: string; community_id: string }>(
+      `SELECT t.title, COALESCE(t.slug, t.id::text) AS thread_ref, COALESCE(c.slug, c.id::text) AS cat_ref, c.community_id
+       FROM threads t JOIN categories c ON c.id = t.category_id WHERE t.id = $1`, [g.thread_id])
+    if (!rows[0]) return null
+    return { authorId: g.author_id, communityId: rows[0].community_id, snapshot: g.content ?? '', label: rows[0].title, link: `/forum/${rows[0].cat_ref}/${rows[0].thread_ref}` }
+  }
+  return null
 }

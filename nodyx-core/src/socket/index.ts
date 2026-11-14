@@ -10,6 +10,7 @@ import sanitizeHtml from 'sanitize-html'
 import { db, redis } from '../config/database'
 import * as ChannelModel from '../models/channel'
 import { notifyMentions } from '../services/mentionNotify'
+import { recordGhost } from '../services/mentionGhosts'
 import { io } from './io'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
@@ -708,8 +709,8 @@ export function registerSocketIO(server: Server): void {
       try {
         // Le message, sa communauté (celle de SON canal, pas n'importe laquelle)
         // et son auteur : la permission et le rang se vérifient là.
-        const { rows: msgRows } = await db.query<{ community_id: string; author_id: string }>(
-          `SELECT c.community_id, m.author_id
+        const { rows: msgRows } = await db.query<{ community_id: string; author_id: string; content: string; created_at: string; channel_id: string }>(
+          `SELECT c.community_id, m.author_id, m.content, m.created_at, m.channel_id
            FROM channel_messages m JOIN channels c ON c.id = m.channel_id
            WHERE m.id = $1`,
           [messageId]
@@ -730,6 +731,13 @@ export function registerSocketIO(server: Server): void {
         }
         const { ok, channelId } = await ChannelModel.deleteMessage(messageId, userId, byModerator)
         if (!ok || !channelId) return
+
+        // Fantôme (D53) : l'AUTEUR efface lui-même, dans les 10 minutes, un message qui
+        // mentionnait quelqu'un (le texte a été lu avant l'effacement)
+        if (msgRows[0].author_id === userId) {
+          void recordGhost({ source: 'chat', messageId, authorId: userId, communityId: msgRows[0].community_id,
+            html: msgRows[0].content, createdAt: msgRows[0].created_at, channelId: msgRows[0].channel_id }).catch(() => false)
+        }
 
         if (io) {
           io.to(`channel:${channelId}`).emit('chat:message_deleted', { messageId })

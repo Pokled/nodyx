@@ -15,6 +15,7 @@ import * as NotificationModel from '../models/notification'
 import { awardPoints, REPUTATION } from '../models/reputation'
 import { sanitize } from '../utils/sanitize'
 import { notifyMentions } from '../services/mentionNotify'
+import { recordGhost } from '../services/mentionGhosts'
 import { db, redis } from '../config/database'
 import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
@@ -561,6 +562,17 @@ app.get('/threads', {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
 
+    // Fantôme (D53) : l'auteur efface lui-même, dans les 10 minutes, une réponse qui
+    // mentionnait quelqu'un. AVANT l'effacement : ses notifications partiraient avec elle.
+    if (isAuthor) {
+      const { rows: g } = await db.query<{ content: string; created_at: string; community_id: string }>(
+        `SELECT p.content, p.created_at, c.community_id FROM posts p
+         JOIN threads t ON t.id = p.thread_id JOIN categories c ON c.id = t.category_id WHERE p.id = $1`, [id])
+      if (g[0]) {
+        await recordGhost({ source: 'forum', messageId: id, authorId: userId, communityId: g[0].community_id,
+          html: g[0].content, createdAt: g[0].created_at, threadId: existing.thread_id }).catch(() => false)
+      }
+    }
     await PostModel.removeById(id)
     // Réputation : suppression d'une réponse = -2 pour son auteur (anti-farming)
     await awardPoints(existing.author_id, -REPUTATION.REPLY)

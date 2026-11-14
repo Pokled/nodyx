@@ -6,8 +6,8 @@
 import { db } from '../config/database'
 
 export type Who = 'all' | 'following' | 'team'
-export interface MentionPrefs { who: Who; quiet_start: number | null; quiet_end: number | null; quiet_tz: string | null }
-export const DEFAULT_PREFS: MentionPrefs = { who: 'all', quiet_start: null, quiet_end: null, quiet_tz: null }
+export interface MentionPrefs { who: Who; quiet_start: number | null; quiet_end: number | null; quiet_tz: string | null; bursts: boolean }
+export const DEFAULT_PREFS: MentionPrefs = { who: 'all', quiet_start: null, quiet_end: null, quiet_tz: null, bursts: true }
 
 export function isValidTz(tz: unknown): tz is string {
   if (typeof tz !== 'string' || tz.length > 64) return false
@@ -36,17 +36,17 @@ export function quietUntil(p: MentionPrefs): string | null {
 
 export async function getPrefs(userId: string): Promise<MentionPrefs> {
   const { rows } = await db.query<MentionPrefs>(
-    `SELECT who, quiet_start, quiet_end, quiet_tz FROM user_mention_prefs WHERE user_id = $1`, [userId])
+    `SELECT who, quiet_start, quiet_end, quiet_tz, bursts FROM user_mention_prefs WHERE user_id = $1`, [userId])
   return rows[0] ?? { ...DEFAULT_PREFS }
 }
 
 export async function setPrefs(userId: string, p: MentionPrefs): Promise<void> {
   await db.query(
-    `INSERT INTO user_mention_prefs (user_id, who, quiet_start, quiet_end, quiet_tz, updated_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
+    `INSERT INTO user_mention_prefs (user_id, who, quiet_start, quiet_end, quiet_tz, bursts, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW())
      ON CONFLICT (user_id) DO UPDATE SET who = EXCLUDED.who, quiet_start = EXCLUDED.quiet_start,
-       quiet_end = EXCLUDED.quiet_end, quiet_tz = EXCLUDED.quiet_tz, updated_at = NOW()`,
-    [userId, p.who, p.quiet_start, p.quiet_end, p.quiet_tz])
+       quiet_end = EXCLUDED.quiet_end, quiet_tz = EXCLUDED.quiet_tz, bursts = EXCLUDED.bursts, updated_at = NOW()`,
+    [userId, p.who, p.quiet_start, p.quiet_end, p.quiet_tz, p.bursts])
 }
 
 /** Ce que chaque destinataire accepte de cet auteur, en trois requêtes pour tous. */
@@ -54,11 +54,11 @@ export async function recipientRules(recipients: string[], actorId: string): Pro
   const out = new Map<string, { prefs: MentionPrefs; muted: boolean; follows: boolean }>()
   if (!recipients.length) return out
   const [prefs, mutes, follows] = await Promise.all([
-    db.query<MentionPrefs & { user_id: string }>(`SELECT user_id, who, quiet_start, quiet_end, quiet_tz FROM user_mention_prefs WHERE user_id = ANY($1::uuid[])`, [recipients]),
+    db.query<MentionPrefs & { user_id: string }>(`SELECT user_id, who, quiet_start, quiet_end, quiet_tz, bursts FROM user_mention_prefs WHERE user_id = ANY($1::uuid[])`, [recipients]),
     db.query<{ user_id: string }>(`SELECT user_id FROM user_mention_mutes WHERE user_id = ANY($1::uuid[]) AND muted_user_id = $2`, [recipients, actorId]),
     db.query<{ follower_id: string }>(`SELECT follower_id FROM follows WHERE follower_id = ANY($1::uuid[]) AND following_id = $2`, [recipients, actorId]),
   ])
-  const p = new Map(prefs.rows.map(r => [r.user_id, { who: r.who, quiet_start: r.quiet_start, quiet_end: r.quiet_end, quiet_tz: r.quiet_tz }]))
+  const p = new Map(prefs.rows.map(r => [r.user_id, { who: r.who, quiet_start: r.quiet_start, quiet_end: r.quiet_end, quiet_tz: r.quiet_tz, bursts: r.bursts !== false }]))
   const m = new Set(mutes.rows.map(r => r.user_id))
   const f = new Set(follows.rows.map(r => r.follower_id))
   for (const id of recipients) out.set(id, { prefs: p.get(id) ?? { ...DEFAULT_PREFS }, muted: m.has(id), follows: f.has(id) })
