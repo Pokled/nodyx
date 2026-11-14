@@ -15,9 +15,13 @@
 	} = $props()
 
 	/** Le nom qui correspond à ce qui est tapé (« /? » montre « /? », pas « /help »). */
-	const shownName = (c: CommandDef) => [c.name, ...(c.aliases ?? [])].find(n => fold(n).startsWith(fold(typed))) ?? c.name
+	// Le nom dans la langue de la personne d'abord (« /event » en anglais, « /événement » en français)
+	const shownName = (c: CommandDef) => {
+		const local = c.nameKey ? $t(c.nameKey) : null
+		return [local, c.name, ...(c.aliases ?? [])].find(n => n && fold(n).startsWith(fold(typed))) ?? local ?? c.name
+	}
 
-	const GROUP_KEYS: Record<CommandDef['group'], string> = { help: 'cmd.group_help', call: 'cmd.group_call', show: 'cmd.group_show', play: 'cmd.group_play', bang: 'cmd.tile_bang' }
+	const GROUP_KEYS: Record<CommandDef['group'], string> = { help: 'cmd.group_help', create: 'cmd.group_create', call: 'cmd.group_call', show: 'cmd.group_show', play: 'cmd.group_play', bang: 'cmd.tile_bang' }
 </script>
 
 <div class="cl" role="listbox" {id} aria-label={$t('cmd.list_aria')}>

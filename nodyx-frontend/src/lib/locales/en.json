@@ -7015,5 +7015,21 @@
   "cmd.pill_twitch_mods": "Twitch mods",
   "cmd.pill_restricted": "some roles",
   "cmd.kw_bang": "command commands exclamation bot message community",
-  "cmd.kw_bang_twitch": "twitch stream live chat command commands"
+  "cmd.kw_bang_twitch": "twitch stream live chat command commands",
+  "cmd.event_cmd_name": "event",
+  "cmd.arg_event_cmd": "title date",
+  "cmd.event_cmd": "Opens a new event with its title and date already filled in. Nothing is published without you.",
+  "cmd.event_cmd_ex": "/event Pizza Friday 8pm",
+  "cmd.kw_event_cmd": "event party calendar date create meetup outing",
+  "cmd.group_create": "Create",
+  "cmd.event_preview": "Create the event “{{title}}”",
+  "cmd.event_untitled": "untitled",
+  "cmd.event_at": "at {{time}}",
+  "cmd.event_note": "Nothing is published: the form opens already filled in, you check it and add the place.",
+  "cmd.event_no_date": "No date understood: you will pick it in the form.",
+  "cmd.event_no_time": "No time understood: you will pick it in the form.",
+  "cmd.event_hint": "Type a title and a date, for example: Pizza Friday 8pm.",
+  "cmd.event_open": "Open the form",
+  "cmd.event_cancel": "Cancel",
+  "cmd.event_aria": "What Nodyx understood"
 }

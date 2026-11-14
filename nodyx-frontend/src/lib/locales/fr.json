@@ -7015,5 +7015,21 @@
   "cmd.pill_twitch_mods": "modos Twitch",
   "cmd.pill_restricted": "certains rôles",
   "cmd.kw_bang": "commande commandes exclamation bot message communaute",
-  "cmd.kw_bang_twitch": "twitch stream live chat commande commandes"
+  "cmd.kw_bang_twitch": "twitch stream live chat commande commandes",
+  "cmd.event_cmd_name": "événement",
+  "cmd.arg_event_cmd": "titre date",
+  "cmd.event_cmd": "Ouvre la création d'un événement, titre et date déjà remplis. Rien n'est publié sans toi.",
+  "cmd.event_cmd_ex": "/événement Pizza vendredi 20h",
+  "cmd.kw_event_cmd": "evenement event soiree agenda calendrier date creer rendez-vous sortie",
+  "cmd.group_create": "Créer",
+  "cmd.event_preview": "Créer l'événement « {{title}} »",
+  "cmd.event_untitled": "sans titre",
+  "cmd.event_at": "à {{time}}",
+  "cmd.event_note": "Rien n'est publié : le formulaire s'ouvre déjà rempli, tu vérifies et tu ajoutes le lieu.",
+  "cmd.event_no_date": "Pas de date comprise : tu la choisiras dans le formulaire.",
+  "cmd.event_no_time": "Pas d'heure comprise : tu la choisiras dans le formulaire.",
+  "cmd.event_hint": "Écris un titre et une date, par exemple : Pizza vendredi 20h.",
+  "cmd.event_open": "Ouvrir le formulaire",
+  "cmd.event_cancel": "Annuler",
+  "cmd.event_aria": "Ce que Nodyx a compris"
 }

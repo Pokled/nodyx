@@ -22,6 +22,8 @@
 	import GameResult from '$lib/components/GameResult.svelte';
 	import CommandHelp from '$lib/components/CommandHelp.svelte';
 	import { slashMatches, exactSlash, isTeamRole, type CommandDef, type Trigger } from '$lib/commands';
+	import EventCommandPreview from '$lib/components/EventCommandPreview.svelte';
+	import { EVENT_COMMAND, parseEventDraft, draftUrl } from '$lib/eventCommand';
 	import { openHelpOverlay } from '$lib/helpOverlay';
 	import MentionWarnings from '$lib/components/MentionWarnings.svelte';
 	import { mentionChips } from '$lib/actions/mentionChips';
@@ -327,6 +329,25 @@
 	const suggestions = $derived(slashTyped === null ? [] : slashMatches(slashTyped, isTeam));
 	const showCommands = $derived(suggestions.length > 0 && !cmdDismissed);
 
+	// « /événement Pizza vendredi 20h » (lot C3) : un aperçu de ce qui est compris, dès
+	// qu'il y a une espace après la commande. Entrée ouvre le formulaire déjà rempli ;
+	// rien ne part dans le salon, rien n'est publié.
+	const eventMatch = $derived(EVENT_COMMAND.exec(inputText));
+	const eventDraft = $derived(eventMatch && /\s/.test(inputText) ? parseEventDraft(eventMatch[1]) : null);
+	function openEventForm() {
+		const url = draftUrl(parseEventDraft(EVENT_COMMAND.exec(inputText.trim())?.[1] ?? ''));
+		inputText = '';
+		cmdDismissed = false;
+		ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'));
+		goto(url);
+	}
+	function cancelEventCommand() {
+		inputText = '';
+		const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
+		ajusterHauteur(el);
+		el?.focus();
+	}
+
 	/** /help ou /? : ouvre l'aide par-dessus, rien n'est envoyé, le champ se vide. */
 	function openHelpFromCommand() {
 		inputText = '';
@@ -336,7 +357,7 @@
 
 	function pickCommand(c: CommandDef) {
 		if (c.local === 'help') { openHelpFromCommand(); return; }
-		inputText = `/${c.name} `;
+		inputText = `/${c.nameKey ? tFn(c.nameKey) : c.name} `;
 		cmdDismissed = false;
 		const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
 		el?.focus();
@@ -996,6 +1017,8 @@
 	async function sendMessage(force = false, mentionsConfirmed = false) {
 		// Une commande locale (/help) agit dans la page : elle ne part jamais dans le salon
 		if (exactSlash(inputText)?.local === 'help') { openHelpFromCommand(); return; }
+		// /événement : n'est jamais envoyé, ouvre le formulaire déjà rempli
+		if (EVENT_COMMAND.test(inputText.trim())) { openEventForm(); return; }
 		if (!s || !selectedChannel || !inputText.trim()) return;
 		// D51 : un grand groupe demande une confirmation, donnée par le panneau d'avertissement
 		if (mentionGateBlocked && !mentionsConfirmed) return;
@@ -1083,6 +1106,11 @@
 			if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !exact)) {
 				e.preventDefault(); const c = suggestions[cmdIndex]; if (c) pickCommand(c); return;
 			}
+		}
+		// L'aperçu de /événement : Entrée ouvre le formulaire, Échap annule
+		if (eventDraft && !showCommands) {
+			if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); openEventForm(); return; }
+			if (e.key === 'Escape') { e.preventDefault(); cancelEventCommand(); return; }
 		}
 		// « # » : flèches, Entrée, Tab, Échap
 		if (showPlaces && placeSuggestions.length) {
@@ -1944,6 +1972,11 @@
 						<span>⏱</span>
 						<span>{tFn('chat.antispam', { s: String(Math.ceil((rateLimitedUntil - Date.now()) / 1000)) })}</span>
 					</div>
+				{/if}
+
+				<!-- /événement : ce qui est compris, avant toute publication -->
+				{#if eventDraft && !showCommands}
+					<EventCommandPreview draft={eventDraft} empty={!eventMatch?.[1]?.trim()} onopen={openEventForm} oncancel={cancelEventCommand} />
 				{/if}
 
 				<!-- La liste du « / », au-dessus du champ, dès qu'on tape « / » en tête -->
