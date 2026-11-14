@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { onMount, onDestroy } from 'svelte';
+	import { page } from '$app/state';
+	import { jsonLdScript } from '$lib/jsonLd';
 	import { t, locale } from '$lib/i18n';
 	import { viewerZone, showZone } from '$lib/eventTime';
 	import { replyCount } from '$lib/forumCounts';
@@ -91,6 +93,8 @@
 	<meta name="description" content={instance.description} />
 	<meta property="og:title" content={instance.name} />
 	<meta property="og:description" content={instance.description} />
+	<!-- L'identité du site pour les moteurs : le nom affiché dans les résultats -->
+	{@html jsonLdScript({ '@context': 'https://schema.org', '@type': 'WebSite', name: instance.name, url: page.url.origin + '/', ...(instance.description ? { description: instance.description } : {}), ...(instance.language ? { inLanguage: instance.language } : {}) })}
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 	<!-- Les 10 polices proposées par le thème du Homepage Builder (--nfont) : sans

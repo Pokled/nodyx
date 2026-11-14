@@ -6,10 +6,40 @@
 	import { goto } from '$app/navigation';
 	import type { PageData, ActionData } from './$types';
 	import { viewerZone, showZone, zoneNote, organizerTime } from '$lib/eventTime';
+	import { page } from '$app/state';
+	import { jsonLdScript, absoluteUrl, plainText } from '$lib/jsonLd';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const ev  = $derived(data.event);
+
+	// ── Référencement ──
+	const seoImage = $derived(absoluteUrl(page.url.origin, ev.cover_url) ?? `${page.url.origin}/og-image.jpg`);
+	const seoDescription = $derived(plainText(ev.description, 300) || ev.title);
+	const seoEvent = $derived.by(() => {
+		const online = !!ev.location && /^https?:\/\//.test(ev.location);
+		const place = ev.location && !online
+			? { '@type': 'Place', name: ev.location, address: ev.location,
+				...(ev.location_lat && ev.location_lng ? { geo: { '@type': 'GeoCoordinates', latitude: Number(ev.location_lat), longitude: Number(ev.location_lng) } } : {}) }
+			: null;
+		const virtual = online ? { '@type': 'VirtualLocation', url: ev.location } : null;
+		const price = ev.ticket_price === null || ev.ticket_price === undefined || ev.ticket_price === '' ? null : Number(ev.ticket_price);
+		return {
+			'@context': 'https://schema.org',
+			'@type': 'Event',
+			name: ev.title,
+			description: seoDescription,
+			startDate: ev.is_all_day ? String(ev.starts_at).slice(0, 10) : ev.starts_at,
+			...(ev.ends_at ? { endDate: ev.is_all_day ? String(ev.ends_at).slice(0, 10) : ev.ends_at } : {}),
+			eventStatus: ev.is_cancelled ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled',
+			eventAttendanceMode: virtual && !place ? 'https://schema.org/OnlineEventAttendanceMode' : 'https://schema.org/OfflineEventAttendanceMode',
+			...(place || virtual ? { location: place ?? virtual } : {}),
+			image: [seoImage],
+			url: page.url.origin + page.url.pathname,
+			organizer: { '@type': 'Organization', name: page.data.communityName ?? 'Nodyx', url: page.url.origin },
+			...(price !== null ? { offers: { '@type': 'Offer', price, priceCurrency: ev.ticket_currency || 'EUR', availability: 'https://schema.org/InStock', url: ev.ticket_url || page.url.origin + page.url.pathname } } : {}),
+		};
+	});
 	const me  = $derived(data.event.my_rsvp ?? null);
 
 	let deleting = $state(false);
@@ -79,9 +109,20 @@
 </script>
 
 <svelte:head>
-	<title>{ev.title}</title>
-	{#if ev.cover_url}
-		<meta property="og:image" content={ev.cover_url}/>
+	<!-- Référencement (revu le 14/11) : avant, le seul titre, et une image en chemin
+	     relatif (aucun aperçu ne l'affichait) ou AUCUNE image sans affiche. Un événement
+	     privé n'est jamais indexé ; un public porte ses données schema.org (Event). -->
+	<title>{ev.title} · {page.data.communityName ?? 'Nodyx'}</title>
+	<meta name="description" content={seoDescription} />
+	<meta property="og:title" content={ev.title} />
+	<meta property="og:description" content={seoDescription} />
+	<meta property="og:type" content="website" />
+	<meta property="og:image" content={seoImage} />
+	<meta name="twitter:image" content={seoImage} />
+	{#if !ev.is_public}
+		<meta name="robots" content="noindex, nofollow" />
+	{:else}
+		{@html jsonLdScript(seoEvent)}
 	{/if}
 </svelte:head>
 

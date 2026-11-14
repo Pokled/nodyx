@@ -49,7 +49,6 @@
   "routes/library/[id]/+page.server.ts": 1,
   "routes/notifications/+page.server.ts": 1,
   "routes/reset-password/[token]/+page.server.ts": 3,
-  "routes/rss.xml/+server.ts": 2,
   "routes/tasks/[id]/+page.server.ts": 1,
   "routes/tasks/+page.server.ts": 1,
   "routes/users/[username]/+page.server.ts": 1,
