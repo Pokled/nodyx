@@ -5,7 +5,8 @@ import { FastifyInstance } from 'fastify'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth, optionalAuth } from '../middleware/auth'
 import { suggestPeople, peopleByIds, instanceCommunityId } from '../services/mentionPeople'
-import { describeGroups, confirmThreshold } from '../services/mentionGroups'
+import { describeGroups, confirmThreshold, groupCards, isTeam } from '../services/mentionGroups'
+import { getPrefs, setPrefs, recipientRules, accepts, isQuietNow, quietUntil, isValidTz, type Who } from '../services/mentionPrefs'
 import { db } from '../config/database'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -33,7 +34,7 @@ export default async function mentionsRoutes(app: FastifyInstance) {
     }
     const list = ids.split(',')
     if (list.length > 50) return reply.code(400).send({ error: 'Trop d’identifiants', code: 'MENTION_IDS_TOO_MANY' })
-    reply.header('Cache-Control', 'private, max-age=30')
+    reply.header('Cache-Control', 'private, no-store')   // D49 : un nom ou une couleur changés se voient au prochain affichage
     return reply.send({ people: await peopleByIds(list) })
   })
 
@@ -51,11 +52,95 @@ export default async function mentionsRoutes(app: FastifyInstance) {
            WHERE cm.community_id = $1 AND cm.user_id = ANY($2::uuid[]) AND u.is_system = false`, [communityId, people])
       : { rows: [] as { user_id: string }[] }
     const members = new Set(rows.map(r => r.user_id))
+    // D54 : « ne sera pas prévenu » quand SON réglage refuse l'auteur, sans dire lequel ;
+    // une sourdine personnelle n'est JAMAIS dévoilée (renvoyée « ok »). D55 : en pause.
+    const me = request.user!.userId
+    const [team, rules, showUntil] = await Promise.all([
+      isTeam(communityId, me).catch(() => false),
+      recipientRules([...members], me).catch(() => new Map()),
+      db.query<{ value: string }>(`SELECT value FROM instance_settings WHERE key = 'mentions_show_quiet_until'`).then(r => r.rows[0]?.value === 'true').catch(() => false),
+    ])
+    const stateOf = (id: string) => {
+      if (!members.has(id)) return { id, state: 'not_member' }
+      const rule = rules.get(id)
+      if (rule && !accepts({ ...rule, muted: false }, team)) return { id, state: 'wont_be_notified' }
+      if (rule && accepts(rule, team) && isQuietNow(rule.prefs)) {
+        return showUntil ? { id, state: 'quiet', quiet_until: quietUntil(rule.prefs) } : { id, state: 'quiet' }
+      }
+      return { id, state: 'ok' }
+    }
     reply.header('Cache-Control', 'private, no-store')
     return reply.send({
-      people: people.map(id => ({ id, state: members.has(id) ? 'ok' : 'not_member' })),
+      people: people.map(stateOf),
       groups: await describeGroups(communityId, request.user!.userId, groups),
       threshold: await confirmThreshold(),
     })
+  })
+
+  // Les puces de groupe (nom et couleur à jour, nombre, quelques noms). Lecture publique.
+  app.get('/groups', { preHandler: [rateLimit, optionalAuth] }, async (request, reply) => {
+    const { keys } = request.query as { keys?: string }
+    if (typeof keys !== 'string' || !keys) return reply.code(400).send({ error: 'Groupes requis', code: 'MENTION_GROUPS_REQUIRED' })
+    const communityId = await instanceCommunityId()
+    reply.header('Cache-Control', 'private, no-store')   // D49 : un nom ou une couleur changés se voient au prochain affichage
+    return reply.send({ groups: communityId ? await groupCards(communityId, keys.split(',').slice(0, 10)) : [] })
+  })
+
+  // ── Mes réglages (D54-D55) ────────────────────────────────────────────────
+  app.get('/prefs', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    reply.header('Cache-Control', 'private, no-store')
+    return reply.send({ prefs: await getPrefs(request.user!.userId) })
+  })
+
+  app.put('/prefs', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const b = (request.body ?? {}) as Record<string, unknown>
+    const who = b.who
+    const minute = (v: unknown) => v === null || (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 1439)
+    if (who !== 'all' && who !== 'following' && who !== 'team') return reply.code(400).send({ error: 'Choix invalide', code: 'MENTION_PREFS_INVALID' })
+    if (!minute(b.quiet_start ?? null) || !minute(b.quiet_end ?? null)) return reply.code(400).send({ error: 'Heures invalides', code: 'MENTION_PREFS_INVALID' })
+    const quietOn = b.quiet_start !== null && b.quiet_start !== undefined && b.quiet_end !== null && b.quiet_end !== undefined
+    if (quietOn && !isValidTz(b.quiet_tz)) return reply.code(400).send({ error: 'Fuseau invalide', code: 'MENTION_PREFS_INVALID' })
+    const prefs = {
+      who: who as Who,
+      quiet_start: quietOn ? b.quiet_start as number : null,
+      quiet_end: quietOn ? b.quiet_end as number : null,
+      quiet_tz: quietOn ? b.quiet_tz as string : null,
+    }
+    await setPrefs(request.user!.userId, prefs)
+    return reply.send({ prefs })
+  })
+
+  // ── Personnes dont je ne reçois plus les mentions (elles n'en savent rien) ──
+  app.get('/mutes', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const { rows } = await db.query<{ id: string; username: string; display_name: string | null; avatar: string | null }>(
+      `SELECT u.id, u.username, up.display_name, COALESCE(u.avatar, up.avatar_url) AS avatar
+       FROM user_mention_mutes m JOIN users u ON u.id = m.muted_user_id LEFT JOIN user_profiles up ON up.user_id = u.id
+       WHERE m.user_id = $1 ORDER BY m.created_at DESC LIMIT 200`, [request.user!.userId])
+    reply.header('Cache-Control', 'private, no-store')
+    return reply.send({ mutes: rows })
+  })
+
+  app.put('/mutes/:userId', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const { userId } = request.params as { userId: string }
+    const me = request.user!.userId
+    if (!UUID.test(userId) || userId === me) return reply.code(400).send({ error: 'Personne invalide', code: 'MENTION_MUTE_INVALID' })
+    const { rows: n } = await db.query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM user_mention_mutes WHERE user_id = $1`, [me])
+    if ((n[0]?.n ?? 0) >= 200) return reply.code(400).send({ error: 'Trop de personnes en sourdine', code: 'MENTION_MUTE_LIMIT' })
+    const { rowCount } = await db.query(
+      `INSERT INTO user_mention_mutes (user_id, muted_user_id)
+       SELECT $1, u.id FROM users u WHERE u.id = $2 AND u.is_system = false
+       ON CONFLICT DO NOTHING`, [me, userId])
+    if (rowCount === 0) {
+      const { rows } = await db.query(`SELECT 1 FROM user_mention_mutes WHERE user_id = $1 AND muted_user_id = $2`, [me, userId])
+      if (!rows.length) return reply.code(404).send({ error: 'Personne introuvable', code: 'MENTION_MUTE_NOT_FOUND' })
+    }
+    return reply.send({ ok: true })
+  })
+
+  app.delete('/mutes/:userId', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const { userId } = request.params as { userId: string }
+    if (!UUID.test(userId)) return reply.code(400).send({ error: 'Personne invalide', code: 'MENTION_MUTE_INVALID' })
+    await db.query(`DELETE FROM user_mention_mutes WHERE user_id = $1 AND muted_user_id = $2`, [request.user!.userId, userId])
+    return reply.send({ ok: true })
   })
 }

@@ -63,7 +63,7 @@
 		<button type="button" class="ml-o" class:on={i === active} role="option" id="{id}-{i}" aria-selected={i === active}
 			onmousedown={(e) => { e.preventDefault(); onpick(s) }}>
 			{#if s.reason === 'group'}
-				<span class="ml-av ml-grp" aria-hidden="true">
+				<span class="ml-av ml-grp" aria-hidden="true" style={s.color && /^#[0-9a-f]{3,8}$/i.test(s.color) ? `--grade:${s.color}` : ''}>
 					<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 				</span>
 			{:else}
@@ -91,7 +91,7 @@
 	.ml-o { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; border-radius: 8px; padding: 6px 8px; cursor: pointer; color: inherit; }
 	.ml-o.on, .ml-o:hover { background: color-mix(in srgb, var(--nx-header-accent) 14%, transparent); }
 	.ml-av { position: relative; width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; }
-	.ml-grp { background: color-mix(in srgb, var(--nx-text) 9%, transparent); color: var(--nx-text-muted); }
+	.ml-grp { background: color-mix(in srgb, var(--grade, var(--nx-text)) 14%, transparent); color: var(--grade, var(--nx-text-muted)); }
 	.ml-grp svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 	.ml-av img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
 	.ml-dot { position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border-radius: 99px; border: 2px solid var(--nx-surface); background: #9ca3af; }

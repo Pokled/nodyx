@@ -33,6 +33,14 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
 - **Deux oublis réparés au passage.** Une mention dans le premier message d'un nouveau sujet du
   forum ne prévenait personne, seules les réponses le faisaient. Et la notification sur le
   téléphone d'une mention dans le chat affichait le message en HTML brut au lieu du texte.
+- **Celui qu'on mentionne garde la main.** Dans Réglages › Notifications : qui peut te
+  mentionner (tout le monde, les membres que tu suis, ou seulement l'équipe), tes heures calmes
+  (les mentions attendent dans la cloche, sans son ni téléphone), et les personnes dont tu ne
+  veux plus les mentions, qu'on ajoute depuis leur carte et qui n'en savent rien. L'équipe peut
+  toujours te joindre. Avant l'envoi, l'auteur voit seulement « ne recevra pas de notification »
+  ou « est en pause », jamais la raison.
+- **Les grades en couleur.** Un grade mentionné prend sa couleur, suit son nom s'il change, et
+  sa carte dit qui est dedans. `@ici` devient `@enligne` : les membres connectés.
 
 ### Modération : une équipe, des droits, une file
 

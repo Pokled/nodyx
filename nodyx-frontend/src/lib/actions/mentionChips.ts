@@ -8,8 +8,9 @@
 import { get } from 'svelte/store'
 import { mount, unmount } from 'svelte'
 import { t } from '$lib/i18n'
-import { personFor, labelOf, GROUP_LABEL_KEYS, type MentionPerson } from '$lib/mentions'
+import { personFor, groupFor, labelOf, GROUP_LABEL_KEYS, type MentionPerson, type MentionGroupCard } from '$lib/mentions'
 import MentionCard from '$lib/components/MentionCard.svelte'
+import GroupCard from '$lib/components/GroupCard.svelte'
 
 interface Opts { html?: string; token: string | null; me?: string | null }
 
@@ -29,17 +30,32 @@ function hideCard() {
 const scheduleHide = () => { if (hideTimer) clearTimeout(hideTimer); hideTimer = setTimeout(hideCard, 160) }
 const keepCard = () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null } }
 
+function place(anchor: HTMLElement, h: number) {
+	const r = anchor.getBoundingClientRect()
+	const x = Math.max(8, Math.min(r.left, window.innerWidth - 268))
+	const y = r.bottom + h + 20 < window.innerHeight ? r.bottom + 6 : Math.max(8, r.top - 6 - h)
+	return { x, y }
+}
+
 function showCard(anchor: HTMLElement, person: MentionPerson, opts: Opts) {
 	keepCard()
 	if (card?.anchor === anchor) return
 	hideCard()
-	const r = anchor.getBoundingClientRect()
-	const x = Math.max(8, Math.min(r.left, window.innerWidth - 268))
-	const below = r.bottom + 190 < window.innerHeight
-	const y = below ? r.bottom + 6 : Math.max(8, r.top - 6 - 150)
+	const { x, y } = place(anchor, 170)
 	const target = document.createElement('div')
 	document.body.appendChild(target)
 	const app = mount(MentionCard, { target, props: { person, x, y, token: opts.token, me: opts.me ?? null, onenter: keepCard, onleave: scheduleHide } })
+	card = { app, target, anchor }
+}
+
+function showGroupCard(anchor: HTMLElement, group: MentionGroupCard, name: string) {
+	keepCard()
+	if (card?.anchor === anchor) return
+	hideCard()
+	const { x, y } = place(anchor, 90)
+	const target = document.createElement('div')
+	document.body.appendChild(target)
+	const app = mount(GroupCard, { target, props: { group, name, x, y, onenter: keepCard, onleave: scheduleHide } })
 	card = { app, target, anchor }
 }
 
@@ -78,10 +94,24 @@ export function mentionChips(node: HTMLElement, initial: Opts) {
 			el.dataset.chip = '1'
 			const key = (el.dataset.mention ?? '').slice(2)
 			const tFn = get(t)
-			const label = GROUP_LABEL_KEYS[key] ? tFn(GROUP_LABEL_KEYS[key]) : (el.textContent ?? '').replace(/^@/, '')
+			const fallback = GROUP_LABEL_KEYS[key] ? tFn(GROUP_LABEL_KEYS[key]) : (el.textContent ?? '').replace(/^@/, '')
 			el.classList.add('nx-mention', 'nx-mention-group')
-			el.textContent = '@' + label
-			el.setAttribute('aria-label', tFn('mention.group_chip_aria', { name: label }))
+			el.textContent = '@' + fallback
+			groupFor(key, opts.token).then(g => {
+				if (!alive || !el.isConnected || !g) return
+				// Un grade : son nom et sa couleur À JOUR (un grade renommé suit)
+				const label = GROUP_LABEL_KEYS[key] ? fallback : (g.label ?? fallback)
+				el.textContent = '@' + label
+				if (g.color && /^#[0-9a-f]{3,8}$/i.test(g.color)) el.style.setProperty('--grade', g.color)
+				el.setAttribute('aria-label', tFn('mention.group_chip_aria', { name: label }))
+				el.tabIndex = 0
+				el.setAttribute('role', 'button')
+				el.addEventListener('mouseenter', () => showGroupCard(el, g, '@' + label))
+				el.addEventListener('mouseleave', scheduleHide)
+				el.addEventListener('focus', () => showGroupCard(el, g, '@' + label))
+				el.addEventListener('blur', scheduleHide)
+				el.addEventListener('keydown', e => { if (e.key === 'Escape') hideCard() })
+			})
 		})
 		const spans = node.querySelectorAll<HTMLElement>('span[data-mention^="u:"]:not([data-chip])')
 		spans.forEach(el => {

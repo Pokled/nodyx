@@ -37,7 +37,7 @@
 			if (mine !== seq) return
 			preview = p
 			for (const x of p?.people ?? []) {
-				if (x.state !== 'ok' && !names[x.id]) {
+				if (x.state !== 'ok' && !names[x.id]) {   // not_member, wont_be_notified, quiet
 					personFor(x.id, token).then(pp => { names = { ...names, [x.id]: pp.username ? labelOf(pp) : '' } })
 				}
 			}
@@ -47,6 +47,8 @@
 
 	const mentioned = $derived(new Set(refs))
 	const outsiders = $derived((preview?.people ?? []).filter(p => p.state === 'not_member' && mentioned.has('u:' + p.id)))
+	const refused = $derived((preview?.people ?? []).filter(p => p.state === 'wont_be_notified' && mentioned.has('u:' + p.id)))
+	const resting = $derived((preview?.people ?? []).filter(p => p.state === 'quiet' && mentioned.has('u:' + p.id)))
 	const groups = $derived((preview?.groups ?? []).filter(g => mentioned.has('g:' + g.key)))
 	const forbidden = $derived(groups.filter(g => g.forbidden))
 	const big = $derived(groups.filter(g => g.needs_confirm))
@@ -58,7 +60,7 @@
 		'@' + (GROUP_LABEL_KEYS[g.key] ? $t(GROUP_LABEL_KEYS[g.key]) : g.label ?? g.key)
 </script>
 
-{#if outsiders.length || forbidden.length || big.length}
+{#if outsiders.length || refused.length || resting.length || forbidden.length || big.length}
 	<div class="mw" role="status" aria-live="polite" aria-label={$t('mention.warn_aria')}>
 		{#each outsiders as p (p.id)}
 			<div class="mw-row mw-info">
@@ -66,6 +68,18 @@
 				<p>{$t('mention.warn_not_member', { name: names[p.id] || $t('mention.warn_someone') })}
 					{#if onremove}<span class="mw-acts"><button type="button" class="mw-btn" onclick={() => onremove?.('u:' + p.id)}>{$t('mention.warn_remove')}</button></span>{/if}
 				</p>
+			</div>
+		{/each}
+		{#each refused as p (p.id)}
+			<div class="mw-row mw-soft">
+				<span class="mw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
+				<p>{$t('mention.warn_wont', { name: names[p.id] || $t('mention.warn_someone') })}</p>
+			</div>
+		{/each}
+		{#each resting as p (p.id)}
+			<div class="mw-row mw-soft">
+				<span class="mw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+				<p>{p.quiet_until ? $t('mention.warn_quiet_until', { name: names[p.id] || $t('mention.warn_someone'), time: p.quiet_until }) : $t('mention.warn_quiet', { name: names[p.id] || $t('mention.warn_someone') })}</p>
 			</div>
 		{/each}
 		{#each forbidden as g (g.key)}
@@ -101,6 +115,8 @@
 	.mw-ico svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 	.mw-info { background: color-mix(in srgb, var(--nx-info, #3b82f6) 7%, var(--nx-surface)); border-color: color-mix(in srgb, var(--nx-info, #3b82f6) 25%, transparent); }
 	.mw-info .mw-ico { background: color-mix(in srgb, var(--nx-info, #3b82f6) 15%, transparent); color: var(--nx-info, #3b82f6); }
+	.mw-soft { background: color-mix(in srgb, var(--nx-text) 3%, var(--nx-surface)); border-color: color-mix(in srgb, var(--nx-text) 12%, transparent); }
+	.mw-soft .mw-ico { background: color-mix(in srgb, var(--nx-text) 8%, transparent); color: var(--nx-text-muted); }
 	.mw-big { background: color-mix(in srgb, var(--nx-warn, #b45309) 8%, var(--nx-surface)); border-color: color-mix(in srgb, var(--nx-warn, #b45309) 35%, transparent); }
 	.mw-big .mw-ico { background: color-mix(in srgb, var(--nx-warn, #b45309) 16%, transparent); color: var(--nx-warn, #b45309); }
 	.mw-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }

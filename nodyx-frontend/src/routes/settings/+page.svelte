@@ -1,6 +1,7 @@
 <script lang="ts">
     import NetworkDoctor from '$lib/components/NetworkDoctor.svelte';
     import E2EKeyBackup from '$lib/components/E2EKeyBackup.svelte';
+    import MentionSettings from '$lib/components/MentionSettings.svelte';
     import { page } from '$app/state';
 
     import { PUBLIC_API_URL, PUBLIC_SIGNET_URL } from '$app/env/public';
@@ -674,6 +675,7 @@
                 <p class="s-hint-text">{tFn('settings.notifications.push.unsupported')}</p>
             </div>
             {/if}
+            {#if page.data.user}<MentionSettings />{/if}
         </div>
         {/if}
 

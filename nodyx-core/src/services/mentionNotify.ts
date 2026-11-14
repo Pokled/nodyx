@@ -10,7 +10,8 @@ import { db } from '../config/database'
 import { io } from '../socket/io'
 import * as NotificationModel from '../models/notification'
 import { resolveMentions } from '../utils/mentions'
-import { groupRecipients } from './mentionGroups'
+import { groupRecipients, isTeam } from './mentionGroups'
+import { recipientRules, accepts, isQuietNow } from './mentionPrefs'
 import { sendPushToUser } from '../routes/notifications'
 import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 
@@ -44,6 +45,11 @@ export async function notifyMentions(opts: {
   recipients.delete(actorId)
   if (!recipients.size) return 0
 
+  // D54-D55 : ce que chaque destinataire accepte (sourdine, « qui peut me mentionner »,
+  // heures calmes). L'équipe passe toujours : c'est elle qui protège.
+  const actorTeam = await isTeam(communityId, actorId).catch(() => false)
+  const rules = await recipientRules([...recipients.keys()], actorId).catch(() => new Map())
+
   // Qui regarde déjà ce salon : pas dérangé
   const viewing = new Set<string>()
   if (where.kind === 'chat' && io) {
@@ -55,10 +61,15 @@ export async function notifyMentions(opts: {
   let sent = 0
   for (const [userId, group] of recipients) {
     if (viewing.has(userId)) continue
+    const rule = rules.get(userId)
+    if (rule && !accepts(rule, actorTeam)) continue
+    // Heures calmes : la notification attend dans la cloche, sans son ni téléphone
+    const quiet = !!rule && isQuietNow(rule.prefs)
     const meta: Record<string, unknown> = where.kind === 'chat'
       ? { channel_id: where.channelId, ...(where.messageId ? { message_id: where.messageId } : {}) }
       : {}
     if (group) meta.group = group
+    if (quiet) meta.quiet = true
     try {
       await NotificationModel.create({
         user_id: userId, type: 'mention', actor_id: actorId,
@@ -71,9 +82,9 @@ export async function notifyMentions(opts: {
     if (io) {
       const count = await NotificationModel.getUnreadCount(userId).catch(() => 0)
       io.to(`user:${userId}`).emit('notification:new', { unreadCount: count })
-      if (where.kind === 'chat') io.to(`user:${userId}`).emit('chat:mention')
+      if (where.kind === 'chat' && !quiet) io.to(`user:${userId}`).emit('chat:mention')
     }
-    if (where.kind === 'chat') {
+    if (where.kind === 'chat' && !quiet) {
       // Un push envoyé n'est plus retraduisible : la langue du DESTINATAIRE
       const { rows } = await db.query<{ locale: string | null }>(`SELECT locale FROM users WHERE id = $1`, [userId]).catch(() => ({ rows: [] as { locale: string | null }[] }))
       const locale = resolveServerLocale(rows[0]?.locale, process.env.NODYX_COMMUNITY_LANGUAGE)

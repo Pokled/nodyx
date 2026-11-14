@@ -10,6 +10,8 @@ export interface MentionSuggestion {
 	reason: 'here' | 'frequent' | 'member' | 'group'; last_at?: string; count?: number
 	/** Groupe (reason = 'group') : « ici », « equipe », « moderation », « tous », « grade:<id> » */
 	key?: string
+	/** Couleur d'un grade */
+	color?: string | null
 }
 
 /** Clés de traduction du nom affiché des groupes intégrés (relu dans la langue du lecteur). */
@@ -53,7 +55,7 @@ export function refsIn(html: string): string[] {
 }
 
 export interface MentionPreview {
-	people: { id: string; state: 'ok' | 'not_member' }[]
+	people: { id: string; state: 'ok' | 'not_member' | 'wont_be_notified' | 'quiet'; quiet_until?: string }[]
 	groups: { key: string; count: number; label: string | null; forbidden: boolean; needs_confirm: boolean }[]
 	threshold: number
 }
@@ -132,5 +134,30 @@ export async function suggestMentions(q: string, token: string | null, ctx: { ch
 	} catch { return [] }
 }
 
+// ── Les groupes des puces : nom et couleur à jour, nombre, quelques noms ─────────────
+export interface MentionGroupCard { key: string; label: string | null; color: string | null; count: number; sample: { username: string; display_name: string | null }[] }
+const groupCache = new Map<string, { at: number; p: Promise<MentionGroupCard | null> }>()
+let groupPending: { keys: Set<string>; res: Map<string, (g: MentionGroupCard | null) => void> } | null = null
+
+export function groupFor(key: string, token: string | null): Promise<MentionGroupCard | null> {
+	const hit = groupCache.get(key)
+	if (hit && Date.now() - hit.at < TTL) return hit.p
+	if (!groupPending) {
+		groupPending = { keys: new Set(), res: new Map() }
+		setTimeout(() => {
+			const b = groupPending!; groupPending = null
+			const keys = [...b.keys].slice(0, 10)
+			apiFetch(fetch, `/mentions/groups?keys=${encodeURIComponent(keys.join(','))}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+				.then(r => r.ok ? r.json() : { groups: [] })
+				.then(({ groups }: { groups: MentionGroupCard[] }) => keys.forEach(k => b.res.get(k)?.(groups.find(g => g.key === k) ?? null)))
+				.catch(() => keys.forEach(k => { groupCache.delete(k); b.res.get(k)?.(null) }))
+		}, 20)
+	}
+	const batch = groupPending
+	const p = new Promise<MentionGroupCard | null>(res => { batch.keys.add(key); batch.res.set(key, res) })
+	groupCache.set(key, { at: Date.now(), p })
+	return p
+}
+
 /** Pour les tests. */
-export function _resetMentionCache(): void { cache.clear(); pending = null }
+export function _resetMentionCache(): void { cache.clear(); pending = null; groupCache.clear(); groupPending = null }
