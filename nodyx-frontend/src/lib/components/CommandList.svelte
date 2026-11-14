@@ -17,7 +17,7 @@
 	/** Le nom qui correspond à ce qui est tapé (« /? » montre « /? », pas « /help »). */
 	const shownName = (c: CommandDef) => [c.name, ...(c.aliases ?? [])].find(n => fold(n).startsWith(fold(typed))) ?? c.name
 
-	const GROUP_KEYS: Record<CommandDef['group'], string> = { help: 'cmd.group_help', call: 'cmd.group_call', play: 'cmd.group_play' }
+	const GROUP_KEYS: Record<CommandDef['group'], string> = { help: 'cmd.group_help', call: 'cmd.group_call', show: 'cmd.group_show', play: 'cmd.group_play' }
 </script>
 
 <div class="cl" role="listbox" {id} aria-label={$t('cmd.list_aria')}>

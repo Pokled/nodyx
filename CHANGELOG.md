@@ -65,6 +65,13 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   perdre (il s'efface à l'envoi).
 - **Taper « / » montre une vraie liste.** Les commandes avec leur explication, au clavier (flèches,
   Tab, Entrée, Échap), comme la liste des mentions.
+- **Taper « # » montre un endroit de la communauté.** Un salon, un événement, un sujet du forum,
+  une page du wiki, un sondage ou un tableau : la liste les propose dans cet ordre, sans tenir
+  compte des accents (« soiree » trouve « Soirée »). Dans le message, c'est une puce cliquable avec
+  l'icône de l'endroit, et la carte de l'événement ou du sujet s'affiche dessous. Le nom suit si
+  l'endroit est renommé ; un endroit supprimé, ou que le lecteur n'a pas le droit de voir, devient
+  « endroit privé », sans jamais montrer son nom. Le nom d'un événement privé n'est même pas écrit
+  dans le message : seuls ceux qui peuvent le voir le lisent.
 - **`/help` ouvre l'aide.** En tête de la liste du « / », sous « Aide », avant les jeux. Le choisir,
   ou taper `/help` (ou `/?`) puis Entrée, ouvre l'aide par-dessus le chat : rien n'est envoyé dans
   le salon.

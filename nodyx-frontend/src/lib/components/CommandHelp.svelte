@@ -27,6 +27,7 @@
 
 	const ROWS: Record<Trigger, { title: string; sub: string; ex: string; hint: string }> = {
 		'@': { title: 'cmd.at_title', sub: 'cmd.at_sub', ex: 'cmd.at_ex', hint: 'cmd.hint_at' },
+		'#': { title: 'cmd.hash_title', sub: 'cmd.hash_sub', ex: 'cmd.hash_ex', hint: 'cmd.hint_hash' },
 		'/': { title: 'cmd.slash_title', sub: 'cmd.slash_sub', ex: 'cmd.slash_ex', hint: 'cmd.hint_slash' },
 	}
 

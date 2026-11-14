@@ -16,6 +16,9 @@
 	import LinkCards   from '$lib/components/LinkCards.svelte';
 	import MentionList from '$lib/components/MentionList.svelte';
 	import CommandList from '$lib/components/CommandList.svelte';
+	import PlaceList from '$lib/components/PlaceList.svelte';
+	import { placeChips } from '$lib/actions/placeChips';
+	import { suggestPlaces, applyPickedPlaces, PLACE_TRIGGER, type Place } from '$lib/places';
 	import GameResult from '$lib/components/GameResult.svelte';
 	import CommandHelp from '$lib/components/CommandHelp.svelte';
 	import { slashMatches, exactSlash, isTeamRole, type CommandDef, type Trigger } from '$lib/commands';
@@ -224,6 +227,17 @@
 	// Mentions choisies dans la liste : deviennent des marques liées à la personne à l'envoi (D49)
 	let pickedMentions     = $state<{ ref: string; label: string }[]>([]);
 
+	// « # » : montrer un endroit (lot C4). Mêmes règles que les mentions : la liste
+	// s'ouvre sur « # », un endroit CHOISI devient une marque à l'envoi.
+	let placeQuery       = $state('');
+	let placeSuggestions = $state<Place[]>([]);
+	let showPlaces       = $state(false);
+	let placeIndex       = $state(0);
+	let pickedPlaces     = $state<{ ref: string; url: string; label: string; private: boolean; kind: Place['kind'] }[]>([]);
+	let placeSeq = 0;
+	/** Le texte envoyé : mentions puis endroits choisis devenus des marques. */
+	const withMarks = (text: string) => applyPickedPlaces(applyPickedMentions(text, pickedMentions), pickedPlaces, k => tFn(`place.neutral_${k}`));
+
 	// ── Brouillon par salon ─────────────────────────────────────────────────────
 	// Ce qu'on écrit est gardé pour CE salon, le temps de l'onglet (sessionStorage) :
 	// quitter le chat par un lien puis revenir, ou changer de salon et revenir, ne
@@ -231,19 +245,27 @@
 	// personne). Effacé à l'envoi. Stockage indisponible (navigation privée
 	// stricte) : rien n'est gardé, rien ne casse.
 	const DRAFT_KEY = (id: string) => `nodyx:chat-draft:${id}`;
-	type Draft = { text: string; picked: { ref: string; label: string }[] };
+	type PickedPlace = { ref: string; url: string; label: string; private: boolean; kind: Place['kind'] };
+	type Draft = { text: string; picked: { ref: string; label: string }[]; places?: PickedPlace[] };
+	// Un endroit relu du stockage : marque et adresse interne valides, sinon écarté
+	const okPlace = (p: any): p is PickedPlace => !!p && typeof p.ref === 'string' && /^(channel|event|thread|wiki|poll|board):[0-9a-f-]{36}$/.test(p.ref)
+		&& typeof p.url === 'string' && p.url.startsWith('/') && !p.url.startsWith('//') && typeof p.label === 'string';
 	function readDraft(id: string): Draft | null {
 		try {
 			const raw = sessionStorage.getItem(DRAFT_KEY(id));
 			if (!raw) return null;
 			const d = JSON.parse(raw) as Draft;
-			return typeof d?.text === 'string' ? { text: d.text.slice(0, 2000), picked: Array.isArray(d.picked) ? d.picked.slice(0, 20) : [] } : null;
+			return typeof d?.text === 'string' ? {
+				text: d.text.slice(0, 2000),
+				picked: Array.isArray(d.picked) ? d.picked.slice(0, 20) : [],
+				places: Array.isArray(d.places) ? d.places.filter(okPlace).slice(0, 20) : [],
+			} : null;
 		} catch { return null; }
 	}
-	function writeDraft(id: string, text: string, picked: Draft['picked']) {
+	function writeDraft(id: string, text: string, picked: Draft['picked'], places: PickedPlace[]) {
 		try {
 			if (!text.trim()) sessionStorage.removeItem(DRAFT_KEY(id));
-			else sessionStorage.setItem(DRAFT_KEY(id), JSON.stringify({ text: text.slice(0, 2000), picked }));
+			else sessionStorage.setItem(DRAFT_KEY(id), JSON.stringify({ text: text.slice(0, 2000), picked, places }));
 		} catch { /* stockage plein ou interdit : tant pis, rien ne casse */ }
 	}
 	let draftChannel: string | null = null;
@@ -252,19 +274,20 @@
 		const id = selectedChannel?.id ?? null;
 		untrack(() => {
 			if (id === draftChannel) return;
-			if (draftChannel) writeDraft(draftChannel, inputText, pickedMentions);
+			if (draftChannel) writeDraft(draftChannel, inputText, pickedMentions, pickedPlaces);
 			draftChannel = id;
 			const d = id ? readDraft(id) : null;
 			inputText = d?.text ?? '';
 			pickedMentions = d?.picked ?? [];
+			pickedPlaces = d?.places ?? [];
 			void tick().then(() => ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input')));
 		});
 	});
 	// Chaque frappe : le brouillon du salon courant suit
 	$effect(() => {
-		const text = inputText, picked = pickedMentions;
+		const text = inputText, picked = pickedMentions, places = pickedPlaces;
 		const id = untrack(() => draftChannel);
-		if (id) writeDraft(id, text, picked);
+		if (id) writeDraft(id, text, picked, places);
 	});
 	let mentionSeq = 0;
 	// D51 : un grand groupe attend « Envoyer quand même » (le cœur refait ses contrôles)
@@ -328,7 +351,8 @@
 			if (inputText.trim()) { el?.focus(); return; }
 			inputText = '/';
 		} else {
-			inputText = inputText && !/\s$/.test(inputText) ? `${inputText} @` : `${inputText}@`;
+			// « @ » et « # » s'écrivent n'importe où : on ajoute à la suite, sans toucher au reste
+			inputText = inputText && !/\s$/.test(inputText) ? `${inputText} ${k}` : `${inputText}${k}`;
 		}
 		cmdDismissed = false; cmdIndex = 0;
 		await tick();
@@ -981,20 +1005,24 @@
 			s.emit('chat:command', { channelId, text: inputText.trim(), replyToId: replyTo?.id ?? null });
 			inputText = '';
 			pickedMentions = [];
+			pickedPlaces = [];
 			showMentions = false;
+			showPlaces = false;
 			replyTo = null;
 			ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'));
 			return;
 		}
-		const content   = applyPickedMentions(inputText.trim(), pickedMentions);
+		const content   = withMarks(inputText.trim());
 		if (!force && !(await passesPrecheck('plain', content, channelId))) return;
 		// Pendant la vérification, on a pu changer de salon ou de texte : on ne part pas
-		if (selectedChannel?.id !== channelId || applyPickedMentions(inputText.trim(), pickedMentions) !== content) return;
+		if (selectedChannel?.id !== channelId || withMarks(inputText.trim()) !== content) return;
 		nudge = null;
 		s.emit('chat:send', { channelId, content, replyToId: replyTo?.id ?? null });
 		inputText = '';
 		pickedMentions = [];
+		pickedPlaces = [];
 		showMentions = false;
+		showPlaces = false;
 		replyTo = null;
 		// Le champ vient d'être vidé : sans ça il resterait à la hauteur du
 		// message qu'on vient d'envoyer.
@@ -1056,6 +1084,13 @@
 				e.preventDefault(); const c = suggestions[cmdIndex]; if (c) pickCommand(c); return;
 			}
 		}
+		// « # » : flèches, Entrée, Tab, Échap
+		if (showPlaces && placeSuggestions.length) {
+			if (e.key === 'ArrowDown') { e.preventDefault(); placeIndex = Math.min(placeIndex + 1, placeSuggestions.length - 1); return; }
+			if (e.key === 'ArrowUp')   { e.preventDefault(); placeIndex = Math.max(placeIndex - 1, 0); return; }
+			if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); const p = placeSuggestions[placeIndex]; if (p) selectPlace(p); return; }
+			if (e.key === 'Escape')    { e.preventDefault(); showPlaces = false; placeSeq++; return; }
+		}
 		// @mention navigation
 		if (showMentions) {
 			if (e.key === 'ArrowDown')  { e.preventDefault(); mentionIndex = Math.min(mentionIndex + 1, mentionSuggestions.length - 1); return; }
@@ -1111,6 +1146,7 @@
 
 		// Dès « @ » seul : ceux qui parlent ici et ceux que tu mentionnes souvent (D50)
 		if (match) {
+			placeSeq++; showPlaces = false;
 			mentionQuery = match[1];
 			const seq = ++mentionSeq;
 			const found = await suggestMentions(mentionQuery, token ?? null, { channelId: selectedChannel?.id });
@@ -1121,7 +1157,35 @@
 		} else {
 			mentionSeq++;
 			showMentions = false;
+			// « # » : un endroit (lot C4), dès « # » seul
+			const pm = textBefore.match(PLACE_TRIGGER);
+			if (pm) {
+				placeQuery = pm[1] ?? '';
+				const seq = ++placeSeq;
+				const found = await suggestPlaces(placeQuery, token ?? null);
+				if (seq !== placeSeq) return;
+				placeSuggestions = found;
+				showPlaces = found.length > 0;
+				placeIndex = 0;
+			} else {
+				placeSeq++;
+				showPlaces = false;
+			}
 		}
+	}
+
+	/** Choisir un endroit : « #Soirée jeux » dans le champ, la marque se pose à l'envoi. */
+	function selectPlace(p: Place) {
+		const textarea   = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
+		const cursor     = textarea?.selectionStart ?? inputText.length;
+		const textBefore = inputText.slice(0, cursor);
+		const textAfter  = inputText.slice(cursor);
+		const replaced   = textBefore.replace(/#((?:[\p{L}\p{N}_.'’-]+ ?){0,3})$/u, `#${p.title} `);
+		inputText        = replaced + textAfter;
+		if (!pickedPlaces.some(x => x.ref === p.ref)) pickedPlaces = [...pickedPlaces, { ref: p.ref, url: p.url, label: p.title, private: p.private, kind: p.kind }];
+		showPlaces       = false;
+		placeSeq++;
+		setTimeout(() => { textarea?.focus(); textarea?.setSelectionRange(replaced.length, replaced.length); }, 0);
 	}
 
 	function selectMention(m: MentionSuggestion) {
@@ -1514,7 +1578,7 @@
 							<!-- ── Jeu tiré par le serveur ── -->
 							<GameResult game={msg.game} author={msg.author_username} />
 						{:else}
-								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: var(--nx-text)" hidden={soleIds.has(msg.id)} use:mentionChips={{ html: msg.content ?? '', token: token ?? null, me: userId }}>
+								<div class="nodyx-prose text-sm leading-relaxed break-words" style="color: var(--nx-text)" hidden={soleIds.has(msg.id)} use:mentionChips={{ html: msg.content ?? '', token: token ?? null, me: userId }} use:placeChips={{ html: msg.content ?? '', token: token ?? null }}>
 									{@html renderCustomEmojis(linkifyHtml(msg.content ?? ''), customEmojis)}
 									{#if shouldGroup && msg.edited_at}
 										<span class="text-[9px] italic ml-2" style="color: var(--nx-text-muted)">{tFn('chat.edited')}</span>
@@ -1780,6 +1844,14 @@
 						</div>
 					</div>
 				{/if}
+				<!-- « # » : la liste des endroits -->
+				{#if showPlaces && placeSuggestions.length > 0}
+					<div class="relative">
+						<div class="absolute bottom-full left-0 mb-1 z-30">
+							<PlaceList items={placeSuggestions} active={placeIndex} query={placeQuery} id="chat-place-list" onpick={selectPlace} />
+						</div>
+					</div>
+				{/if}
 
 				<!-- GIF picker popup -->
 				{#if showGifPicker}
@@ -1897,9 +1969,9 @@
 						oninput={handleInput}
 						role="combobox"
 						aria-autocomplete="list"
-						aria-expanded={(showMentions && mentionSuggestions.length > 0) || showCommands}
-						aria-controls={showCommands ? 'chat-command-list' : 'chat-mention-list'}
-						aria-activedescendant={showCommands ? `chat-command-list-${cmdIndex}` : showMentions && mentionSuggestions.length > 0 ? `chat-mention-list-${mentionIndex}` : undefined}
+						aria-expanded={(showMentions && mentionSuggestions.length > 0) || (showPlaces && placeSuggestions.length > 0) || showCommands}
+						aria-controls={showCommands ? 'chat-command-list' : showPlaces ? 'chat-place-list' : 'chat-mention-list'}
+						aria-activedescendant={showCommands ? `chat-command-list-${cmdIndex}` : showPlaces && placeSuggestions.length > 0 ? `chat-place-list-${placeIndex}` : showMentions && mentionSuggestions.length > 0 ? `chat-mention-list-${mentionIndex}` : undefined}
 						disabled={isRateLimited}
 					></textarea>
 					<!-- Toolbar -->
@@ -1952,7 +2024,7 @@
 					</div>
 				</div>
 				<!-- Sous le champ : les touches (champ vide, D54) ou les raccourcis d'envoi, et le « ? » -->
-				<CommandHelp empty={!inputText.trim()} triggers={['@', '/']} ontry={tryTrigger} hint={tFn('chat.composer_hint')} id="chat-cmd-help" />
+				<CommandHelp empty={!inputText.trim()} triggers={['@', '#', '/']} ontry={tryTrigger} hint={tFn('chat.composer_hint')} id="chat-cmd-help" />
 			</div>
 
 			{/if}<!-- end voice/text branch -->
