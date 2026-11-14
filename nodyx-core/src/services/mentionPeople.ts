@@ -6,6 +6,7 @@
 // avatar, grade. Jamais d'e-mail, de rôle technique ni de date de connexion.
 import { db } from '../config/database'
 import * as CommunityModel from '../models/community'
+import { describeGroups, isTeam } from './mentionGroups'
 
 let communityIdCache: string | null = null
 export async function instanceCommunityId(): Promise<string | null> {
@@ -43,8 +44,34 @@ export function withinOneEdit(a: string, b: string): boolean {
 
 export interface Suggestion {
   id: string; username: string; display_name: string | null; avatar: string | null
-  reason: 'here' | 'frequent' | 'member'
+  reason: 'here' | 'frequent' | 'member' | 'group'
   last_at?: string; count?: number
+  /** Groupe (reason = 'group') : clé de la marque (« ici », « grade:<id> »…) */
+  key?: string
+}
+
+// Mots qui retrouvent un groupe intégré (FR et EN), sans accents
+const GROUP_WORDS: Record<string, string[]> = {
+  ici: ['ici', 'here', 'en ligne', 'online'],
+  equipe: ['equipe', 'team', 'staff'],
+  moderation: ['moderation', 'moderateurs', 'mods', 'modo'],
+  tous: ['tous', 'everyone', 'all', 'tout le monde'],
+}
+
+/** Les groupes qui correspondent à la recherche (D52), avec leur nombre de personnes. */
+async function suggestGroups(communityId: string, me: string, q: string): Promise<Suggestion[]> {
+  const keys = Object.entries(GROUP_WORDS).filter(([, w]) => !q || w.some(x => x.startsWith(q))).map(([k]) => k)
+  const { rows: grades } = await db.query<{ id: string; name: string; color: string | null }>(
+    `SELECT id, name, color FROM community_grades WHERE community_id = $1 ORDER BY position, name LIMIT 50`, [communityId])
+  const gradeHits = grades.filter(g => q && fold(g.name).split(/\s+/).some(w => w.startsWith(q)) || q && fold(g.name).startsWith(q)).slice(0, 3)
+  const team = await isTeam(communityId, me)
+  const all = [...keys.filter(k => k !== 'tous' || team), ...gradeHits.map(g => 'grade:' + g.id)]
+  if (!all.length) return []
+  const info = await describeGroups(communityId, me, all)
+  return info.filter(i => !i.forbidden).map(i => ({
+    id: 'g:' + i.key, key: i.key, username: i.key, display_name: i.label ?? grades.find(g => 'grade:' + g.id === i.key)?.name ?? null,
+    avatar: null, reason: 'group' as const, count: i.count,
+  }))
 }
 
 type Ctx = { channelId?: string; threadId?: string }
@@ -127,6 +154,11 @@ export async function suggestPeople(me: string, rawQ: string, ctx: Ctx): Promise
   }
   for (const [id, last_at] of here) push(id, { reason: 'here', last_at })
   for (const [id, count] of frequent) push(id, { reason: 'frequent', count })
+  // D50 : les groupes après les personnes d'ici et les habituelles, avant les autres membres
+  for (const g of await suggestGroups(communityId, me, q).catch(() => [])) {
+    if (out.length >= MAX) break
+    out.push(g)
+  }
   if (q) [...people.values()].sort((a, b) => a.username.localeCompare(b.username)).forEach(p => push(p.id, { reason: 'member' }))
   return out
 }

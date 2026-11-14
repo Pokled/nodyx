@@ -9,7 +9,8 @@
 	import { toInternalPath, cardFor } from '$lib/linkCards'
 	import { internalLinkAt, linkCardPreviewPlugin, type LinkHit } from './linkCardPreview'
 	import MentionList from '$lib/components/MentionList.svelte'
-	import { suggestMentions, labelOf, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions'
+	import MentionWarnings from '$lib/components/MentionWarnings.svelte'
+	import { suggestMentions, insertLabel, refOf, refsIn, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions'
 	import { draftKey, readDraft, writeDraft, removeDraft } from '$lib/editorDrafts'
 
 	let {
@@ -735,21 +736,22 @@
 			inline: true,
 			atom: true,
 			selectable: false,
+			// ref : « u:<id> » (une personne) ou « g:<clé> » (un groupe, lot M2)
 			addAttributes() {
-				return { id: { default: null }, label: { default: '' } }
+				return { ref: { default: null }, label: { default: '' } }
 			},
 			parseHTML() {
 				return [{
 					tag: 'span[data-mention]',
 					getAttrs: (el: HTMLElement) => {
 						const v = el.getAttribute('data-mention') ?? ''
-						if (!v.startsWith('u:')) return false
-						return { id: v.slice(2), label: (el.textContent ?? '').replace(/^@/, '') }
+						if (!/^[ug]:/.test(v)) return false
+						return { ref: v, label: (el.textContent ?? '').replace(/^@/, '') }
 					},
 				}]
 			},
 			renderHTML({ node }: any) {
-				return ['span', { 'data-mention': 'u:' + node.attrs.id, class: 'nx-mention' }, '@' + node.attrs.label]
+				return ['span', { 'data-mention': node.attrs.ref, class: 'nx-mention' }, '@' + node.attrs.label]
 			},
 			renderText({ node }: any) { return '@' + node.attrs.label },
 		})
@@ -832,6 +834,7 @@
 
 		syncActive()
 		setupDraft()
+		setupMentionGate()
 	})
 
 	// ── Brouillon automatique (lib/editorDrafts.ts) ──────────────────────────
@@ -1603,10 +1606,61 @@
 	function pickMention(s: MentionSuggestion | undefined): void {
 		if (!editor || !s) return
 		editor.chain().focus().insertContentAt({ from: mentionFrom, to: mentionTo }, [
-			{ type: 'mention', attrs: { id: s.id, label: labelOf(s) } },
+			{ type: 'mention', attrs: { ref: refOf(s), label: insertLabel(s, tFn) } },
 			{ type: 'text', text: ' ' },
 		]).run()
 		mentionOpen = false; mentionItems = []; mentionSeq++
+	}
+
+	// ── D51 : avant l'envoi d'un formulaire, ce que les mentions vont faire ─────────
+	// Seulement dans un formulaire (forum, wiki, événement…). Un grand groupe retient
+	// l'envoi jusqu'à « Envoyer quand même » ; le cœur refait ses contrôles à l'envoi.
+	let mentionForm      = $state<HTMLFormElement | null>(null)
+	let mentionBlocked   = $state(false)
+	let mentionConfirmed = false
+	const mentionRefs = $derived(mentionForm ? refsIn(html) : [])
+	$effect(() => { void mentionRefs.join('|'); mentionConfirmed = false })
+
+	function setupMentionGate() {
+		const form = wrapperEl?.closest('form')
+		if (!form) return
+		mentionForm = form
+		// En capture : passe AVANT use:enhance et l'effacement du brouillon
+		form.addEventListener('submit', (e) => {
+			if (!mentionBlocked || mentionConfirmed) return
+			e.preventDefault()
+			e.stopImmediatePropagation()
+			wrapperEl?.querySelector('.mw')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+		}, { capture: true })
+	}
+
+	function confirmMentions() {
+		mentionConfirmed = true
+		mentionForm?.requestSubmit()
+	}
+
+	/** Les mentions de cette référence dans le texte, de la dernière à la première. */
+	function mentionPositions(ref: string): { pos: number; size: number }[] {
+		const out: { pos: number; size: number }[] = []
+		editor?.state.doc.descendants((node: any, pos: number) => {
+			if (node.type.name === 'mention' && node.attrs.ref === ref) out.push({ pos, size: node.nodeSize })
+		})
+		return out.reverse()
+	}
+	function removeMentionRef(ref: string) {
+		if (!editor) return
+		const tr = editor.state.tr
+		for (const m of mentionPositions(ref)) {
+			const after = tr.doc.textBetween(m.pos + m.size, Math.min(tr.doc.content.size, m.pos + m.size + 1))
+			tr.delete(m.pos, m.pos + m.size + (after === ' ' ? 1 : 0))
+		}
+		editor.view.dispatch(tr)
+	}
+	function replaceMentionRef(from: string, to: string, toLabel: string) {
+		if (!editor) return
+		const tr = editor.state.tr
+		for (const m of mentionPositions(from)) tr.setNodeMarkup(m.pos, undefined, { ref: to, label: toLabel })
+		editor.view.dispatch(tr)
 	}
 
 	// ── Preset colours & emoji ────────────────────────────────────────────────
@@ -2102,6 +2156,14 @@
 			<span>{tFn('editor.link_view.raw')}</span>
 		</button>
 		<span class="nb-hint">{tFn('editor.link_view.undo_hint')}</span>
+	</div>
+	{/if}
+
+	<!-- ── D51 : avertissements des mentions, dans un formulaire ─────────────── -->
+	{#if mentionForm && mentionRefs.length}
+	<div class="px-4 pt-2">
+		<MentionWarnings refs={mentionRefs} token={token ?? null} onremove={removeMentionRef} onreplace={replaceMentionRef}
+			onconfirm={confirmMentions} ongate={(b) => (mentionBlocked = b)} />
 	</div>
 	{/if}
 

@@ -9,11 +9,8 @@ import jwt from 'jsonwebtoken'
 import sanitizeHtml from 'sanitize-html'
 import { db, redis } from '../config/database'
 import * as ChannelModel from '../models/channel'
-import * as NotificationModel from '../models/notification'
-import { resolveMentions } from '../utils/mentions'
+import { notifyMentions } from '../services/mentionNotify'
 import { io } from './io'
-import { sendPushToUser } from '../routes/notifications'
-import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
 import { checkHtmlContent } from '../services/contentFilter'
 import { runPipeline, isOctoGuardEnabled, isUserMuted, tryHandleCommand } from '../services/octoguard'
 import { fileAutoReport } from '../services/octoguard/autoReport'
@@ -567,45 +564,11 @@ export function registerSocketIO(server: Server): void {
             .catch(err => console.error('[chat:send] twitch relay error', err))
         }
 
-        // Push notifications for @mentions
-        const mentionedIds = await resolveMentions(sanitized, memberCheck[0].community_id).catch(() => [])
-        for (const notifiedUserId of mentionedIds) {
-          if (notifiedUserId === userId) continue
-          // Déjà en train de regarder ce channel (onglet actif) ? Il lit le message
-          // en direct -> aucune notif (cloche/badge/push) nécessaire.
-          if (io) {
-            const userSockets = await io.in(`user:${notifiedUserId}`).fetchSockets().catch(() => [])
-            if (userSockets.some(s => s.data.activeChannel === channelId)) continue
-          }
-          await NotificationModel.create({
-            user_id:   notifiedUserId,
-            type:      'mention',
-            actor_id:  userId,
-            thread_id: null,
-            post_id:   null,
-          }).catch(() => {})
-          if (io) {
-            const count = await NotificationModel.getUnreadCount(notifiedUserId).catch(() => 0)
-            io.to(`user:${notifiedUserId}`).emit('notification:new', { unreadCount: count })
-            // Separate chat-specific mention badge (won't mix with forum notifications)
-            io.to(`user:${notifiedUserId}`).emit('chat:mention')
-          }
-          // Web Push si l'utilisateur n'est pas connecté en temps réel.
-          // Contrairement à une erreur API, un push envoyé n'est plus retraduisible
-          // une fois reçu (le service worker l'affiche tel quel) : on résout la
-          // langue du destinataire, pas celle de l'auteur du message.
-          const { rows: localeRows } = await db.query<{ locale: string | null }>(
-            `SELECT locale FROM users WHERE id = $1`, [notifiedUserId]
-          ).catch(() => ({ rows: [] }))
-          const pushLocale = resolveServerLocale(localeRows[0]?.locale, process.env.NODYX_COMMUNITY_LANGUAGE)
-          sendPushToUser(notifiedUserId, {
-            title: pushStrings(pushLocale).mentionTitle(username),
-            body:  sanitized.slice(0, 80),
-            type:  'mention',
-            tag:   'chat-mention',
-            url:   '/chat',
-          }).catch(() => {})
-        }
+        // Mentions (personnes et groupes) : le service unique, partagé avec le forum
+        await notifyMentions({
+          html: sanitized, communityId: memberCheck[0].community_id, actorId: userId, actorName: username,
+          where: { kind: 'chat', channelId, messageId: message.id },
+        }).catch(() => 0)
       } catch {
         // Silently ignore DB errors (e.g. channel deleted)
       }

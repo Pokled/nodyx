@@ -8,7 +8,7 @@
 import { get } from 'svelte/store'
 import { mount, unmount } from 'svelte'
 import { t } from '$lib/i18n'
-import { personFor, labelOf, type MentionPerson } from '$lib/mentions'
+import { personFor, labelOf, GROUP_LABEL_KEYS, type MentionPerson } from '$lib/mentions'
 import MentionCard from '$lib/components/MentionCard.svelte'
 
 interface Opts { html?: string; token: string | null; me?: string | null }
@@ -73,6 +73,16 @@ export function mentionChips(node: HTMLElement, initial: Opts) {
 	let opts = initial
 	let alive = true
 	function run() {
+		// Groupes (lot M2) : une puce sans carte, nom traduit dans la langue du lecteur
+		node.querySelectorAll<HTMLElement>('span[data-mention^="g:"]:not([data-chip])').forEach(el => {
+			el.dataset.chip = '1'
+			const key = (el.dataset.mention ?? '').slice(2)
+			const tFn = get(t)
+			const label = GROUP_LABEL_KEYS[key] ? tFn(GROUP_LABEL_KEYS[key]) : (el.textContent ?? '').replace(/^@/, '')
+			el.classList.add('nx-mention', 'nx-mention-group')
+			el.textContent = '@' + label
+			el.setAttribute('aria-label', tFn('mention.group_chip_aria', { name: label }))
+		})
 		const spans = node.querySelectorAll<HTMLElement>('span[data-mention^="u:"]:not([data-chip])')
 		spans.forEach(el => {
 			el.dataset.chip = '1'

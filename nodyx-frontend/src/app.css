@@ -1274,6 +1274,7 @@ select option {
   margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; object-fit: cover;
 }
 .nx-mention.nx-mention-me { background: color-mix(in srgb, var(--nx-header-accent, #f59e0b) 24%, transparent); color: var(--nx-text); }
+.nx-mention.nx-mention-group { padding-left: 6px; cursor: default; background: color-mix(in srgb, var(--nx-text, #fff) 9%, transparent); color: var(--nx-text); }
 .nx-mention.nx-mention-gone { cursor: default; padding-left: 6px; background: color-mix(in srgb, var(--nx-text, #fff) 7%, transparent); color: var(--nx-text-muted); font-style: italic; }
 /* !important : la ligne du chat pose son fond en style direct (et le change au survol) */
 [data-mention-scope].nx-mentioned { background: color-mix(in srgb, var(--nx-header-accent, #f59e0b) 7%, transparent) !important; box-shadow: inset 3px 0 0 var(--nx-header-accent, #f59e0b); }

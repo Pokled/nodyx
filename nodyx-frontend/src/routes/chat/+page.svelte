@@ -15,8 +15,9 @@
 	import PollCard    from '$lib/components/PollCard.svelte';
 	import LinkCards   from '$lib/components/LinkCards.svelte';
 	import MentionList from '$lib/components/MentionList.svelte';
+	import MentionWarnings from '$lib/components/MentionWarnings.svelte';
 	import { mentionChips } from '$lib/actions/mentionChips';
-	import { suggestMentions, applyPickedMentions, labelOf, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions';
+	import { suggestMentions, applyPickedMentions, insertLabel, refOf, refsIn, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions';
 	import { findInternalLinks, setCardOff, toInternalPath } from '$lib/linkCards';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import VoiceRoom from '$lib/components/VoiceRoom.svelte';
@@ -214,8 +215,26 @@
 	let mentionQuery       = $state('');
 	let mentionSuggestions = $state<MentionSuggestion[]>([]);
 	// Mentions choisies dans la liste : deviennent des marques liées à la personne à l'envoi (D49)
-	let pickedMentions     = $state<{ id: string; label: string }[]>([]);
+	let pickedMentions     = $state<{ ref: string; label: string }[]>([]);
 	let mentionSeq = 0;
+	// D51 : un grand groupe attend « Envoyer quand même » (le cœur refait ses contrôles)
+	let mentionGateBlocked = $state(false);
+	let richMentionBlocked = $state(false);
+	// Les mentions choisies encore présentes dans le texte
+	const liveMentionRefs = $derived([...new Set(pickedMentions.filter(p => inputText.includes('@' + p.label)).map(p => p.ref))]);
+
+	function removeMention(ref: string) {
+		const p = pickedMentions.find(x => x.ref === ref);
+		if (!p) return;
+		inputText = inputText.replace(new RegExp('@' + p.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' ?'), '');
+		pickedMentions = pickedMentions.filter(x => x.ref !== ref);
+	}
+	function replaceMention(from: string, to: string, toLabel: string) {
+		const p = pickedMentions.find(x => x.ref === from);
+		if (!p) return;
+		inputText = inputText.replace('@' + p.label, '@' + toLabel);
+		pickedMentions = pickedMentions.map(x => x.ref === from ? { ref: to, label: toLabel } : x);
+	}
 	let showMentions       = $state(false);
 
 	/**
@@ -913,8 +932,10 @@
 		if (source === 'plain') document.querySelector<HTMLTextAreaElement>('textarea#chat-input')?.focus();
 	}
 
-	async function sendMessage(force = false) {
+	async function sendMessage(force = false, mentionsConfirmed = false) {
 		if (!s || !selectedChannel || !inputText.trim()) return;
+		// D51 : un grand groupe demande une confirmation, donnée par le panneau d'avertissement
+		if (mentionGateBlocked && !mentionsConfirmed) return;
 		const channelId = selectedChannel.id;
 		const cmdResult = parseSlashCommand(inputText.trim());
 		const content   = cmdResult ?? applyPickedMentions(inputText.trim(), pickedMentions);
@@ -933,8 +954,9 @@
 		ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input'));
 	}
 
-	async function sendRich(force = false) {
+	async function sendRich(force = false, mentionsConfirmed = false) {
 		if (!s || !richContent.trim()) return;
+		if (richMentionBlocked && !mentionsConfirmed) return;
 		if (!editingRichId && selectedChannel && !force) {
 			const channelId = selectedChannel.id;
 			const html = richContent.trim();
@@ -1048,10 +1070,11 @@
 		const cursor      = textarea?.selectionStart ?? inputText.length;
 		const textBefore  = inputText.slice(0, cursor);
 		const textAfter   = inputText.slice(cursor);
-		const label       = labelOf(m);
+		const label       = insertLabel(m, tFn);
 		const replaced    = textBefore.replace(/@[\p{L}\p{N}_.\-]{0,30}$/u, `@${label} `);
 		inputText         = replaced + textAfter;
-		if (!pickedMentions.some(p => p.id === m.id && p.label === label)) pickedMentions = [...pickedMentions, { id: m.id, label }];
+		const ref         = refOf(m);
+		if (!pickedMentions.some(p => p.ref === ref && p.label === label)) pickedMentions = [...pickedMentions, { ref, label }];
 		showMentions      = false;
 		mentionSeq++;
 		// Re-focus textarea
@@ -1684,6 +1707,9 @@
 
 			<!-- Input area -->
 			<div class="px-4 shrink-0" style="padding-bottom: calc(var(--bottom-nav-h) + 1rem)">
+				<!-- D51 : ce que les mentions vont faire, avant l'envoi -->
+				<MentionWarnings refs={liveMentionRefs} token={token ?? null} onremove={removeMention} onreplace={replaceMention}
+					onconfirm={() => void sendMessage(false, true)} ongate={(b) => (mentionGateBlocked = b)} />
 				<!-- @mention dropdown -->
 				{#if showMentions && mentionSuggestions.length > 0}
 					<div class="relative">
@@ -1951,6 +1977,10 @@
 			</div>
 			{#if richNudge}
 				<div class="px-6 pt-3"><NudgeBanner nudge={richNudge} busy={prechecking} onReformulate={reformulate} onSendAnyway={() => sendRich(true)} /></div>
+			{/if}
+			{#if refsIn(richContent).length}
+				<div class="px-6 pt-3"><MentionWarnings refs={refsIn(richContent)} token={token ?? null}
+					onconfirm={() => void sendRich(false, true)} ongate={(b) => (richMentionBlocked = b)} /></div>
 			{/if}
 			<div class="px-6 py-4 border-t border-gray-800 flex justify-end gap-3">
 				<button onclick={closeRichModal} class="px-4 py-2 rounded bg-[var(--nx-border)] hover:bg-[var(--nx-border-soft)] text-sm text-[var(--nx-text)] transition-colors">

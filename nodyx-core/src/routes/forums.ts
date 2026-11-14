@@ -14,7 +14,7 @@ import * as TagModel from '../models/tag'
 import * as NotificationModel from '../models/notification'
 import { awardPoints, REPUTATION } from '../models/reputation'
 import { sanitize } from '../utils/sanitize'
-import { resolveMentions } from '../utils/mentions'
+import { notifyMentions } from '../services/mentionNotify'
 import { db, redis } from '../config/database'
 import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
@@ -349,6 +349,13 @@ app.get('/threads', {
     }
 
     if (ogThread.report) void fileAutoReport({ targetType: 'thread', targetId: thread.id, ruleName: ogThread.report.rule_name, excerpt: ogThread.report.excerpt })
+    // Les mentions du premier message préviennent aussi (avant le 13/11/2026 : personne)
+    if (catRows[0]) {
+      void notifyMentions({
+        html: sanitizedContent, communityId: catRows[0].community_id, actorId: request.user!.userId, actorName: '',
+        where: { kind: 'forum', threadId: thread.id, postId: post.id },
+      }).catch(() => 0)
+    }
 
     const tags = await TagModel.getTagsForThread(thread.id)
     // Webhooks : l'article est publié (pas retenu) ; il s'annonce aux destinations qui l'ont demandé
@@ -464,25 +471,15 @@ app.get('/threads', {
             io.to(`user:${thread.author_id}`).emit('notification:new', { unreadCount: count })
           }
         }
-        // Notify mentioned users (scopé à la communauté du fil : cf resolveMentions)
+        // Mentions (personnes et groupes) : le service unique, partagé avec le chat
         const { rows: catRows2 } = await db.query<{ community_id: string }>(
           `SELECT community_id FROM categories WHERE id = $1`, [thread.category_id]
         )
-        const mentionedIds = catRows2[0] ? await resolveMentions(sanitized, catRows2[0].community_id) : []
-        for (const mentionedId of mentionedIds) {
-          if (mentionedId !== userId) {
-            await NotificationModel.create({
-              user_id:   mentionedId,
-              type:      'mention',
-              actor_id:  userId,
-              thread_id: thread.id,
-              post_id:   post.id,
-            })
-            if (io) {
-              const count = await NotificationModel.getUnreadCount(mentionedId)
-              io.to(`user:${mentionedId}`).emit('notification:new', { unreadCount: count })
-            }
-          }
+        if (catRows2[0]) {
+          await notifyMentions({
+            html: sanitized, communityId: catRows2[0].community_id, actorId: userId, actorName: '',
+            where: { kind: 'forum', threadId: thread.id, postId: post.id },
+          })
         }
       } catch {
         // Never block the response for notification failures

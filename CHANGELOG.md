@@ -24,6 +24,15 @@ humains. Le reste, c'est de l'administration refaite et des pages qui suivent en
   (en ligne, dans un salon vocal), avec « Profil » et « Écrire ». Un message qui te mentionne
   est surligné. Une personne partie de la communauté devient « ancien membre ». Les anciennes
   mentions écrites « @pseudo » continuent de prévenir.
+- **Appeler un groupe, sans abus.** `@ici` (les membres en ligne), `@équipe`, `@modération` et
+  chaque grade sont proposés à tous ; `@tous` (toute la communauté) seulement à l'équipe, et le
+  serveur le refuse même si l'interface est contournée. Avant l'envoi, tu sais ce que tes
+  mentions vont faire : une personne hors de la communauté ne sera pas prévenue, et un groupe de
+  plus de 10 personnes demande une confirmation, avec « Seulement l'équipe » ou « Retirer la
+  mention » à côté. Le seuil se règle par instance.
+- **Deux oublis réparés au passage.** Une mention dans le premier message d'un nouveau sujet du
+  forum ne prévenait personne, seules les réponses le faisaient. Et la notification sur le
+  téléphone d'une mention dans le chat affichait le message en HTML brut au lieu du texte.
 
 ### Modération : une équipe, des droits, une file
 
