@@ -6993,5 +6993,8 @@
   "seo.desc_forum": "Le forum de {{name}} : toutes les discussions, ouvertes à la lecture sans compte.",
   "seo.desc_calendar": "Les événements de {{name}} : soirées, rencontres, lives et réunions, affichés à l'heure de chacun.",
   "seo.desc_help": "Tout ce que tu peux taper sur {{name}} : @ pour appeler quelqu'un, # pour montrer un endroit, / pour lancer une action.",
-  "seo.desc_category": "Les discussions de la catégorie {{category}}, sur le forum de {{name}}."
+  "seo.desc_category": "Les discussions de la catégorie {{category}}, sur le forum de {{name}}.",
+  "forum.views_one": "vue",
+  "forum.replies_one": "réponse",
+  "seo.desc_thread_fallback": "Discussion de {{author}} sur {{name}} : {{title}}"
 }

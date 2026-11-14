@@ -9,7 +9,7 @@
 	}
 
 	// JSON-LD sûr (texte de membre échappé) : $lib/jsonLd, partagé avec l'accueil et les événements.
-	import { jsonLdScript } from '$lib/jsonLd'
+	import { jsonLdScript, plainText } from '$lib/jsonLd'
 
 	import { enhance, applyAction } from '$app/forms';
 	import { untrack } from 'svelte';
@@ -21,9 +21,9 @@
 	import PostReactions from '$lib/components/PostReactions.svelte';
 	import PollCard from '$lib/components/PollCard.svelte';
 	import PollCreator from '$lib/components/PollCreator.svelte';
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 	import { apiFetch } from '$lib/api';
-	import { replyCount } from '$lib/forumCounts';
+	import { replyCount, isOne } from '$lib/forumCounts';
 	import { can, isAdminRole } from '$lib/permissions';
 	import { openReport } from '$lib/report';
 	import { octoguardMessage } from '$lib/octoguardMessages';
@@ -61,6 +61,43 @@
 	// post_count compte le message d'ouverture : ce n'est PAS un nombre de
 	// réponses. Voir $lib/forumCounts.
 	const replies = $derived(replyCount(thread.post_count));
+
+	// ── Référencement (revu le 14/11) ──
+	// La description : le début du VRAI message, pas « Discussion par X · 0 réponses ».
+	const opening = $derived(posts?.[0] ?? null);
+	const seoDescription = $derived(
+		plainText(opening?.content, 160)
+		|| tFn('seo.desc_thread_fallback', { author: thread.author_username ?? '', name: page.data.communityName ?? 'Nodyx', title: thread.title })
+	);
+	// Une seule adresse par sujet : sans ?highlight= ni autre paramètre.
+	const canonicalUrl = $derived(page.url.origin + page.url.pathname);
+	const profileUrl = (u: string | null | undefined) => (u ? `${page.url.origin}/users/${encodeURIComponent(u)}` : undefined);
+	// schema.org DiscussionForumPosting : Google EXIGE le texte (`text`), et lit les
+	// réponses (`comment`). Avant, ni l'un ni l'autre, et un isPartOf mal typé.
+	const seoPosting = $derived({
+		'@context': 'https://schema.org',
+		'@type': 'DiscussionForumPosting',
+		headline: thread.title,
+		text: plainText(opening?.content, 5000),
+		url: canonicalUrl,
+		mainEntityOfPage: canonicalUrl,
+		author: { '@type': 'Person', name: thread.author_username, ...(profileUrl(thread.author_username) ? { url: profileUrl(thread.author_username) } : {}) },
+		datePublished: thread.created_at,
+		dateModified: thread.updated_at ?? thread.created_at,
+		...(shareImage ? { image: shareImage } : {}),
+		commentCount: replies,
+		interactionStatistic: [
+			{ '@type': 'InteractionCounter', interactionType: 'https://schema.org/ViewAction', userInteractionCount: thread.views ?? 0 },
+			{ '@type': 'InteractionCounter', interactionType: 'https://schema.org/CommentAction', userInteractionCount: replies },
+		],
+		comment: (posts ?? []).slice(1, 51).map((p: any) => ({
+			'@type': 'Comment',
+			text: plainText(p.content, 2000),
+			datePublished: p.created_at,
+			author: { '@type': 'Person', name: p.author_username, ...(profileUrl(p.author_username) ? { url: profileUrl(p.author_username) } : {}) },
+		})),
+		isPartOf: { '@type': 'WebSite', name: page.data.communityName ?? 'Nodyx', url: page.url.origin + '/' },
+	});
 	const user   = $derived(data.user);
 	// Modérer le contenu (modifier, supprimer, épingler, verrouiller) : permission
 	// moderate_content, socle du modérateur + grade (lib/permissions.ts). Mettre
@@ -184,39 +221,20 @@
 
 <svelte:head>
 	<title>{thread.title} · {page.data.communityName ?? 'Nodyx'}</title>
-	<meta name="description" content="Discussion : {thread.title} par {thread.author_username}" />
-	<link rel="canonical" href={page.url.href} />
+	<meta name="description" content={seoDescription} />
+	<link rel="canonical" href={canonicalUrl} />
 	<meta property="og:title"       content="{thread.title} · {page.data.communityName ?? 'Nodyx'}" />
-	<meta property="og:description" content="Discussion par {thread.author_username} · {replies} {tFn('forum.replies_label')} · {thread.views} {tFn('forum.views')}" />
+	<meta property="og:description" content={seoDescription} />
 	<meta property="og:type"        content="article" />
-	<meta property="og:url"         content={page.url.href} />
+	<meta property="og:url"         content={canonicalUrl} />
+	<meta property="article:published_time" content={thread.created_at} />
 	<!-- Pas de og:image:width/height ici : l'image de tête d'un article a des
 	     dimensions variables (le pipeline d'upload re-encode/redimensionne).
 	     Déclarer une taille fixe fausserait l'aperçu. Les scrapers lisent la
 	     vraie taille de l'image. -->
 	<meta property="og:image"        content={shareImage} />
 	<meta name="twitter:image"       content={shareImage} />
-	<meta property="og:site_name"   content={page.data.communityName ?? 'Nodyx'} />
-	{@html jsonLdScript({
-		"@context": "https://schema.org",
-		"@type": "DiscussionForumPosting",
-		"headline": thread.title,
-		"url": page.url.href,
-		"author": { "@type": "Person", "name": thread.author_username },
-		"datePublished": thread.created_at,
-		"dateModified": thread.updated_at ?? thread.created_at,
-		"commentCount": replies,
-		"interactionStatistic": {
-			"@type": "InteractionCounter",
-			"interactionType": "https://schema.org/ViewAction",
-			"userInteractionCount": thread.views
-		},
-		"isPartOf": {
-			"@type": "DiscussionForumPosting",
-			"name": page.data.communityName ?? 'Nodyx',
-			"url": page.url.origin + '/forum'
-		}
-	})}
+	{@html jsonLdScript(seoPosting)}
 </svelte:head>
 
 <!-- ── En-tête du thread avec avatar créateur ─────────────────────────────── -->
@@ -403,7 +421,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 							</svg>
 							<span class="font-medium text-[var(--nx-text)]">{thread.views}</span>
-							<span class="text-[var(--nx-text-muted)] text-xs">{tFn('forum.views')}</span>
+							<span class="text-[var(--nx-text-muted)] text-xs">{tFn(isOne(thread.views ?? 0, $locale) ? 'forum.views_one' : 'forum.views')}</span>
 						</div>
 
 						<!-- Réponses -->
@@ -412,7 +430,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 							</svg>
 							<span class="font-medium text-[var(--nx-text)]">{replies}</span>
-							<span class="text-[var(--nx-text-muted)] text-xs">{tFn('forum.replies_label')}</span>
+							<span class="text-[var(--nx-text-muted)] text-xs">{tFn(isOne(replies, $locale) ? 'forum.replies_one' : 'forum.replies_label')}</span>
 						</div>
 
 						<!-- Dernier posteur (si existe) -->

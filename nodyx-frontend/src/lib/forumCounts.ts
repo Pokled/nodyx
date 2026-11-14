@@ -34,3 +34,16 @@ export function replyCount(postCount: number | null | undefined): number {
 export function isUnanswered(postCount: number | null | undefined): boolean {
 	return replyCount(postCount) === 0
 }
+
+/**
+ * Le mot qui suit un nombre, accordé : « 1 vue », « 0 réponse » en français
+ * (zéro et un sont au singulier), « 1 view », « 0 replies » en anglais. Avant le
+ * 14/11, le forum écrivait « 1 vues » et « 1 réponses ».
+ */
+export function isOne(n: number, locale: string): boolean {
+	try {
+		return new Intl.PluralRules(locale).select(n) === 'one'
+	} catch {
+		return n === 1
+	}
+}

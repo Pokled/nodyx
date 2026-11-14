@@ -4,8 +4,8 @@
 	import type { FlyParams, FadeParams } from 'svelte/transition';
 	import { page } from '$app/state';
 	import { inkOn } from '$lib/adminTheme';
-	import { t } from '$lib/i18n';
-	import { replyCount, isUnanswered } from '$lib/forumCounts';
+	import { t, locale } from '$lib/i18n';
+	import { replyCount, isUnanswered, isOne } from '$lib/forumCounts';
 
 	const tFn = $derived($t)
 
@@ -729,7 +729,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 								<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 							</svg>
-							<span>{thread.views || 0} {tFn('forum.views')}</span>
+							<span>{thread.views || 0} {tFn(isOne(thread.views || 0, $locale) ? 'forum.views_one' : 'forum.views')}</span>
 						</div>
 					</div>
 				</div>
@@ -739,7 +739,7 @@
 					<!-- Compteur de réponses -->
 					<div class="flex flex-col items-center px-3 py-1.5 border border-[color-mix(in_srgb,var(--nx-text)_6%,transparent)] group-hover:border-indigo-700/50 transition-colors min-w-[60px] text-center">
 						<span class="text-lg font-bold text-[var(--nx-header-accent)] leading-none">{replyCount(thread.post_count)}</span>
-						<span class="text-[11px] text-[var(--nx-text-muted)] uppercase tracking-wider">{tFn('forum.replies_label')}</span>
+						<span class="text-[11px] text-[var(--nx-text-muted)] uppercase tracking-wider">{tFn(isOne(replyCount(thread.post_count), $locale) ? 'forum.replies_one' : 'forum.replies_label')}</span>
 					</div>
 
 					<!-- Dernier posteur -->

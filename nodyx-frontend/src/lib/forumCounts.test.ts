@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { replyCount, isUnanswered } from './forumCounts'
+import { replyCount, isUnanswered, isOne } from './forumCounts'
 
 describe('replyCount', () => {
 	// Le cas exact rapporté : un sujet ouvert, aucune réponse, affichait
@@ -50,5 +50,21 @@ describe('isUnanswered', () => {
 	it('selectionne bien les sujets a un seul message dans une liste', () => {
 		const sujets = [{ post_count: 1 }, { post_count: 1 }, { post_count: 5 }, { post_count: 2 }]
 		expect(sujets.filter(s => isUnanswered(s.post_count)).length).toBe(2)
+	})
+})
+
+describe('isOne : accord du mot qui suit un nombre', () => {
+	it('français : zéro et un au singulier', () => {
+		expect(isOne(0, 'fr')).toBe(true)
+		expect(isOne(1, 'fr')).toBe(true)
+		expect(isOne(2, 'fr')).toBe(false)
+	})
+	it('anglais : un seul au singulier', () => {
+		expect(isOne(0, 'en')).toBe(false)
+		expect(isOne(1, 'en')).toBe(true)
+	})
+	it('langue inconnue : repli sur « 1 »', () => {
+		expect(isOne(1, 'pas-une-langue!!')).toBe(true)
+		expect(isOne(0, 'pas-une-langue!!')).toBe(false)
 	})
 })
