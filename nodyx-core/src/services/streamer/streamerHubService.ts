@@ -916,6 +916,12 @@ export function getHardcodedCommandNames(): readonly string[] {
   return CHAT_COMMANDS.map(c => c.name)
 }
 
+// Les commandes natives telles que l'aide de Nodyx les montre (nom, réservée aux
+// modérateurs du chat Twitch). Ni gestionnaire ni texte : services/bangCommands.ts.
+export function getNativeChatCommands(): { name: string; modOnly: boolean }[] {
+  return CHAT_COMMANDS.map(c => ({ name: c.name, modOnly: c.modOnly }))
+}
+
 const CHAT_COMMANDS: ChatCommandDef[] = [
   { name: '!nodyx',     modOnly: false, description: "Lien d'invite vers la communauté Nodyx",     handler: execNodyxCommand },
   { name: '!uptime',    modOnly: false, description: "Durée écoulée depuis le début du stream",    handler: execUptimeCommand },
