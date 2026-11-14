@@ -68,6 +68,34 @@
 	]);
 	const ownsOgImage = $derived(PAGES_WITH_OWN_OG.has(page.route.id ?? ''));
 
+	// ── Référencement : ce que chaque page dit aux moteurs et aux assistants ──────
+	// Pages qui posent DÉJÀ leur adresse canonique (deux canoniques = aucune).
+	const PAGES_WITH_OWN_CANONICAL = new Set([
+		'/forum/[category]/[thread]',
+		'/forum/[category]',
+		'/users/[username]/card',
+		'/musique',
+		'/musique/[slug]',
+		'/musique/playlists/rock-alternatif-2000s',
+	]);
+	// Rien à indexer : comptes, réglages, espaces réservés aux membres, recherche.
+	// (robots.txt les écarte déjà de l'exploration ; noindex couvre un lien venu d'ailleurs.)
+	const NOINDEX = /^\/(admin|auth|login|register|reset-password|settings|notifications|dm|chat|search|overlay|banned|whisper|canvas)(\/|$)/;
+	const noindex = $derived(NOINDEX.test(page.url.pathname));
+	// L'adresse canonique : le chemin, sans les paramètres de suivi ou d'état
+	// (seul le numéro de page d'une liste change vraiment le contenu).
+	const canonicalUrl = $derived.by(() => {
+		const n = page.url.searchParams.get('page');
+		return page.url.origin + page.url.pathname + (n && /^\d+$/.test(n) && n !== '1' ? `?page=${n}` : '');
+	});
+	// Pages publiques qui n'avaient pas de description (les moteurs en inventaient une)
+	const ROUTE_DESCRIPTIONS: Record<string, string> = {
+		'/forum': 'seo.desc_forum',
+		'/calendar': 'seo.desc_calendar',
+		'/help': 'seo.desc_help',
+	};
+	const routeDescription = $derived(ROUTE_DESCRIPTIONS[page.route.id ?? ''] ?? null);
+
 	const user            = $derived(data.user);
 	const isBanned        = $derived(data.user?.is_banned === true);
 	// Fond de la sidebar membres : visibilité tout/visiteurs/connectés — pour
@@ -816,6 +844,19 @@
 	     (community identity) prevents an uploaded square logo from being
 	     stretched into a 16×16 tab icon. -->
 	<meta property="og:site_name" content={communityName} />
+	{#if noindex}
+		<meta name="robots" content="noindex, nofollow" />
+	{:else if !PAGES_WITH_OWN_CANONICAL.has(page.route.id ?? '')}
+		<link rel="canonical" href={canonicalUrl} />
+		<meta property="og:url" content={canonicalUrl} />
+	{/if}
+	{#if !ownsOgImage}
+		<meta property="og:type" content="website" />
+	{/if}
+	{#if routeDescription}
+		<meta name="description" content={tFn(routeDescription, { name: communityName })} />
+		<meta property="og:description" content={tFn(routeDescription, { name: communityName })} />
+	{/if}
 	<!-- og:image en URL ABSOLUE : Discord/Twitter/Facebook ne résolvent pas
 	     les chemins relatifs (l'ancien /og-image.jpg de app.html ne
 	     s'affichait jamais dans les partages). Les pages qui définissent
@@ -827,7 +868,6 @@
 		<meta name="twitter:image" content="{page.url.origin}/og-image.jpg" />
 	{/if}
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="theme-color" content="var(--nx-accent)" />
 	<!-- Preload all Google Font presets (avatar/username effects) -->
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />

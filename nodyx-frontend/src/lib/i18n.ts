@@ -76,6 +76,22 @@ export async function ensureLocale(code: Locale): Promise<void> {
   await Promise.all([loadOne(code), code === 'fr' || code === 'en' ? null : loadOne('en')])
 }
 
+/**
+ * Traduire HORS composant, dans une langue donnée : les routes serveur qui produisent
+ * un fichier (rss.xml, llms.txt) écrivent dans la langue de l'INSTANCE, pas dans celle
+ * d'un visiteur. Même repli que `t` : la langue, puis l'anglais, puis le français.
+ */
+export async function translatorFor(code: string | null | undefined): Promise<(key: string, vars?: Record<string, string | number>) => string> {
+  const lang: Locale = isKnownLocale(code) ? code : 'en'
+  await ensureLocale(lang)
+  if (lang !== 'en') await loadOne('en')
+  return (key, vars) => {
+    let str: string = messages[lang]?.[key] ?? messages['en']?.[key] ?? messages['fr']?.[key] ?? key
+    if (vars) for (const [k, v] of Object.entries(vars)) str = str.replaceAll(`{{${k}}}`, String(v))
+    return str
+  }
+}
+
 // ── Store locale ──────────────────────────────────────────────────────────────
 
 /**

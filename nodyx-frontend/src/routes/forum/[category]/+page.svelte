@@ -28,6 +28,17 @@
 	tFn('forum.category_fallback')
 ); // À remplacer quand l'API fournira la catégorie
 
+	const absUrl = (u: string) => (/^https?:\/\//.test(u) ? u : page.url.origin + (u.startsWith('/') ? u : '/' + u));
+	const seoDescription = $derived(
+		(data.category?.description ?? '').replace(/<[^<>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)
+		|| tFn('seo.desc_category', { category: categoryName, name: page.data.communityName ?? 'Nodyx' })
+	);
+	const seoCanonical = $derived.by(() => {
+		const n = page.url.searchParams.get('page');
+		return page.url.origin + page.url.pathname + (n && /^\d+$/.test(n) && n !== '1' ? `?page=${n}` : '');
+	});
+	const seoImage = $derived(absUrl(page.data.communityBannerUrl ?? page.data.communityLogoUrl ?? '/og-image.jpg'));
+
 	// ── Types ──────────────────────────────────────────────────────────
 	type Tag = {
 		id: string;
@@ -259,14 +270,18 @@
 
 <svelte:head>
 	<title>{categoryName} · {page.data.communityName ?? 'Nodyx'}</title>
-	<meta name="description" content="Discussions dans {categoryName}, forum {page.data.communityName ?? 'Nodyx'}" />
-	<link rel="canonical" href={page.url.href} />
+	<!-- Référencement (revu le 14/11) : la description de la catégorie quand elle existe ;
+	     une adresse canonique SANS ?tag= ni autres paramètres (sinon autant de doublons que
+	     de filtres) ; une image en adresse complète (un chemin relatif ne s'affiche dans
+	     aucun aperçu), et plus « default-og-image.png », qui n'a jamais existé. -->
+	<meta name="description" content={seoDescription} />
+	<link rel="canonical" href={seoCanonical} />
 	<meta property="og:title"       content="{categoryName} · {page.data.communityName ?? 'Nodyx'}" />
-	<meta property="og:description" content="Discussions dans {categoryName}, forum {page.data.communityName ?? 'Nodyx'}" />
+	<meta property="og:description" content={seoDescription} />
 	<meta property="og:type"        content="website" />
-	<meta property="og:url"         content={page.url.href} />
-	<meta property="og:image"       content={page.data.communityBannerUrl ?? page.data.communityLogoUrl ?? `${page.url.origin}/default-og-image.png`} />
-	<meta property="og:site_name"   content={page.data.communityName ?? 'Nodyx'} />
+	<meta property="og:url"         content={seoCanonical} />
+	<meta property="og:image"       content={seoImage} />
+	<meta name="twitter:image"      content={seoImage} />
 </svelte:head>
 
 <!-- EN-TÊTE DE CATÉGORIE -->

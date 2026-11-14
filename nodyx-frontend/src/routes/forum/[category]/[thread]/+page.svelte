@@ -8,21 +8,8 @@
 		return origin + url
 	}
 
-	// JSON.stringify() n'échappe pas < > & : une valeur comme le titre du fil
-	// contenant la séquence de fermeture d'un tag script romprait le JSON-LD
-	// injecté plus bas et ferait exécuter ce qui suit comme du HTML/JS. On
-	// échappe ces trois caractères en séquences unicode après coup, seule
-	// façon fiable d'embarquer du JSON dans un tag script sans risque (voir
-	// aussi le nettoyage posé côté API sur POST/PATCH /forums/threads).
-	// Note : le "<\/script>" ci-dessous a son slash échappé exprès, sinon le
-	// parseur Svelte lirait ce fichier .svelte comme fermant CE bloc script.
-	function jsonLdScript(data: unknown): string {
-		const json = JSON.stringify(data)
-			.replace(/</g, '\\u003c')
-			.replace(/>/g, '\\u003e')
-			.replace(/&/g, '\\u0026')
-		return `<script type="application/ld+json">${json}<\/script>`
-	}
+	// JSON-LD sûr (texte de membre échappé) : $lib/jsonLd, partagé avec l'accueil et les événements.
+	import { jsonLdScript } from '$lib/jsonLd'
 
 	import { enhance, applyAction } from '$app/forms';
 	import { untrack } from 'svelte';

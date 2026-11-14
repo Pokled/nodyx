@@ -45,7 +45,8 @@
 </script>
 
 <svelte:head>
-	<title>Forum</title>
+	<title>{tFn('nav.forum')} · {page.data.communityName ?? 'Nodyx'}</title>
+	<meta property="og:title" content="{tFn('nav.forum')} · {page.data.communityName ?? 'Nodyx'}" />
 </svelte:head>
 
 <div>

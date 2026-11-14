@@ -1,71 +1,44 @@
-import type { RequestHandler } from './$types';
-import { apiFetch } from '$lib/api';
+// Plan du site : toutes les pages qu'un visiteur anonyme peut lire.
+// Revu le 14/11 : les sujets au-delà des 100 premiers d'une catégorie manquaient,
+// les événements publics, le calendrier et l'aide n'y étaient pas, et aucune page
+// de liste ne disait quand elle avait changé (lastmod, le seul repère que Google
+// lit encore ; changefreq et priority sont ignorés, on ne les envoie plus).
+import type { RequestHandler } from './$types'
+import { seoCategories, seoAllThreads, seoEvents, threadPath, categoryPath, xml } from '$lib/server/seoData'
 
-function escapeXml(str: string): string {
-	return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const day = (iso: string | null | undefined) => {
+	const d = iso ? new Date(iso) : null
+	return d && !isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : undefined
 }
-
-function flattenCategories(cats: any[]): any[] {
-	return cats.flatMap((c: any) => [c, ...flattenCategories(c.children ?? [])]);
-}
-
-function urlEntry(loc: string, lastmod?: string, priority = '0.7', changefreq = 'weekly') {
-	return `  <url>
-    <loc>${escapeXml(loc)}</loc>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
-    <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
-  </url>`;
-}
+const entry = (loc: string, lastmod?: string) =>
+	`  <url><loc>${xml(loc)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>`
 
 export const GET: RequestHandler = async ({ fetch, url }) => {
-	const origin = url.origin;
-	const entries: string[] = [];
+	const o = url.origin
+	const [cats, events] = await Promise.all([seoCategories(fetch), seoEvents(fetch)])
+	const threads = await seoAllThreads(fetch, cats)
 
-	// Pages statiques
-	entries.push(urlEntry(origin, undefined, '1.0', 'daily'));
-	entries.push(urlEntry(`${origin}/forum`, undefined, '0.9', 'daily'));
-
-	try {
-		const catsRes = await apiFetch(fetch, '/instance/categories');
-		if (catsRes.ok) {
-			const { categories } = await catsRes.json();
-			const flat = flattenCategories(categories ?? []);
-
-			// Page de chaque catégorie
-			for (const cat of flat) {
-				entries.push(urlEntry(`${origin}/forum/${cat.slug ?? cat.id}`, undefined, '0.8', 'daily'));
-			}
-
-			// Threads — fetch toutes les catégories en parallèle
-			const threadBatches = await Promise.all(
-				flat.map((cat: any) =>
-					apiFetch(fetch, `/forums/threads?category_id=${cat.id}&limit=100`)
-						.then(r => r.ok ? r.json() : { threads: [] })
-						.then(j => (j.threads ?? []) as any[])
-						.catch(() => [] as any[])
-				)
-			);
-
-			for (const threads of threadBatches) {
-				for (const t of threads) {
-					const lastmod = new Date(t.updated_at || t.created_at).toISOString().split('T')[0];
-					entries.push(urlEntry(`${origin}/forum/${t.category_slug ?? t.category_id}/${t.slug ?? t.id}`, lastmod, '0.7', 'weekly'));
-				}
-			}
-		}
-	} catch {
-		// API indisponible — on retourne au moins les pages statiques
+	// Une catégorie change quand l'un de ses sujets change ; le forum, quand l'une d'elles change
+	const latest = new Map<string, string>()
+	for (const t of threads) {
+		const d = day(t.updated_at ?? t.created_at)
+		if (d && (!latest.has(t.category_id) || latest.get(t.category_id)! < d)) latest.set(t.category_id, d)
 	}
+	const forumDay = [...latest.values()].sort().at(-1)
 
-	const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+	const entries = [
+		entry(`${o}/`, forumDay),
+		entry(`${o}/forum`, forumDay),
+		entry(`${o}/calendar`),
+		entry(`${o}/help`),
+		...cats.map(c => entry(`${o}${categoryPath(c)}`, latest.get(c.id) ?? day(c.updated_at))),
+		...threads.map(t => entry(`${o}${threadPath(t)}`, day(t.updated_at ?? t.created_at))),
+		...events.map(e => entry(`${o}/calendar/${e.id}`)),
+	]
+
+	const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries.join('\n')}
-</urlset>`;
-
-	return new Response(sitemap, {
-		headers: {
-			'Content-Type': 'application/xml; charset=utf-8',
-			'Cache-Control': 'public, max-age=3600',
-		},
-	});
-};
+</urlset>`
+	return new Response(body, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } })
+}
