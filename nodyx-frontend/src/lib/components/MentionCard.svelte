@@ -22,6 +22,15 @@
 	const online = $derived($onlineMembersStore.some(m => m.userId === person.id))
 	const inVoice = $derived(Object.values($voiceChannelMembersStore).some(list => list?.some(m => m.userId === person.id)))
 	let busy = $state(false)
+	let muted = $state(false)
+	async function setMuted(on: boolean) {
+		if (busy || !token) return
+		busy = true
+		try {
+			const r = await apiFetch(fetch, `/mentions/mutes/${person.id}`, { method: on ? 'PUT' : 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+			if (r.ok) muted = on
+		} finally { busy = false }
+	}
 
 	async function write() {
 		if (busy || !token) return
@@ -53,6 +62,12 @@
 		<span class="mc-dot" class:on={online || inVoice}></span>
 		{inVoice ? $t('mention.card_in_voice') : online ? $t('mention.card_online') : $t('mention.card_offline')}
 	</div>
+	{#if token && person.id !== me}
+		<p class="mc-mute" role="status" aria-live="polite">
+			{#if muted}{$t('mention.card_muted')} <button type="button" onclick={() => setMuted(false)} disabled={busy}>{$t('mention.card_unmute')}</button>
+			{:else}<button type="button" onclick={() => setMuted(true)} disabled={busy}>{$t('mention.card_mute')}</button>{/if}
+		</p>
+	{/if}
 	<div class="mc-b">
 		<a class="mc-btn" href="/users/{person.username}">{$t('mention.card_profile')}</a>
 		{#if token && person.id !== me}
@@ -75,6 +90,9 @@
 	.mc-dot { width: 8px; height: 8px; border-radius: 99px; background: #9ca3af; flex: none; }
 	.mc-dot.on { background: #22c55e; }
 	.mc-b { display: flex; gap: 6px; }
+	.mc-mute { margin: -4px 0 10px; font-size: 12px; color: var(--nx-text-muted); }
+	.mc-mute button { border: 0; background: none; padding: 0; color: var(--nx-text-muted); text-decoration: underline; cursor: pointer; font: inherit; }
+	.mc-mute button:hover { color: var(--nx-text); }
 	.mc-btn { flex: 1; display: inline-flex; justify-content: center; align-items: center; border-radius: 8px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; border: 1px solid color-mix(in srgb, var(--nx-text) 14%, transparent); background: transparent; color: var(--nx-text); text-decoration: none; cursor: pointer; }
 	.mc-btn:hover { background: color-mix(in srgb, var(--nx-text) 6%, transparent); }
 	.mc-primary { background: var(--nx-header-accent); color: var(--nx-on-accent, #16120c); border-color: transparent; }

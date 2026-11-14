@@ -120,3 +120,28 @@ export async function groupRecipients(html: string, communityId: string, actorId
   }
   return out
 }
+
+export interface GroupCard { key: string; label: string | null; color: string | null; count: number; sample: { username: string; display_name: string | null }[] }
+
+/** Les puces de groupe : nom et couleur À JOUR (un grade renommé suit), nombre et quelques noms. */
+export async function groupCards(communityId: string, keys: string[]): Promise<GroupCard[]> {
+  const valid = [...new Set(keys.filter(isGroupKey))].slice(0, 10)
+  if (!valid.length) return []
+  const gradeIds = valid.filter(k => k.startsWith('grade:')).map(k => k.slice(6))
+  const grades = new Map<string, { name: string; color: string | null }>()
+  if (gradeIds.length) {
+    const { rows } = await db.query<{ id: string; name: string; color: string | null }>(
+      `SELECT id, name, color FROM community_grades WHERE community_id = $1 AND id = ANY($2::uuid[])`, [communityId, gradeIds])
+    rows.forEach(r => grades.set('grade:' + r.id, { name: r.name, color: r.color }))
+  }
+  return Promise.all(valid.map(async key => {
+    const ids = key.startsWith('grade:') && !grades.has(key) ? [] : await membersOf(communityId, key)
+    const { rows } = ids.length
+      ? await db.query<{ username: string; display_name: string | null }>(
+          `SELECT u.username, up.display_name FROM users u LEFT JOIN user_profiles up ON up.user_id = u.id
+           WHERE u.id = ANY($1::uuid[]) ORDER BY u.username LIMIT 5`, [ids.slice(0, 200)])
+      : { rows: [] as { username: string; display_name: string | null }[] }
+    const g = grades.get(key)
+    return { key, label: g?.name ?? null, color: g?.color ?? null, count: Math.min(ids.length, MAX_GROUP_RECIPIENTS), sample: rows }
+  }))
+}

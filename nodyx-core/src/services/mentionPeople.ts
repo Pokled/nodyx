@@ -48,11 +48,13 @@ export interface Suggestion {
   last_at?: string; count?: number
   /** Groupe (reason = 'group') : clé de la marque (« ici », « grade:<id> »…) */
   key?: string
+  /** Couleur d'un grade */
+  color?: string | null
 }
 
 // Mots qui retrouvent un groupe intégré (FR et EN), sans accents
 const GROUP_WORDS: Record<string, string[]> = {
-  ici: ['ici', 'here', 'en ligne', 'online'],
+  ici: ['enligne', 'en ligne', 'ici', 'online', 'here'],
   equipe: ['equipe', 'team', 'staff'],
   moderation: ['moderation', 'moderateurs', 'mods', 'modo'],
   tous: ['tous', 'everyone', 'all', 'tout le monde'],
@@ -71,6 +73,7 @@ async function suggestGroups(communityId: string, me: string, q: string): Promis
   return info.filter(i => !i.forbidden).map(i => ({
     id: 'g:' + i.key, key: i.key, username: i.key, display_name: i.label ?? grades.find(g => 'grade:' + g.id === i.key)?.name ?? null,
     avatar: null, reason: 'group' as const, count: i.count,
+    color: grades.find(g => 'grade:' + g.id === i.key)?.color ?? null,
   }))
 }
 
