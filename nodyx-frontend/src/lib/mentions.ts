@@ -28,7 +28,7 @@ export interface MentionPerson {
 
 /** Minuscules sans accents (même règle que le cœur). */
 export function fold(s: string): string {
-	return (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+	return (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 
 export const labelOf = (p: { username?: string; display_name?: string | null }) => p.display_name || p.username || ''

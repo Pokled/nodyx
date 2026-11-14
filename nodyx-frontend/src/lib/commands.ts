@@ -6,7 +6,7 @@
 // On n'annonce que ce qui marche : une touche ou une commande n'entre ici que le
 // jour où elle fonctionne (pas de « # » avant son lot).
 
-export type Trigger = '@' | '/'
+export type Trigger = '@' | '#' | '/'
 export type Place = 'chat' | 'forum'
 
 export interface CommandDef {
@@ -22,7 +22,7 @@ export interface CommandDef {
 	descKey: string
 	exampleKey?: string
 	/** Famille, pour regrouper la liste du « / ». */
-	group: 'help' | 'call' | 'play'
+	group: 'help' | 'call' | 'show' | 'play'
 	/** Autres noms acceptés (`/?`), trouvés aussi par la liste. Jamais rien en « ai » (réservé). */
 	aliases?: string[]
 	/** Action locale : la commande ne s'envoie pas, elle agit dans la page. */
@@ -42,6 +42,13 @@ export const COMMANDS: CommandDef[] = [
 	{ id: 'at-mods', trigger: '@', name: '', nameKey: 'mention.g_moderation', descKey: 'cmd.at_mods', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_mods' },
 	{ id: 'at-grade', trigger: '@', name: '', argsKey: 'cmd.arg_grade', descKey: 'cmd.at_grade', exampleKey: 'cmd.at_grade_ex', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_grade' },
 	{ id: 'at-all', trigger: '@', name: '', nameKey: 'mention.g_tous', descKey: 'cmd.at_all', group: 'call', where: ['chat', 'forum'], team: true, keywordsKey: 'cmd.kw_at_all' },
+	// # : montrer un endroit (lot C4, D59). Le nom de l'endroit suit la touche.
+	{ id: 'show-channel', trigger: '#', name: '', argsKey: 'cmd.arg_channel', descKey: 'cmd.show_channel', exampleKey: 'cmd.show_channel_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_channel' },
+	{ id: 'show-event', trigger: '#', name: '', argsKey: 'cmd.arg_event', descKey: 'cmd.show_event', exampleKey: 'cmd.show_event_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_event' },
+	{ id: 'show-thread', trigger: '#', name: '', argsKey: 'cmd.arg_thread', descKey: 'cmd.show_thread', exampleKey: 'cmd.show_thread_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_thread' },
+	{ id: 'show-wiki', trigger: '#', name: '', argsKey: 'cmd.arg_wiki', descKey: 'cmd.show_wiki', exampleKey: 'cmd.show_wiki_ex', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_wiki' },
+	{ id: 'show-poll', trigger: '#', name: '', argsKey: 'cmd.arg_poll', descKey: 'cmd.show_poll', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_poll' },
+	{ id: 'show-board', trigger: '#', name: '', argsKey: 'cmd.arg_board', descKey: 'cmd.show_board', group: 'show', where: ['chat'], keywordsKey: 'cmd.kw_show_board' },
 	// / : l'aide, EN TÊTE de la liste du « / » (ouvre le pop-up, rien n'est envoyé).
 	// Pas d'alias « aide » : « /ai » est RÉSERVÉ à une future commande d'IA (Jonathan, 14/11).
 	{ id: 'help', trigger: '/', name: 'help', aliases: ['?'], local: 'help', descKey: 'cmd.help_cmd', exampleKey: 'cmd.help_cmd_ex', group: 'help', where: ['chat'], keywordsKey: 'cmd.kw_help' },
@@ -82,7 +89,7 @@ export function exactSlash(text: string): CommandDef | null {
 
 /** Minuscules sans accents. */
 export function fold(s: string): string {
-	return (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+	return (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 
 /**

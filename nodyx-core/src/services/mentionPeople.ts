@@ -22,7 +22,7 @@ export async function instanceCommunityId(): Promise<string | null> {
 
 /** Minuscules sans accents : « Léa » et « lea » se retrouvent (JS et SQL pareils). */
 export function fold(s: string): string {
-  return (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  return (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 const ACCENTS_FROM = 'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÇçÑñÝýÿŒœÆæ'
 const ACCENTS_TO   = 'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNnYyyOoAa'

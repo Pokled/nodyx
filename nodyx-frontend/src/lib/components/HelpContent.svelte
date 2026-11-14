@@ -18,6 +18,7 @@
 
 	const SECTIONS: { k: Trigger; title: string; sub: string; tile: string; tileSub: string }[] = [
 		{ k: '@', title: 'cmd.sec_at_title', sub: 'cmd.sec_at_sub', tile: 'cmd.tile_at', tileSub: 'cmd.tile_at_sub' },
+		{ k: '#', title: 'cmd.sec_hash_title', sub: 'cmd.sec_hash_sub', tile: 'cmd.tile_hash', tileSub: 'cmd.tile_hash_sub' },
 		{ k: '/', title: 'cmd.sec_slash_title', sub: 'cmd.sec_slash_sub', tile: 'cmd.tile_slash', tileSub: 'cmd.tile_slash_sub' },
 	]
 

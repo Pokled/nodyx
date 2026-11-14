@@ -1,3 +1,4 @@
+import { PLACE_VALUE } from '../services/places'
 import sanitizeHtml from 'sanitize-html'
 import { isContainedUploadPath } from './uploadPath'
 
@@ -45,7 +46,7 @@ const ALLOWED_ATTRS: sanitizeHtml.IOptions['allowedAttributes'] = {
   // (« Retirer la carte », « Lien simple »). Seule la valeur « off » passe : toute
   // autre est retirée en entier par transformTags.a (une liste de valeurs laisserait
   // un « data-card » vide).
-  'a':      ['href', 'target', 'rel', 'data-card'],
+  'a':      ['href', 'target', 'rel', 'data-card', 'data-place'],
   'img':    ['src', 'alt', 'width', 'height'],
   'iframe': ['src', 'width', 'height', 'frameborder', 'allowfullscreen', 'allow'],
   'audio':              ['src', 'controls', 'preload'],
@@ -138,9 +139,10 @@ export function sanitize(raw: string, opts: SanitizeOptions = {}): string {
         return { tagName, attribs: cleaned }
       },
       'a': (tagName, attribs) => {
-        if (attribs['data-card'] === undefined || attribs['data-card'] === 'off') return { tagName, attribs }
         const cleaned: Record<string, string> = { ...attribs }
-        delete cleaned['data-card']
+        if (cleaned['data-card'] !== undefined && cleaned['data-card'] !== 'off') delete cleaned['data-card']
+        // « # » (lot C4) : une marque d'endroit « <sorte>:<uuid> », rien d'autre
+        if (cleaned['data-place'] !== undefined && !PLACE_VALUE.test(cleaned['data-place'])) delete cleaned['data-place']
         return { tagName, attribs: cleaned }
       },
       'nodyx-audio-player': (tagName, attribs) => {
