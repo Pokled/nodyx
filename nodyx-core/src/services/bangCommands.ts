@@ -54,9 +54,12 @@ async function twitchCommands(): Promise<{ login: string | null; commands: BangC
   const native = getNativeChatCommands().map(c => ({ name: strip(c.name), source: 'twitch' as const, restricted: c.modOnly, native: true }))
   const { rows: custom } = await db.query<{ name: string; mod_only: boolean }>(
     `SELECT name, mod_only FROM streamer_chat_commands WHERE enabled = true ORDER BY name`)
+  // Une commande personnalisée homonyme d'une native ne s'exécute jamais (la native
+  // passe d'abord, streamerHubService) : on ne l'annonce pas. Vécu le 14/11 : « !nodyx ».
+  const nativeNames = new Set(native.map(c => c.name))
   return {
     login: rows[0].external_login,
-    commands: [...native, ...custom.map(c => ({ name: strip(c.name), source: 'twitch' as const, restricted: c.mod_only }))],
+    commands: [...native, ...custom.filter(c => !nativeNames.has(strip(c.name))).map(c => ({ name: strip(c.name), source: 'twitch' as const, restricted: c.mod_only }))],
   }
 }
 
