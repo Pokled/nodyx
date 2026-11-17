@@ -79,13 +79,14 @@ export default async function mentionsRoutes(app: FastifyInstance) {
     })
   })
 
-  // Les puces de groupe (nom et couleur à jour, nombre, quelques noms). Lecture publique.
+  // Les puces de groupe (nom et couleur à jour, nombre, quelques noms). Lecture publique ;
+  // @inscrits d'un événement privé : rien pour qui ne peut pas le lire.
   app.get('/groups', { preHandler: [rateLimit, optionalAuth] }, async (request, reply) => {
     const { keys } = request.query as { keys?: string }
     if (typeof keys !== 'string' || !keys) return reply.code(400).send({ error: 'Groupes requis', code: 'MENTION_GROUPS_REQUIRED' })
     const communityId = await instanceCommunityId()
     reply.header('Cache-Control', 'private, no-store')   // D49 : un nom ou une couleur changés se voient au prochain affichage
-    return reply.send({ groups: communityId ? await groupCards(communityId, keys.split(',').slice(0, 10)) : [] })
+    return reply.send({ groups: communityId ? await groupCards(communityId, keys.split(',').slice(0, 10), (request as any).user?.userId ?? null) : [] })
   })
 
   // ── Mes réglages (D54-D55) ────────────────────────────────────────────────

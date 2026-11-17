@@ -4,7 +4,7 @@
 	// seul un groupe au-delà du seuil de l'instance demande une confirmation.
 	// Le cœur refait ses propres contrôles à l'envoi : ce panneau ne décide de rien.
 	import { t } from '$lib/i18n'
-	import { previewMentions, personFor, labelOf, GROUP_LABEL_KEYS, type MentionPreview } from '$lib/mentions'
+	import { previewMentions, personFor, labelOf, isEventKey, eventLabel, GROUP_LABEL_KEYS, type MentionPreview } from '$lib/mentions'
 
 	let { refs, token = null, onremove, onreplace, onconfirm, ongate }: {
 		/** Références présentes dans le texte : « u:<id> » ou « g:<clé> » */
@@ -57,7 +57,10 @@
 	$effect(() => { ongate?.(big.length > 0) })
 
 	const groupName = (g: { key: string; label: string | null }) =>
-		'@' + (GROUP_LABEL_KEYS[g.key] ? $t(GROUP_LABEL_KEYS[g.key]) : g.label ?? g.key)
+		isEventKey(g.key) ? '@' + eventLabel(g.label ?? '', g.key.startsWith('event-going:'), $t)
+		: '@' + (GROUP_LABEL_KEYS[g.key] ? $t(GROUP_LABEL_KEYS[g.key]) : g.label ?? g.key)
+	/** @inscrits → « seulement ceux qui viennent » (D60) */
+	const goingKey = (key: string) => key.replace(/^event:/, 'event-going:')
 </script>
 
 {#if outsiders.length || refused.length || resting.length || forbidden.length || big.length}
@@ -85,7 +88,7 @@
 		{#each forbidden as g (g.key)}
 			<div class="mw-row mw-info">
 				<span class="mw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
-				<p>{$t('mention.warn_forbidden', { group: groupName(g) })}
+				<p>{$t(isEventKey(g.key) ? 'mention.warn_forbidden_event' : 'mention.warn_forbidden', { group: groupName(g) })}
 					{#if onremove}<span class="mw-acts"><button type="button" class="mw-btn" onclick={() => onremove?.('g:' + g.key)}>{$t('mention.warn_remove')}</button></span>{/if}
 				</p>
 			</div>
@@ -93,10 +96,15 @@
 		{#each big as g (g.key)}
 			<div class="mw-row mw-big">
 				<span class="mw-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-				<p><b>{$t('mention.warn_big', { group: groupName(g), count: g.count })}</b> {$t('mention.warn_big_q')}
+				<p>{#if g.event}<b>{$t('mention.warn_big_event', { group: groupName(g), count: g.count, going: g.event.going, maybe: g.event.maybe })}</b>
+					<small class="mw-sub">{$t('mention.warn_big_event_sub')}</small>
+					{:else}<b>{$t('mention.warn_big', { group: groupName(g), count: g.count })}</b> {$t('mention.warn_big_q')}{/if}
 					<span class="mw-acts">
 						<button type="button" class="mw-btn mw-primary" onclick={onconfirm}>{$t('mention.warn_send_anyway')}</button>
-						{#if onreplace && team && g.key !== 'equipe' && team.count > 0}
+						{#if onreplace && g.event && g.key.startsWith('event:') && g.event.maybe > 0}
+							<button type="button" class="mw-btn" onclick={() => onreplace?.('g:' + g.key, 'g:' + goingKey(g.key), eventLabel(g.label ?? '', true, $t))}>{$t('mention.warn_only_going', { count: g.event.going })}</button>
+						{/if}
+						{#if onreplace && team && g.key !== 'equipe' && !isEventKey(g.key) && team.count > 0}
 							<button type="button" class="mw-btn" onclick={() => onreplace?.('g:' + g.key, 'g:equipe', $t('mention.g_equipe'))}>{$t('mention.warn_only_team', { count: team.count })}</button>
 						{/if}
 						{#if onremove}<button type="button" class="mw-btn mw-ghost" onclick={() => onremove?.('g:' + g.key)}>{$t('mention.warn_remove')}</button>{/if}
@@ -119,6 +127,7 @@
 	.mw-soft .mw-ico { background: color-mix(in srgb, var(--nx-text) 8%, transparent); color: var(--nx-text-muted); }
 	.mw-big { background: color-mix(in srgb, var(--nx-warn, #b45309) 8%, var(--nx-surface)); border-color: color-mix(in srgb, var(--nx-warn, #b45309) 35%, transparent); }
 	.mw-big .mw-ico { background: color-mix(in srgb, var(--nx-warn, #b45309) 16%, transparent); color: var(--nx-warn, #b45309); }
+	.mw-sub { display: block; color: var(--nx-text-muted); font-size: 12px; }
 	.mw-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 	.mw-btn { border: 1px solid color-mix(in srgb, var(--nx-text) 15%, transparent); background: var(--nx-surface); color: var(--nx-text); border-radius: 8px; padding: 3px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
 	.mw-btn:hover { background: color-mix(in srgb, var(--nx-text) 6%, var(--nx-surface)); }

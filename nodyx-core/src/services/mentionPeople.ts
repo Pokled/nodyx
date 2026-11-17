@@ -6,7 +6,7 @@
 // avatar, grade. Jamais d'e-mail, de rôle technique ni de date de connexion.
 import { db } from '../config/database'
 import * as CommunityModel from '../models/community'
-import { describeGroups, isTeam } from './mentionGroups'
+import { describeGroups, isTeam, MAX_GROUP_RECIPIENTS } from './mentionGroups'
 
 let communityIdCache: string | null = null
 export async function instanceCommunityId(): Promise<string | null> {
@@ -50,6 +50,46 @@ export interface Suggestion {
   key?: string
   /** Couleur d'un grade */
   color?: string | null
+  /** @inscrits : de quoi choisir le bon événement (date, inscrits, son rôle) */
+  event?: { starts_at: string; going: number; maybe: number; role: 'organizer' | 'attending' | 'team'; private: boolean; cancelled: boolean }
+}
+
+// @inscrits (§10, D62) : mots qui ouvrent la liste des événements, FR et EN
+const EVENT_WORDS = ['inscrits', 'inscrit', 'participants', 'registered', 'attendees']
+
+/**
+ * Les événements dont la personne peut prévenir les inscrits (D61) : elle l'organise,
+ * elle y est inscrite, ou elle est de l'équipe. À venir, ou finis depuis moins de 24 h
+ * (annulés compris), le plus proche d'abord, 5 au plus. « @ins » les montre tous ;
+ * « @raid » trouve celui dont un mot du titre commence ainsi.
+ */
+async function suggestEvents(communityId: string, me: string, q: string): Promise<Suggestion[]> {
+  const byWord = q.length >= 2 && EVENT_WORDS.some(w => w.startsWith(q))
+  if (!byWord && q.length < 3) return []
+  const team = await isTeam(communityId, me)
+  const { rows } = await db.query<{ id: string; title: string; starts_at: string; is_public: boolean; is_cancelled: boolean; author_id: string | null; going: number; maybe: number; mine: boolean }>(
+    `SELECT e.id, e.title, e.starts_at, e.is_public, e.is_cancelled, e.author_id,
+            (SELECT COUNT(*)::int FROM event_rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS going,
+            (SELECT COUNT(*)::int FROM event_rsvps r WHERE r.event_id = e.id AND r.status = 'maybe') AS maybe,
+            EXISTS (SELECT 1 FROM event_rsvps r WHERE r.event_id = e.id AND r.user_id = $2 AND r.status IN ('going', 'maybe')) AS mine
+     FROM events e
+     WHERE e.community_id = $1 AND COALESCE(e.ends_at, e.starts_at) > NOW() - INTERVAL '24 hours'
+       AND ($3::boolean OR e.author_id = $2
+            OR EXISTS (SELECT 1 FROM event_rsvps r WHERE r.event_id = e.id AND r.user_id = $2 AND r.status IN ('going', 'maybe')))
+     ORDER BY (e.starts_at >= NOW()) DESC, CASE WHEN e.starts_at >= NOW() THEN e.starts_at END ASC, e.starts_at DESC
+     LIMIT 30`, [communityId, me, team])
+  return rows
+    .filter(e => byWord || fold(e.title).split(/\s+/).some(w => w.startsWith(q)))
+    .slice(0, 5)
+    .map(e => ({
+      id: 'g:event:' + e.id, key: 'event:' + e.id, username: 'event:' + e.id, display_name: e.title, avatar: null,
+      reason: 'group' as const, count: Math.min(e.going + e.maybe, MAX_GROUP_RECIPIENTS),
+      event: {
+        starts_at: new Date(e.starts_at).toISOString(), going: e.going, maybe: e.maybe,
+        role: e.author_id === me ? 'organizer' as const : e.mine ? 'attending' as const : 'team' as const,
+        private: !e.is_public, cancelled: e.is_cancelled,
+      },
+    }))
 }
 
 // Mots qui retrouvent un groupe intégré (FR et EN), sans accents
@@ -161,6 +201,11 @@ export async function suggestPeople(me: string, rawQ: string, ctx: Ctx): Promise
   for (const g of await suggestGroups(communityId, me, q).catch(() => [])) {
     if (out.length >= MAX) break
     out.push(g)
+  }
+  // @inscrits : après les groupes, avant les autres membres
+  for (const e of await suggestEvents(communityId, me, q).catch(() => [])) {
+    if (out.length >= MAX) break
+    out.push(e)
   }
   if (q) [...people.values()].sort((a, b) => a.username.localeCompare(b.username)).forEach(p => push(p.id, { reason: 'member' }))
   return out

@@ -10,7 +10,7 @@ import { db } from '../config/database'
 import { io } from '../socket/io'
 import * as NotificationModel from '../models/notification'
 import { resolveMentions } from '../utils/mentions'
-import { groupRecipients, isTeam } from './mentionGroups'
+import { groupRecipients, isTeam, eventKey } from './mentionGroups'
 import { recipientRules, accepts, isQuietNow } from './mentionPrefs'
 import { sendPushToUser } from '../routes/notifications'
 import { resolveServerLocale, pushStrings } from '../i18n/serverStrings'
@@ -57,6 +57,14 @@ export async function notifyMentions(opts: {
     sockets.forEach(s => { if (s.data.activeChannel === where.channelId) viewing.add(s.data.userId as string) })
   }
 
+  // @inscrits : la notification dit QUEL événement (« Léa a prévenu les inscrits de Raid »)
+  const eventIds = [...new Set([...groups.values()].map(k => eventKey(k)?.id).filter((x): x is string => !!x))]
+  const eventTitles = new Map<string, string>()
+  if (eventIds.length) {
+    const { rows } = await db.query<{ id: string; title: string }>(`SELECT id, title FROM events WHERE id = ANY($1::uuid[])`, [eventIds])
+    rows.forEach(r => eventTitles.set(r.id, r.title))
+  }
+
   const body = plainText(html)
   let sent = 0
   for (const [userId, group] of recipients) {
@@ -69,6 +77,8 @@ export async function notifyMentions(opts: {
       ? { channel_id: where.channelId, ...(where.messageId ? { message_id: where.messageId } : {}) }
       : {}
     if (group) meta.group = group
+    const ev = group ? eventKey(group) : null
+    if (ev) { meta.event_id = ev.id; meta.event_title = eventTitles.get(ev.id) ?? null }
     if (quiet) meta.quiet = true
     // Rafale (D55) : déjà une mention non lue du même auteur, au même endroit, depuis moins
     // de 10 minutes → on la COMPTE au lieu d'en créer une autre ; ni son ni téléphone.

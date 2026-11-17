@@ -8,7 +8,7 @@
 import { get } from 'svelte/store'
 import { mount, unmount } from 'svelte'
 import { t } from '$lib/i18n'
-import { personFor, groupFor, labelOf, GROUP_LABEL_KEYS, type MentionPerson, type MentionGroupCard } from '$lib/mentions'
+import { personFor, groupFor, labelOf, isEventKey, eventLabel, GROUP_LABEL_KEYS, type MentionPerson, type MentionGroupCard } from '$lib/mentions'
 import MentionCard from '$lib/components/MentionCard.svelte'
 import GroupCard from '$lib/components/GroupCard.svelte'
 
@@ -99,6 +99,27 @@ export function mentionChips(node: HTMLElement, initial: Opts) {
 			el.textContent = '@' + fallback
 			groupFor(key, opts.token).then(g => {
 				if (!alive || !el.isConnected || !g) return
+				// @inscrits (§10, D63) : un événement que ce lecteur ne peut pas lire ne dit rien
+				if (isEventKey(key) && (g.private || !g.label)) {
+					el.textContent = '@' + tFn('mention.g_inscrits_private')
+					el.classList.add('nx-mention-private')
+					el.setAttribute('role', 'note')
+					return
+				}
+				if (isEventKey(key)) {
+					const label = eventLabel(g.label!, key.startsWith('event-going:'), tFn)
+					el.textContent = '@' + label
+					el.classList.add('nx-mention-event')
+					el.setAttribute('aria-label', tFn('mention.group_chip_aria', { name: label }))
+					el.tabIndex = 0
+					el.setAttribute('role', 'button')
+					el.addEventListener('mouseenter', () => showGroupCard(el, g, '@' + label))
+					el.addEventListener('mouseleave', scheduleHide)
+					el.addEventListener('focus', () => showGroupCard(el, g, '@' + label))
+					el.addEventListener('blur', scheduleHide)
+					el.addEventListener('keydown', e => { if (e.key === 'Escape') hideCard() })
+					return
+				}
 				// Un grade : son nom et sa couleur À JOUR (un grade renommé suit)
 				const label = GROUP_LABEL_KEYS[key] ? fallback : (g.label ?? fallback)
 				el.textContent = '@' + label

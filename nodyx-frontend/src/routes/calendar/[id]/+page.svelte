@@ -8,8 +8,24 @@
 	import { viewerZone, showZone, zoneNote, organizerTime } from '$lib/eventTime';
 	import { page } from '$app/state';
 	import { jsonLdScript, absoluteUrl, plainText } from '$lib/jsonLd';
+	import { previewMentions } from '$lib/mentions';
+	import { onMount } from 'svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	// « Prévenir les inscrits » (SPECS/NODYX_MENTIONS_CDC.md §10, D64) : seulement pour
+	// qui en a le droit (D61, le cœur le dit) et s'il y a quelqu'un à prévenir. Le bouton
+	// ouvre le salon choisi avec la mention déjà écrite : rien n'est envoyé sans la personne.
+	let notifyCount = $state(0);
+	const textChannels = $derived(((page.data as any)?.channels ?? []).filter((c: any) => c.type === 'text'));
+	let notifyChannel = $state('');
+	onMount(async () => {
+		if (!data.token) return;
+		const p = await previewMentions(['g:event:' + data.event.id], data.token);
+		const g = p?.groups.find(x => x.key === 'event:' + data.event.id);
+		if (g && !g.forbidden) notifyCount = g.count;
+	});
+	$effect(() => { if (!notifyChannel && textChannels.length) notifyChannel = textChannels[0].id; });
 
 	const ev  = $derived(data.event);
 
@@ -421,6 +437,21 @@
 						</button>
 					</form>
 				{/if}
+			</div>
+		{/if}
+
+		<!-- Prévenir les inscrits (D64) -->
+		{#if notifyCount > 0 && textChannels.length}
+			<div class="rounded-2xl border border-[var(--nx-border)] bg-[var(--nx-surface)]/60 px-5 py-4">
+				<h3 class="text-sm font-semibold text-[var(--nx-text)] mb-1">{tFn('event.notify_title')}</h3>
+				<p class="text-xs text-[var(--nx-text-muted)] mb-3">{tFn('event.notify_hint')} <b class="text-[var(--nx-text)]">{tFn(new Intl.PluralRules($locale).select(notifyCount) === 'one' ? 'event.notify_count_one' : 'event.notify_count_other', { count: notifyCount })}</b></p>
+				<label class="block text-xs text-[var(--nx-text-muted)] mb-1" for="notify-channel">{tFn('event.notify_in')}</label>
+				<select id="notify-channel" bind:value={notifyChannel}
+					class="w-full mb-2 bg-[var(--nx-surface-raised)] border border-[var(--nx-border)] rounded-xl px-3 py-2 text-sm text-[var(--nx-text)]">
+					{#each textChannels as c, i (c.id ?? i)}<option value={c.id}># {c.name}</option>{/each}
+				</select>
+				<a href="/chat?channel={notifyChannel}&inscrits={ev.id}" data-notify-attendees
+					class="block w-full text-center py-2.5 rounded-xl text-xs font-semibold bg-[var(--nx-header-accent)] text-[var(--nx-on-accent)]">{tFn('event.notify_button')}</a>
 			</div>
 		{/if}
 

@@ -4,7 +4,7 @@
 	// clavier ni la position : c'est le champ qui la pilote (flèches, Entrée, Échap).
 	import { t, locale } from '$lib/i18n'
 	import { onlineMembersStore } from '$lib/socket'
-	import { fold, insertLabel, type MentionSuggestion } from '$lib/mentions'
+	import { fold, insertLabel, isEventKey, type MentionSuggestion } from '$lib/mentions'
 
 	let { items, active = 0, query = '', context = 'channel', onpick, id = 'nx-mention-list' }: {
 		items: MentionSuggestion[]
@@ -32,6 +32,16 @@
 	function why(s: MentionSuggestion): string {
 		if (s.reason === 'here') return $t(context === 'thread' ? 'mention.why_here_thread' : 'mention.why_here', { when: ago(s.last_at) })
 		if (s.reason === 'frequent') return $t('mention.why_frequent')
+		if (s.reason === 'group' && s.event) {
+			// @inscrits : « sam. 21 nov., 20:00 · 8 viennent, 3 peut-être · tu organises »
+			const e = s.event
+			const when = new Intl.DateTimeFormat($locale, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(e.starts_at))
+			const parts = [when, $t(new Intl.PluralRules($locale).select(e.going) === 'one' ? 'mention.why_event_going_one' : 'mention.why_event_going_other', { count: e.going })]
+			if (e.maybe) parts.push($t('mention.why_event_maybe', { count: e.maybe }))
+			parts.push($t(`mention.event_role_${e.role}`))
+			if (e.cancelled) parts.push($t('mention.event_cancelled'))
+			return parts.join(' · ')
+		}
 		if (s.reason === 'group') {
 			const n = s.count ?? 0
 			if (s.key === 'ici') return $t('mention.why_online', { count: n })
@@ -40,8 +50,11 @@
 		return '@' + s.username
 	}
 
-	const groupOf = (r: MentionSuggestion['reason']) =>
-		r === 'here' ? $t(context === 'thread' ? 'mention.group_here_thread' : 'mention.group_here')
+	// Les inscrits d'un événement ont leur propre rubrique
+	const sectionOf = (s: MentionSuggestion) => (isEventKey(s.key) ? 'event' : s.reason)
+	const groupOf = (r: MentionSuggestion['reason'] | 'event') =>
+		r === 'event' ? $t('mention.group_events')
+		: r === 'here' ? $t(context === 'thread' ? 'mention.group_here_thread' : 'mention.group_here')
 		: r === 'frequent' ? $t('mention.group_frequent') : r === 'group' ? $t('mention.group_groups') : $t('mention.group_member')
 
 	/** Le nom avec la partie tapée surlignée (comparaison sans accents). */
@@ -59,10 +72,14 @@
 	{#each items as s, i (s.id)}
 		{@const name = insertLabel(s, $t)}
 		{@const [a, b, c] = parts(name)}
-		{#if i === 0 || items[i - 1].reason !== s.reason}<div class="ml-h" role="presentation">{groupOf(s.reason)}</div>{/if}
+		{#if i === 0 || sectionOf(items[i - 1]) !== sectionOf(s)}<div class="ml-h" role="presentation">{groupOf(sectionOf(s))}</div>{/if}
 		<button type="button" class="ml-o" class:on={i === active} role="option" id="{id}-{i}" aria-selected={i === active}
 			onmousedown={(e) => { e.preventDefault(); onpick(s) }}>
-			{#if s.reason === 'group'}
+			{#if s.reason === 'group' && s.event}
+				<span class="ml-av ml-evt" aria-hidden="true">
+					<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg>
+				</span>
+			{:else if s.reason === 'group'}
 				<span class="ml-av ml-grp" aria-hidden="true" style={s.color && /^#[0-9a-f]{3,8}$/i.test(s.color) ? `--grade:${s.color}` : ''}>
 					<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 				</span>
@@ -92,7 +109,8 @@
 	.ml-o.on, .ml-o:hover { background: color-mix(in srgb, var(--nx-header-accent) 14%, transparent); }
 	.ml-av { position: relative; width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; }
 	.ml-grp { background: color-mix(in srgb, var(--grade, var(--nx-text)) 14%, transparent); color: var(--grade, var(--nx-text-muted)); }
-	.ml-grp svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+	.ml-evt { background: color-mix(in srgb, var(--nx-ok, #15803d) 15%, transparent); color: var(--nx-ok, #15803d); }
+	.ml-evt svg, .ml-grp svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 	.ml-av img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }
 	.ml-dot { position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border-radius: 99px; border: 2px solid var(--nx-surface); background: #9ca3af; }
 	.ml-dot.is-on { background: #22c55e; }
