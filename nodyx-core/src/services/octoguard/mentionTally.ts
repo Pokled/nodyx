@@ -9,7 +9,7 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 // marque n'est PAS relu comme un « @mot » (il serait compté deux fois).
 // Quantificateurs bornés : un texte hostile ne fait jamais travailler la regex
 // plus de quelques centaines de caractères par position.
-const MARK_RE = new RegExp(`<span\\b[^>]{0,300}?\\bdata-mention="(u:${UUID}|g:(?:ici|equipe|moderation|tous|grade:${UUID}))"[^>]{0,300}>[^<]{0,200}</span>`, 'gi')
+const MARK_RE = new RegExp(`<span\\b[^>]{0,300}?\\bdata-mention="(u:${UUID}|g:(?:ici|equipe|moderation|tous|grade:${UUID}|event(?:-going)?:${UUID}))"[^>]{0,300}>[^<]{0,200}</span>`, 'gi')
 // Tolérant, comme avant ({1,32} : même les « @a » en série), lettres accentuées comprises
 const AT_RE = /@[\p{L}\p{N}_-]{1,32}/gu
 

@@ -75,6 +75,8 @@
 		if (n.type === 'mention') {
 			if (n.meta?.ghost) return tFn('notifications.mention_ghost_label')
 			if ((n.meta?.count ?? 1) > 1) return tFn('notifications.mention_burst_label', { count: n.meta.count })
+			// @inscrits : « a prévenu les inscrits de « Raid » »
+			if (n.meta?.event_id) return tFn('notifications.mention_event_label', { title: n.meta.event_title ?? '' })
 			if (n.meta?.group) return tFn('notifications.mention_group_label', { group: '@' + (GROUP_LABEL_KEYS[n.meta.group] ? tFn(GROUP_LABEL_KEYS[n.meta.group]) : tFn('notifications.mention_group_grade')) })
 		}
 		return TYPE_LABEL[n.type] ?? n.type
@@ -248,6 +250,9 @@
 								<button onclick={() => setMuteActor(notif.actor_id, true)}
 									class="text-xs text-[var(--nx-text-muted)] hover:text-[var(--nx-text)] underline">{tFn('mention.card_mute')}</button>
 							{/if}
+						{/if}
+						{#if notif.type === 'mention' && notif.meta?.event_id && !notif.meta?.ghost}
+							<a href="/calendar/{notif.meta.event_id}" class="text-xs px-2 py-1 rounded-md bg-[var(--nx-header-accent)] text-[var(--nx-on-accent)] font-semibold">{tFn('mention.event_card_open')}</a>
 						{/if}
 						{#if notif.type === 'mention' && notif.meta?.channel_id && !notif.meta?.ghost}
 							<button onclick={() => markReadAndNavigate(notif)}

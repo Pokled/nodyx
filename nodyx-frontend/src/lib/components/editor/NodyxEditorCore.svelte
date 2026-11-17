@@ -1684,7 +1684,7 @@
 	function pickMention(s: MentionSuggestion | undefined): void {
 		if (!editor || !s) return
 		editor.chain().focus().insertContentAt({ from: mentionFrom, to: mentionTo }, [
-			{ type: 'mention', attrs: { ref: refOf(s), label: insertLabel(s, tFn) } },
+			{ type: 'mention', attrs: { ref: refOf(s), label: insertLabel(s, tFn, { publicText: true }) } },
 			{ type: 'text', text: ' ' },
 		]).run()
 		mentionOpen = false; mentionItems = []; mentionSeq++

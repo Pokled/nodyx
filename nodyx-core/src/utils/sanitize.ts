@@ -96,8 +96,8 @@ const ATTRS_NO_HEADING_IDS: sanitizeHtml.IOptions['allowedAttributes'] = Object.
     [tag, /^h[1-4]$/.test(tag) ? attrs.filter(a => a !== 'id') : attrs]),
 )
 
-/** Valeurs acceptées pour data-mention : une personne (u:<uuid>) ou un groupe connu. */
-export const MENTION_VALUE = /^(?:u:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|g:(?:ici|equipe|moderation|tous|grade:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))$/
+/** Valeurs acceptées pour data-mention : une personne (u:<uuid>) ou un groupe connu (dont @inscrits : event:<uuid>). */
+export const MENTION_VALUE = /^(?:u:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|g:(?:ici|equipe|moderation|tous|(?:grade|event|event-going):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))$/
 
 export interface SanitizeOptions {
   /**

@@ -50,6 +50,7 @@ export const COMMANDS: CommandDef[] = [
 	{ id: 'at-mods', trigger: '@', name: '', nameKey: 'mention.g_moderation', descKey: 'cmd.at_mods', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_mods' },
 	{ id: 'at-grade', trigger: '@', name: '', argsKey: 'cmd.arg_grade', descKey: 'cmd.at_grade', exampleKey: 'cmd.at_grade_ex', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_grade' },
 	{ id: 'at-all', trigger: '@', name: '', nameKey: 'mention.g_tous', descKey: 'cmd.at_all', group: 'call', where: ['chat', 'forum'], team: true, keywordsKey: 'cmd.kw_at_all' },
+	{ id: 'at-event', trigger: '@', name: '', nameKey: 'mention.g_inscrits', argsKey: 'cmd.arg_event', descKey: 'cmd.at_event', exampleKey: 'cmd.at_event_ex', group: 'call', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_at_event' },
 	// # : montrer un endroit (lot C4, D59). Le nom de l'endroit suit la touche.
 	{ id: 'show-channel', trigger: '#', name: '', argsKey: 'cmd.arg_channel', descKey: 'cmd.show_channel', exampleKey: 'cmd.show_channel_ex', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_channel' },
 	{ id: 'show-event', trigger: '#', name: '', argsKey: 'cmd.arg_event', descKey: 'cmd.show_event', exampleKey: 'cmd.show_event_ex', group: 'show', where: ['chat', 'forum'], keywordsKey: 'cmd.kw_show_event' },

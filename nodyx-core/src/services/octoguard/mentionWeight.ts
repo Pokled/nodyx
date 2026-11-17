@@ -11,7 +11,8 @@
  *  - un groupe pèse le nombre réel de personnes qu'il prévient (plafonné comme
  *    l'envoi lui-même), au moins 1 ; s'il revient plusieurs fois, chaque reprise
  *    pèse 1 de plus (personne n'est prévenu deux fois) ;
- *  - un groupe que l'auteur n'a pas le droit d'utiliser (`@tous` hors équipe) ne
+ *  - un groupe que l'auteur n'a pas le droit d'utiliser (`@tous` hors équipe, les
+ *    inscrits d'un événement où il n'est ni organisateur ni inscrit) ne
  *    prévient personne : il pèse 1, comme un mot ;
  *  - les lettres accentuées sont lues (`@équipe`, `@Zoé`).
  *
@@ -19,7 +20,7 @@
  * quand le moteur n'a pas fourni le poids (chaque marque y pèse 1).
  */
 
-import { groupKeysIn, isTeam, membersOf, MAX_GROUP_RECIPIENTS } from '../mentionGroups'
+import { groupKeysIn, isTeam, membersOf, eventKey, eventInCommunity, canCallEvent, MAX_GROUP_RECIPIENTS } from '../mentionGroups'
 import { tallyMentions } from './mentionTally'
 
 export { tallyMentions, countMentionsText } from './mentionTally'
@@ -43,7 +44,14 @@ export async function mentionWeight(content: string, communityId: string | null,
     try {
       if (communityId) {
         if (key === 'tous') team ??= await cached(cache, `team:${authorId}`, async () => (await isTeam(communityId, authorId)) ? 1 : 0) === 1
-        if (key !== 'tous' || team) size = Math.max(1, Math.min(MAX_GROUP_RECIPIENTS, await cached(cache, `group:${key}`, async () => (await membersOf(communityId, key)).length)))
+        const evk = eventKey(key)
+        const allowed = evk
+          ? await cached(cache, `call:${key}:${authorId}`, async () => {
+              const ev = await eventInCommunity(communityId, evk.id)
+              return ev && (await canCallEvent(communityId, authorId, ev)) ? 1 : 0
+            }) === 1
+          : key !== 'tous' || team
+        if (allowed) size = Math.max(1, Math.min(MAX_GROUP_RECIPIENTS, await cached(cache, `group:${key}`, async () => (await membersOf(communityId, key)).length)))
       }
     } catch { size = 1 }
     weight += size

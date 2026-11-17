@@ -27,7 +27,7 @@
 	import { openHelpOverlay } from '$lib/helpOverlay';
 	import MentionWarnings from '$lib/components/MentionWarnings.svelte';
 	import { mentionChips } from '$lib/actions/mentionChips';
-	import { suggestMentions, applyPickedMentions, insertLabel, refOf, refsIn, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions';
+	import { suggestMentions, applyPickedMentions, insertLabel, refOf, refsIn, groupFor, eventLabel, MENTION_TRIGGER, type MentionSuggestion } from '$lib/mentions';
 	import { findInternalLinks, setCardOff, toInternalPath } from '$lib/linkCards';
 	import PollCreator from '$lib/components/PollCreator.svelte';
 	import VoiceRoom from '$lib/components/VoiceRoom.svelte';
@@ -283,6 +283,35 @@
 			pickedMentions = d?.picked ?? [];
 			pickedPlaces = d?.places ?? [];
 			void tick().then(() => ajusterHauteur(document.querySelector<HTMLTextAreaElement>('textarea#chat-input')));
+		});
+	});
+	// « Écrire aux inscrits » depuis la page d'un événement (§10, D64) : ?inscrits=<id>.
+	// Une fois le salon ouvert (et son brouillon repris), la mention est posée en tête,
+	// liée à l'événement ; rien n'est envoyé. Le paramètre est retiré de l'adresse.
+	let inscritsDone: string | null = null;
+	$effect(() => {
+		const evId = page.url.searchParams.get('inscrits');
+		const chId = selectedChannel?.id ?? null;
+		untrack(() => {
+			if (!evId || !chId || chId !== draftChannel || inscritsDone === evId) return;
+			if (!/^[0-9a-f-]{36}$/i.test(evId)) return;
+			inscritsDone = evId;
+			groupFor('event:' + evId, token ?? null).then(g => {
+				const url = new URL(page.url.href);
+				url.searchParams.delete('inscrits');
+				goto(url.pathname + url.search, { replaceState: true });
+				if (!g?.label || g.private) return;
+				const ref = 'g:event:' + evId;
+				const label = eventLabel(g.label, false, tFn);
+				if (!inputText.includes('@' + label)) inputText = `@${label} ` + inputText;
+				if (!pickedMentions.some(p => p.ref === ref)) pickedMentions = [...pickedMentions, { ref, label }];
+				void tick().then(() => {
+					const el = document.querySelector<HTMLTextAreaElement>('textarea#chat-input');
+					ajusterHauteur(el);
+					el?.focus();
+					el?.setSelectionRange(inputText.length, inputText.length);
+				});
+			});
 		});
 	});
 	// Chaque frappe : le brouillon du salon courant suit

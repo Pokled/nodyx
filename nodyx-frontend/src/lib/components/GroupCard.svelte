@@ -19,10 +19,16 @@
 		<b>{name}</b>
 		<span class="nx-gcard-n">{count}</span>
 	</div>
+	{#if group.event}
+		<p class="nx-gcard-ev">{new Intl.DateTimeFormat($locale, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(group.event.starts_at))}{#if group.event.is_cancelled} · <span class="nx-gcard-x">{$t('mention.event_cancelled')}</span>{/if}</p>
+	{/if}
 	{#if group.sample.length}
 		<p class="nx-gcard-who">{group.sample.map(p => p.display_name || p.username).join(', ')}{#if others} {$t('mention.group_card_more', { count: others })}{/if}</p>
-	{:else}
+	{:else if !group.event}
 		<p class="nx-gcard-who">{$t('mention.group_card_empty')}</p>
+	{/if}
+	{#if group.event}
+		<a class="nx-gcard-go" href="/calendar/{group.event.id}">{$t('mention.event_card_open')}</a>
 	{/if}
 </div>
 
@@ -32,5 +38,8 @@
 	.nx-gcard-h b { font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.nx-gcard-dot { width: 10px; height: 10px; border-radius: 99px; background: color-mix(in srgb, var(--nx-text) 35%, transparent); flex: none; }
 	.nx-gcard-n { font-size: 12px; color: var(--nx-text-muted); }
+	.nx-gcard-ev { margin: 6px 0 0; font-size: 12.5px; color: var(--nx-text); }
+	.nx-gcard-x { color: var(--nx-bad, #b91c1c); font-weight: 600; }
+	.nx-gcard-go { display: block; margin-top: 10px; text-align: center; border-radius: 8px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; background: var(--nx-header-accent); color: var(--nx-on-accent, #16120c); text-decoration: none; }
 	.nx-gcard-who { margin: 8px 0 0; color: var(--nx-text-muted); font-size: 12.5px; }
 </style>

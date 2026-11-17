@@ -12,6 +12,16 @@ export interface MentionSuggestion {
 	key?: string
 	/** Couleur d'un grade */
 	color?: string | null
+	/** @inscrits d'un événement (§10) : date, qui vient, le rôle de celui qui écrit */
+	event?: { starts_at: string; going: number; maybe: number; role: 'organizer' | 'attending' | 'team'; private: boolean; cancelled: boolean }
+}
+
+/** « event:<id> » (tous les inscrits) ou « event-going:<id> » (ceux qui viennent). */
+export const isEventKey = (k?: string | null): boolean => !!k && /^event(-going)?:[0-9a-f-]{36}$/i.test(k)
+
+/** « inscrits · Raid Veloren », ou « ceux qui viennent · Raid Veloren ». */
+export function eventLabel(title: string, goingOnly: boolean, tFn: (k: string) => string): string {
+	return `${tFn(goingOnly ? 'mention.g_inscrits_going' : 'mention.g_inscrits')} · ${title}`
 }
 
 /** Clés de traduction du nom affiché des groupes intégrés (relu dans la langue du lecteur). */
@@ -33,8 +43,16 @@ export function fold(s: string): string {
 
 export const labelOf = (p: { username?: string; display_name?: string | null }) => p.display_name || p.username || ''
 
-/** Le nom à insérer : pour un groupe intégré, traduit dans la langue de celui qui écrit. */
-export function insertLabel(s: MentionSuggestion, tFn: (k: string) => string): string {
+/**
+ * Le nom à insérer : pour un groupe intégré, traduit dans la langue de celui qui écrit.
+ * @inscrits : « inscrits · <titre> » ; dans un texte qui peut être PUBLIC (forum, wiki),
+ * jamais le titre d'un événement privé (D63) : chaque lecteur autorisé le relit.
+ */
+export function insertLabel(s: MentionSuggestion, tFn: (k: string) => string, opts: { publicText?: boolean } = {}): string {
+	if (s.reason === 'group' && isEventKey(s.key)) {
+		if (opts.publicText && s.event?.private) return tFn('mention.g_inscrits_private')
+		return eventLabel(s.display_name ?? '', !!s.key?.startsWith('event-going:'), tFn)
+	}
 	if (s.reason === 'group' && s.key && GROUP_LABEL_KEYS[s.key]) return tFn(GROUP_LABEL_KEYS[s.key])
 	return labelOf(s)
 }
@@ -56,7 +74,7 @@ export function refsIn(html: string): string[] {
 
 export interface MentionPreview {
 	people: { id: string; state: 'ok' | 'not_member' | 'wont_be_notified' | 'quiet'; quiet_until?: string }[]
-	groups: { key: string; count: number; label: string | null; forbidden: boolean; needs_confirm: boolean }[]
+	groups: { key: string; count: number; label: string | null; forbidden: boolean; needs_confirm: boolean; event?: { going: number; maybe: number } }[]
 	threshold: number
 }
 
@@ -135,7 +153,12 @@ export async function suggestMentions(q: string, token: string | null, ctx: { ch
 }
 
 // ── Les groupes des puces : nom et couleur à jour, nombre, quelques noms ─────────────
-export interface MentionGroupCard { key: string; label: string | null; color: string | null; count: number; sample: { username: string; display_name: string | null }[] }
+export interface MentionGroupCard {
+	key: string; label: string | null; color: string | null; count: number; sample: { username: string; display_name: string | null }[]
+	/** @inscrits : l'événement ; private : le lecteur ne peut pas le lire (ni titre, ni noms) */
+	event?: { id: string; starts_at: string; is_cancelled: boolean }
+	private?: true
+}
 const groupCache = new Map<string, { at: number; p: Promise<MentionGroupCard | null> }>()
 let groupPending: { keys: Set<string>; res: Map<string, (g: MentionGroupCard | null) => void> } | null = null
 
