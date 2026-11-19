@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte'
 	import { replyCount } from '$lib/forumCounts';
 	import { t, locale } from '$lib/i18n'
+	import { thumb, thumbSrcset } from '$lib/thumb'
 
 	const tFn = $derived($t)
 	const loc = $derived($locale)
@@ -104,7 +105,7 @@
 						{#if showAvatar}
 							<div class="rt-avatar rt-avatar--sm">
 								{#if t.author_avatar}
-									<img src={t.author_avatar} alt="" />
+									<img src={thumb(t.author_avatar, 20)} srcset={thumbSrcset(t.author_avatar, 20)} alt="" />
 								{:else}
 									<span>{t.author_username.charAt(0).toUpperCase()}</span>
 								{/if}
@@ -137,7 +138,7 @@
 					{#if showAvatar}
 						<div class="rt-avatar">
 							{#if t.last_poster_avatar ?? t.author_avatar}
-								<img src={t.last_poster_avatar ?? t.author_avatar} alt="" />
+								<img src={thumb(t.last_poster_avatar ?? t.author_avatar, 36)} srcset={thumbSrcset(t.last_poster_avatar ?? t.author_avatar, 36)} alt="" />
 							{:else}
 								<span>{(t.last_poster_username ?? t.author_username).charAt(0).toUpperCase()}</span>
 							{/if}
