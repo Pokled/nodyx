@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { t, locale } from '$lib/i18n'
+	import EventVisual from '$lib/components/EventVisual.svelte'
+	import { hasLook } from '$lib/eventGames'
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
 	import { unreadCountStore } from '$lib/socket';
@@ -187,7 +189,7 @@
 							{#if notif.actor_username}
 								<span class="font-semibold text-[var(--nx-text)]">{notif.actor_username}</span>
 							{/if}
-							{labelOf(notif)}
+							{#if notif.type === 'mention' && hasLook(notif.meta?.event_look)}<span class="inline-flex align-middle mr-1.5"><EventVisual look={notif.meta.event_look} size="xs" /></span>{/if}{labelOf(notif)}
 							{#if notif.type === 'held_refused' && notif.meta?.expired}
 								<span class="block mt-1 text-[var(--nx-text-muted)]">{tFn('notifications.held_expired_hint')}</span>
 							{/if}

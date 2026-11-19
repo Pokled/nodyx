@@ -5,6 +5,8 @@
 	import { t, locale } from '$lib/i18n'
 	import { onlineMembersStore } from '$lib/socket'
 	import { fold, insertLabel, isEventKey, type MentionSuggestion } from '$lib/mentions'
+	import EventVisual from '$lib/components/EventVisual.svelte'
+	import { hasLook } from '$lib/eventGames'
 
 	let { items, active = 0, query = '', context = 'channel', onpick, id = 'nx-mention-list' }: {
 		items: MentionSuggestion[]
@@ -75,7 +77,9 @@
 		{#if i === 0 || sectionOf(items[i - 1]) !== sectionOf(s)}<div class="ml-h" role="presentation">{groupOf(sectionOf(s))}</div>{/if}
 		<button type="button" class="ml-o" class:on={i === active} role="option" id="{id}-{i}" aria-selected={i === active}
 			onmousedown={(e) => { e.preventDefault(); onpick(s) }}>
-			{#if s.reason === 'group' && s.event}
+			{#if s.reason === 'group' && s.event && hasLook(s.event)}
+				<span class="ml-look"><EventVisual look={s.event} size="sm" /></span>
+			{:else if s.reason === 'group' && s.event}
 				<span class="ml-av ml-evt" aria-hidden="true">
 					<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg>
 				</span>
@@ -109,6 +113,7 @@
 	.ml-o.on, .ml-o:hover { background: color-mix(in srgb, var(--nx-header-accent) 14%, transparent); }
 	.ml-av { position: relative; width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; }
 	.ml-grp { background: color-mix(in srgb, var(--grade, var(--nx-text)) 14%, transparent); color: var(--grade, var(--nx-text-muted)); }
+	.ml-look { display: inline-flex; flex: none; }
 	.ml-evt { background: color-mix(in srgb, var(--nx-ok, #15803d) 15%, transparent); color: var(--nx-ok, #15803d); }
 	.ml-evt svg, .ml-grp svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 	.ml-av img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; }

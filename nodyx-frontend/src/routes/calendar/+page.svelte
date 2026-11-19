@@ -1,4 +1,5 @@
 <script lang="ts">
+	import EventVisual from '$lib/components/EventVisual.svelte';
 	import { t, locale } from '$lib/i18n';
 	import { viewerZone, showZone, zoneNote, organizerTime } from '$lib/eventTime';
 	const tFn = $derived($t);
@@ -114,6 +115,9 @@
 									{new Date(ev.starts_at).toLocaleDateString($locale, { day: 'numeric', ...zoneOf(ev) })}
 								</span>
 							</div>
+
+							<!-- Le jeu ou l'icône (D66) -->
+							{#if ev.game_cover || ev.icon}<EventVisual look={ev} size="md" shape={ev.game_cover ? 'jaq' : 'tile'} />{/if}
 
 							<!-- Content -->
 							<div class="cal-row-body">

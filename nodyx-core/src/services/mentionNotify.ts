@@ -60,9 +60,12 @@ export async function notifyMentions(opts: {
   // @inscrits : la notification dit QUEL événement (« Léa a prévenu les inscrits de Raid »)
   const eventIds = [...new Set([...groups.values()].map(k => eventKey(k)?.id).filter((x): x is string => !!x))]
   const eventTitles = new Map<string, string>()
+  const eventLooks = new Map<string, { game_cover: string | null; icon: string | null; icon_color: string | null }>()
   if (eventIds.length) {
-    const { rows } = await db.query<{ id: string; title: string }>(`SELECT id, title FROM events WHERE id = ANY($1::uuid[])`, [eventIds])
-    rows.forEach(r => eventTitles.set(r.id, r.title))
+    const { rows } = await db.query<{ id: string; title: string; game_cover: string | null; icon: string | null; icon_color: string | null }>(
+      `SELECT e.id, e.title, g.cover_path AS game_cover, e.icon, e.icon_color
+       FROM events e LEFT JOIN event_games g ON g.id = e.game_id WHERE e.id = ANY($1::uuid[])`, [eventIds])
+    rows.forEach(r => { eventTitles.set(r.id, r.title); eventLooks.set(r.id, { game_cover: r.game_cover, icon: r.icon, icon_color: r.icon_color }) })
   }
 
   const body = plainText(html)
@@ -78,7 +81,12 @@ export async function notifyMentions(opts: {
       : {}
     if (group) meta.group = group
     const ev = group ? eventKey(group) : null
-    if (ev) { meta.event_id = ev.id; meta.event_title = eventTitles.get(ev.id) ?? null }
+    if (ev) {
+      meta.event_id = ev.id; meta.event_title = eventTitles.get(ev.id) ?? null
+      // La jaquette (ou l'icône) au moment de l'envoi, pour la notification (D66)
+      const look = eventLooks.get(ev.id)
+      if (look && (look.game_cover || look.icon)) meta.event_look = look
+    }
     if (quiet) meta.quiet = true
     // Rafale (D55) : déjà une mention non lue du même auteur, au même endroit, depuis moins
     // de 10 minutes → on la COMPTE au lieu d'en créer une autre ; ni son ni téléphone.

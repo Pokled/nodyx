@@ -30,6 +30,7 @@ import eventRoutes           from './routes/events'
 import geoRoutes from './routes/geo'
 import linksRoutes           from './routes/links'
 import commandsRoutes        from './routes/commands'
+import gamesRoutes           from './routes/games'
 import mentionsRoutes        from './routes/mentions'
 import authenticatorRoutes   from './routes/authenticator'
 import taskRoutes            from './routes/tasks'
@@ -238,6 +239,7 @@ server.register(eventRoutes,          { prefix: '/api/v1/events' })
 server.register(geoRoutes,            { prefix: '/api/v1/geo' })
 server.register(linksRoutes,          { prefix: '/api/v1/links' })
 server.register(commandsRoutes,       { prefix: '/api/v1/commands' })
+server.register(gamesRoutes,          { prefix: '/api/v1/games' })
 server.register(mentionsRoutes,       { prefix: '/api/v1/mentions' })
 server.register(authenticatorRoutes,  { prefix: '/api/auth' })
 server.register(taskRoutes,           { prefix: '/api/v1/tasks' })

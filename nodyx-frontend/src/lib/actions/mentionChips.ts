@@ -9,6 +9,7 @@ import { get } from 'svelte/store'
 import { mount, unmount } from 'svelte'
 import { t } from '$lib/i18n'
 import { personFor, groupFor, labelOf, isEventKey, eventLabel, GROUP_LABEL_KEYS, type MentionPerson, type MentionGroupCard } from '$lib/mentions'
+import { hasLook, lookNode } from '$lib/eventGames'
 import MentionCard from '$lib/components/MentionCard.svelte'
 import GroupCard from '$lib/components/GroupCard.svelte'
 
@@ -109,6 +110,8 @@ export function mentionChips(node: HTMLElement, initial: Opts) {
 				if (isEventKey(key)) {
 					const label = eventLabel(g.label!, key.startsWith('event-going:'), tFn)
 					el.textContent = '@' + label
+					// La jaquette du jeu, ou l'icône (D66), devant le nom
+					if (g.event && hasLook(g.event)) el.prepend(lookNode(g.event, 16))
 					el.classList.add('nx-mention-event')
 					el.setAttribute('aria-label', tFn('mention.group_chip_aria', { name: label }))
 					el.tabIndex = 0
