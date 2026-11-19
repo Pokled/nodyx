@@ -23,6 +23,8 @@ const RULES: Array<{ prefix: string; exact?: boolean; any: Permission[] | 'staff
 	{ prefix: '/admin/octoguard/ladder', any: ['moderate_members', 'manage_octoguard'] },
 	// Le bouclier : toute l'équipe le lève et le baisse (pendant un raid, on n'attend pas un admin)
 	{ prefix: '/admin/octoguard/shield', any: ['moderate_members', 'manage_octoguard'] },
+	// Les chartes (lot 7) : l'équipe les lit (qui a signé, qui attend), seul manage_octoguard les écrit
+	{ prefix: '/admin/octoguard/charter', any: ['moderate_members', 'manage_octoguard'] },
 	{ prefix: '/admin/octoguard', any: ['manage_octoguard'] },
 ]
 
