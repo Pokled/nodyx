@@ -17,6 +17,7 @@
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded, GOOGLE_FONTS_URL } from '$lib/nameEffects';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import WallpaperStill from '$lib/components/layout/WallpaperStill.svelte';
+	import { installThumbFallback } from '$lib/thumb';
 	import StageView from '$lib/components/StageView.svelte';
 	import { stageOpenStore } from '$lib/stageStore';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
@@ -251,6 +252,8 @@
 	// Le fuseau du lecteur, pour les heures d'événement (lib/eventTime) : connu dès que
 	// la page est chargée ; avant, on affiche l'heure de l'organisateur en le disant.
 	onMount(() => { viewerZone.set(browserZone()); });
+	// Une vignette qui ne charge pas retombe sur l'image d'origine (lib/thumb)
+	onMount(() => installThumbFallback());
 
 	onMount(() => {
 		if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
 	import { onMount, onDestroy } from 'svelte'
 	import { t, locale } from '$lib/i18n'
@@ -188,7 +189,7 @@
 		<!-- Background image -->
 		{#key slideIndex}
 			{#if slide.imageUrl}
-				<img src={slide.imageUrl} alt="" class="as-bg sfade" />
+				<img src={thumb(slide.imageUrl, 960)} srcset={thumbSrcset(slide.imageUrl, 960)} alt="" class="as-bg sfade" decoding="async" />
 			{:else}
 				<div class="as-bg-fallback sfade"></div>
 			{/if}
@@ -243,7 +244,7 @@
 					<div class="as-author">
 						<div class="as-avatar">
 							{#if slide.authorAvatar}
-								<img src={slide.authorAvatar} alt="" />
+								<img src={thumb(slide.authorAvatar, 32)} srcset={thumbSrcset(slide.authorAvatar, 32)} alt="" decoding="async" />
 							{:else}
 								<span>{slide.authorUsername.charAt(0).toUpperCase()}</span>
 							{/if}

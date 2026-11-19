@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb } from '$lib/thumb'
 	// Le papier peint du contenant (app.css, .nx-wallpaper) : la bannière, très floutée.
 	// Dessinée UNE fois dans un canvas, petit, et le flou (--nx-wallpaper-filter : flou,
 	// saturation, luminosité) est appliqué UNE fois dans ses pixels : le navigateur n'a
@@ -58,7 +59,9 @@
 		const im = new Image()
 		im.decoding = 'async'
 		im.onload = () => { if (alive) { img = im; draw() } }
-		im.src = url
+		// Une vignette FIXE suffit : elle est floutée et réduite à 640 px de toute façon.
+		// Sur nodyx.org : 1,9 Mo de GIF animé → quelques dizaines de Ko.
+		im.src = thumb(url, 640, { still: true })
 		return () => { alive = false; im.onload = null }
 	})
 

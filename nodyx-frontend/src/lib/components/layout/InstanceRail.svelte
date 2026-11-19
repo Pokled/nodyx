@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { editZone } from '$lib/actions/editZone';
 	import { t } from '$lib/i18n';
 	import { activeCommunityNameStore } from '$lib/communityStore';
@@ -52,7 +53,7 @@
 			}
 		}}>
 			{#if communityLogo}
-				<img src={communityLogo} alt={tFn('common.logo_alt')} class="w-full h-full object-cover" />
+				<img src={thumb(communityLogo, 40)} srcset={thumbSrcset(communityLogo, 40)} alt={tFn('common.logo_alt')} class="w-full h-full object-cover" />
 			{:else}
 				{communityName.charAt(0).toUpperCase()}
 			{/if}

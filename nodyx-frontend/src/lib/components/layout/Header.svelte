@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { clearAllDrafts } from '$lib/editorDrafts';
 	import { editMode } from '$lib/editMode';
 	import { editZone } from '$lib/actions/editZone';
@@ -285,7 +286,7 @@
 				        aria-haspopup="true" aria-expanded={dropdownOpen}>
 					<div class="relative shrink-0">
 						{#if user.avatar}
-							<img src={user.avatar} alt={tFn('common.avatar_alt')} class="w-6 h-6 rounded-md object-cover" style="outline: 1px solid var(--nx-border)" />
+							<img src={thumb(user.avatar, 24)} srcset={thumbSrcset(user.avatar, 24)} alt={tFn('common.avatar_alt')} class="w-6 h-6 rounded-md object-cover" style="outline: 1px solid var(--nx-border)" />
 						{:else}
 							<div class="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold select-none" style="background: var(--nx-header-accent); color: var(--nx-on-accent)">{user.username.charAt(0).toUpperCase()}</div>
 						{/if}
@@ -302,7 +303,7 @@
 							<div class="px-4 pt-4 pb-3 nx-dropdown-head">
 								<div class="flex items-center gap-3">
 									{#if user.avatar}
-										<img src={user.avatar} alt={tFn('common.avatar_alt')} class="w-12 h-12 rounded-full object-cover shrink-0" style="border: 2px solid var(--nx-border)" />
+										<img src={thumb(user.avatar, 48)} srcset={thumbSrcset(user.avatar, 48)} alt={tFn('common.avatar_alt')} class="w-12 h-12 rounded-full object-cover shrink-0" style="border: 2px solid var(--nx-border)" />
 									{:else}
 										<div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold shrink-0 select-none" style="background: var(--nx-header-accent); color: var(--nx-on-accent); border: 2px solid var(--nx-border)">{user.username.charAt(0).toUpperCase()}</div>
 									{/if}

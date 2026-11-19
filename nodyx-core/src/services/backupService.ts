@@ -464,6 +464,8 @@ export async function createBackup(opts: CreateBackupOpts): Promise<BackupRow> {
       await fsp.mkdir(uploadsCopy)
       const { code, stderr } = await spawnAndCollect('cp', ['-a', UPLOADS_DIR + '/.', uploadsCopy], process.env)
       if (code !== 0) throw new Error(`uploads copy failed: ${stderr}`)
+      // Vignettes : recalculées à la demande, inutile de les archiver.
+      await fsp.rm(path.join(uploadsCopy, '_thumbs'), { recursive: true, force: true })
       items.push('uploads')
     }
 

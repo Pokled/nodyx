@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
 	import { onMount, onDestroy } from 'svelte'
 	import { t } from '$lib/i18n'
@@ -111,7 +112,7 @@
 
 	<!-- Background -->
 	{#if effectiveBg}
-		<img src={effectiveBg} alt="" class="hb-bg" style="opacity:{overlayOpacity * 0.13}" />
+		<img src={thumb(effectiveBg, 1024, { still: true })} alt="" class="hb-bg" style="opacity:{overlayOpacity * 0.13}" decoding="async" />
 	{/if}
 
 	<!-- Decorative orbs -->
@@ -142,7 +143,7 @@
 		{:else}
 			<div class="hb-identity">
 				{#if logoUrl}
-					<img src={logoUrl} alt={name} class="hb-logo" />
+					<img src={thumb(logoUrl, 48)} srcset={thumbSrcset(logoUrl, 48)} alt={name} class="hb-logo" />
 				{:else}
 					<div class="hb-logo-fallback">{heroLetter}</div>
 				{/if}
@@ -202,7 +203,7 @@
 					{#each visibleMembers as m (m.userId)}
 						<div class="hb-avatar" style={glowStyle(m)}>
 							{#if m.avatar}
-								<img src={m.avatar} alt="" />
+								<img src={thumb(m.avatar, 34)} srcset={thumbSrcset(m.avatar, 34)} alt="" decoding="async" />
 							{:else}
 								<span class="hb-avatar-letter">{m.username.charAt(0).toUpperCase()}</span>
 							{/if}
