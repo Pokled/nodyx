@@ -86,6 +86,7 @@ export function eventErrorKey(json: { code?: string; error?: string } | null | u
 	if (msg.includes('TICKET_URL_INVALID')) return 'event.err_ticket_url'
 	if (/location_l(at|ng)/.test(msg)) return 'event.err_coords'
 	if (code === 'EVENT_FORBIDDEN') return 'event.err_forbidden'
+	if (code === 'GAME_NOT_FOUND') return 'eventgame.err_not_found'
 	return null
 }
 

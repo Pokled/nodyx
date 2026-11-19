@@ -5,6 +5,7 @@
 	import { PUBLIC_API_URL } from '$app/env/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import LocationFinder from '$lib/components/LocationFinder.svelte';
+	import EventGamePicker from '$lib/components/EventGamePicker.svelte';
 	import type { PageData, ActionData } from './$types';
 	import { untrack } from 'svelte';
 	import { inputValue, sendIso } from '$lib/eventTime';
@@ -217,6 +218,9 @@
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
 		</section>
+
+		<!-- ── LE JEU (D66) ───────────────────────────────────────────────────── -->
+		<EventGamePicker token={data.token ?? null} gameId={ev.game_id ?? null} icon={ev.icon ?? null} iconColor={ev.icon_color ?? null} />
 
 		<!-- ── DESCRIPTION ────────────────────────────────────────────────────── -->
 		<section>

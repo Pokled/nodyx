@@ -9,6 +9,7 @@
 	import { page } from '$app/state';
 	import { jsonLdScript, absoluteUrl, plainText } from '$lib/jsonLd';
 	import { previewMentions } from '$lib/mentions';
+	import EventVisual from '$lib/components/EventVisual.svelte';
 	import { onMount } from 'svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -28,6 +29,8 @@
 	$effect(() => { if (!notifyChannel && textChannels.length) notifyChannel = textChannels[0].id; });
 
 	const ev  = $derived(data.event);
+	// Le jeu de l'événement, ou son icône (D66)
+	const hasLook = $derived(!!(ev.game_cover || ev.icon));
 
 	// ── Référencement ──
 	const seoImage = $derived(absoluteUrl(page.url.origin, ev.cover_url) ?? `${page.url.origin}/og-image.jpg`);
@@ -170,7 +173,13 @@
 					<span class="text-xs px-2.5 py-1 rounded-full bg-[var(--nx-surface-raised)]/80 text-[var(--nx-text)] border border-[var(--nx-border)]/50 font-medium backdrop-blur-sm">{tFn('event.badge_private')}</span>
 				{/if}
 			</div>
-			<h1 class="text-3xl font-bold text-white drop-shadow-lg {ev.is_cancelled ? 'line-through opacity-70' : ''}">{ev.title}</h1>
+			<div class="flex items-end gap-4">
+				{#if hasLook}<EventVisual look={ev} size="lg" shape={ev.game_cover ? 'jaq' : 'tile'} />{/if}
+				<div>
+					{#if ev.game_name}<p class="text-sm font-semibold text-white/85 drop-shadow">{ev.game_name}</p>{/if}
+					<h1 class="text-3xl font-bold text-white drop-shadow-lg {ev.is_cancelled ? 'line-through opacity-70' : ''}">{ev.title}</h1>
+				</div>
+			</div>
 		</div>
 
 		<a href="/calendar" class="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl
@@ -188,6 +197,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
 			</svg>
 		</a>
+		{#if hasLook}<EventVisual look={ev} size="xl" shape={ev.game_cover ? 'jaq' : 'tile'} />{/if}
 		<div>
 			<div class="flex items-center gap-2 mb-1 flex-wrap">
 				{#if ev.is_cancelled}
@@ -196,6 +206,7 @@
 					<span class="text-xs px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--nx-ok)_15%,transparent)] text-[var(--nx-ok)] border border-[color-mix(in_srgb,var(--nx-ok)_40%,transparent)] font-medium">{tFn('event.badge_upcoming')}</span>
 				{/if}
 			</div>
+			{#if ev.game_name}<p class="text-sm font-semibold text-[var(--nx-text-muted)]">{ev.game_name}</p>{/if}
 			<h1 class="text-2xl font-bold text-[var(--nx-text)] {ev.is_cancelled ? 'line-through opacity-60' : ''}">{ev.title}</h1>
 		</div>
 	</div>
