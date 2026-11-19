@@ -1,7 +1,7 @@
 {
   "id": "video-player",
   "label": "Lecteur Multimédia",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "Nodyx",
   "icon": "🎬",
   "family": "media",

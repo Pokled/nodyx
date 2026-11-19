@@ -54,6 +54,21 @@
 	let parentDomain = $state('')
 	let mounted      = $state(false)
 
+	// ── Lecteur Twitch : chargé seulement quand il sert ───────────────────────
+	// Le lecteur et le chat Twitch pèsent ~4,5 Mo et continuent de télécharger la
+	// vidéo tant que la page est ouverte (mesuré sur nodyx.org le 19/11/2026, pour
+	// un widget à 5 500 px sous le haut de page). Et chaque chargement contacte
+	// Twitch avec l'adresse du visiteur.
+	//   - sans lecture auto : une affiche Nodyx, le lecteur se charge AU CLIC ;
+	//   - lecture auto voulue par l'admin : le lecteur se charge quand le widget
+	//     arrive près de l'écran, plus pour qui ne descend jamais jusque-là.
+	let rootEl       = $state<HTMLElement | null>(null)
+	let playerWanted = $state(false)
+	let clicked      = $state(false)
+	let ioRef: IntersectionObserver | null = null
+	let dwell: ReturnType<typeof setTimeout> | null = null
+	function play() { clicked = true; playerWanted = true }
+
 	// ── État dynamique alimenté par /api/v1/twitch/widget ─────────────────────
 	interface StreamInfo {
 		channel:    string
@@ -98,6 +113,23 @@
 		parentDomain = window.location.hostname
 		mounted = true
 
+		let io: IntersectionObserver | null = null
+		if (autoplay) {
+			if (typeof IntersectionObserver === 'undefined' || !rootEl) playerWanted = true
+			else {
+				// Il doit RESTER près de l'écran 600 ms : au premier rendu, les widgets
+				// au-dessus n'ont pas encore leur hauteur, celui-ci passe un instant
+				// « visible » avant d'être repoussé loin (vu au banc : chargé à 3 000 px).
+				io = new IntersectionObserver(entries => {
+					if (dwell) { clearTimeout(dwell); dwell = null }
+					if (entries.some(e => e.isIntersecting))
+						dwell = setTimeout(() => { playerWanted = true; io?.disconnect() }, 600)
+				}, { rootMargin: '300px' })
+				io.observe(rootEl)
+				ioRef = io
+			}
+		}
+
 		// Poll seulement si on a une chaîne configurée
 		if (configuredChannel) {
 			pollWidgetData()
@@ -110,6 +142,8 @@
 
 	onDestroy(() => {
 		if (pollTimer) clearInterval(pollTimer)
+		ioRef?.disconnect()
+		if (dwell) clearTimeout(dwell)
 	})
 
 	// ── Chaîne effective à embed : live_channel retourné, sinon configuredChannel ──
@@ -129,7 +163,7 @@
 		const params = new URLSearchParams({
 			channel:  activeChannel,
 			parent:   parentDomain,
-			autoplay: String(autoplay),
+			autoplay: String(autoplay || clicked),
 			muted:    String(muted),
 		})
 		return `https://player.twitch.tv/?${params.toString()}`
@@ -175,7 +209,7 @@
 	</div>
 
 {:else}
-	<div class="twitch-widget relative overflow-hidden" use:pauseOffscreen
+	<div class="twitch-widget relative overflow-hidden" use:pauseOffscreen bind:this={rootEl}
 	     class:is-live={isMainLive || isFallbackLive}
 	     style="--accent:{accent}; background:var(--nc, rgba(255,255,255,.03)); border:var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07)); border-radius:var(--nr, 0px)">
 
@@ -264,7 +298,24 @@
 			<div class="relative flex-1"
 			     style="min-height:{height}px; background:#000">
 
-				{#if !iframeLoaded}
+				{#if !playerWanted}
+					<!-- Affiche Nodyx : rien n'est demandé à Twitch avant le clic -->
+					<button type="button" class="twitch-poster absolute inset-0 flex flex-col items-center justify-center gap-3 w-full"
+					        onclick={play}
+					        aria-label={tFn('widgets.twitch_play_aria', { channel: activeChannel })}
+					        style="background:linear-gradient(135deg, rgb(var(--np-rgb) / .10), rgb(var(--na-rgb) / .06)), #000">
+						<span class="twitch-play flex items-center justify-center w-16 h-16 rounded-full"
+						      style="background:{accentBgWeak}; border:1px solid {accentBrdMed}; color:{accent}">
+							<svg viewBox="0 0 24 24" class="w-7 h-7 ml-1" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+						</span>
+						<span class="text-sm font-bold" style="color:var(--nt, #e2e8f0); font-family:var(--nfont, 'Space Grotesk', sans-serif)">
+							{(isMainLive || isFallbackLive) ? tFn('widgets.twitch_play_live') : tFn('widgets.twitch_play')}
+						</span>
+						<span class="text-[11px] max-w-xs px-4 text-center" style="color:var(--ntm, #6b7280)">
+							{tFn('widgets.twitch_play_hint')}
+						</span>
+					</button>
+				{:else if !iframeLoaded}
 					<!-- Skeleton loader pulse -->
 					<div class="absolute inset-0 flex items-center justify-center"
 					     style="background:linear-gradient(135deg, rgb(var(--np-rgb) / .08), rgb(var(--na-rgb) / .08))">
@@ -278,7 +329,7 @@
 					</div>
 				{/if}
 
-				{#if mounted && parentDomain}
+				{#if mounted && parentDomain && playerWanted}
 					{#key activeChannel + parentDomain}
 						<iframe
 							src={playerUrl}
@@ -300,7 +351,7 @@
 				     class:md:border-l={chatRight}
 				     class:border-t={!chatRight}
 				     style="height:{chatRight ? `${height}px` : '280px'}; border-color:var(--nborder, rgba(255,255,255,.06)); background:var(--nc, #0d0d12)">
-					{#if mounted && parentDomain}
+					{#if mounted && parentDomain && playerWanted}
 						{#key activeChannel + parentDomain}
 							<iframe
 								src={chatUrl}
@@ -320,6 +371,11 @@
 	.twitch-widget {
 		position: relative;
 	}
+	.twitch-poster { cursor: pointer; border: 0; }
+	.twitch-play { transition: transform .15s ease; }
+	.twitch-poster:hover .twitch-play,
+	.twitch-poster:focus-visible .twitch-play { transform: scale(1.08); }
+	.twitch-poster:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 	/* Gradient shine animée autour du widget — effet premium subtil */
 	.twitch-shine {
