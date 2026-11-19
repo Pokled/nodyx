@@ -77,7 +77,10 @@ export async function charterRoutes(app: FastifyInstance) {
     const aud = audienceOf(request.params, reply); if (!aud) return
     const userId = userIdOf(request)
     if (!(await mayRead(aud, userId))) return reply.code(403).send({ error: 'Team only', code: 'CHARTER_TEAM_ONLY' })
-    const b = (request.body ?? {}) as { version?: unknown; way?: unknown; pledge?: unknown; decoy?: unknown; typed?: unknown }
+    // La fausse case arrive sous un nom ordinaire (human_check) : rien, dans ce qui passe
+    // sur le réseau, ne doit trahir le piège. « decoy » reste accepté.
+    const b = (request.body ?? {}) as { version?: unknown; way?: unknown; pledge?: unknown; decoy?: unknown; human_check?: unknown; typed?: unknown }
+    const trap = b.human_check !== undefined ? b.human_check : b.decoy
     if (!Number.isInteger(b.version) || (b.way !== 'hand' && b.way !== 'phrase')) {
       return reply.code(400).send({ error: 'version and way (hand | phrase) are required', code: 'CHARTER_SIGN_INVALID' })
     }
@@ -85,7 +88,7 @@ export async function charterRoutes(app: FastifyInstance) {
       return reply.send(await signCharter(aud, userId, {
         version: b.version as number, way: b.way, pledge: b.pledge === true,
         // La fausse case : toute valeur « vraie » compte (un robot coche comme il peut)
-        decoy: b.decoy === true || b.decoy === 'on' || b.decoy === 1 || b.decoy === '1',
+        decoy: trap === true || trap === 'on' || trap === 1 || trap === '1',
         typed: typeof b.typed === 'number' && Number.isFinite(b.typed) ? b.typed : 0,
       }))
     } catch (e) { return fail(reply, e) }

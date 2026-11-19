@@ -212,6 +212,23 @@ async function communityName(): Promise<string> {
   return rows[0]?.name ?? ''
 }
 
+/**
+ * Où dire bonjour après avoir signé (bouton de l'écran Bienvenue) : le salon choisi
+ * dans OctoGuard > Messages de bienvenue, sinon le premier salon texte.
+ */
+async function helloChannel(): Promise<{ id: string; name: string } | null> {
+  try {
+    const communityId = await instanceCommunityId()
+    if (!communityId) return null
+    const { rows } = await db.query<{ id: string; name: string }>(
+      `SELECT c.id, c.name FROM channels c
+        WHERE c.community_id = $1 AND c.type = 'text'
+        ORDER BY (c.id = (SELECT channel_id FROM octoguard_welcome WHERE id = 1)) IS TRUE DESC, c.position ASC, c.created_at ASC
+        LIMIT 1`, [communityId])
+    return rows[0] ?? null
+  } catch { return null }
+}
+
 /** La charte à lire. Ouvre (ou reprend) la lecture : le chrono part de la première ouverture. */
 export async function openCharter(aud: Audience, userId: string) {
   const s = await charterState(aud)
@@ -230,6 +247,7 @@ export async function openCharter(aud: Audience, userId: string) {
     pledge: { tone: s.tone, own: s.tone === 'own' ? s.own : '' },
     draw_enabled: s.drawEnabled,
     community: await communityName(),
+    hello_channel: aud === 'members' ? await helloChannel() : null,
   }
 }
 
