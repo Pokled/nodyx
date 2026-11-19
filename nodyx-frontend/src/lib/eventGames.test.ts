@@ -1,6 +1,6 @@
 // Le jeu d'un événement (D66) : ce que le formulaire envoie, ce que l'affichage accepte.
 import { describe, it, expect } from 'vitest'
-import { gameFieldsFromForm, isGameCover } from './eventGames'
+import { gameFieldsFromForm, isGameCover, hasLook } from './eventGames'
 
 const fd = (o: Record<string, string>) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.append(k, v); return f }
 const G = '11111111-1111-4111-8111-111111111111'
@@ -25,5 +25,14 @@ describe('isGameCover', () => {
   it('seulement une jaquette servie par l’instance', () => {
     expect(isGameCover(`/uploads/games/${G}.webp`)).toBe(true)
     for (const bad of ['https://cdn.cloudflare.steamstatic.com/x.jpg', `/uploads/games/${G}.webp?x`, '/uploads/../etc/passwd', 'javascript:alert(1)', null]) expect(isGameCover(bad)).toBe(false)
+  })
+})
+
+describe('hasLook', () => {
+  it('une jaquette de l’instance ou une icône connue ; rien d’autre', () => {
+    expect(hasLook({ game_cover: `/uploads/games/${G}.webp` })).toBe(true)
+    expect(hasLook({ icon: 'dice' })).toBe(true)
+    expect(hasLook({ game_cover: 'https://evil.example/x.webp', icon: 'nope' })).toBe(false)
+    expect(hasLook(null)).toBe(false)
   })
 })

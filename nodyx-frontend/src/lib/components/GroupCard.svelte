@@ -3,6 +3,8 @@
 	// qui est dedans. Montée dans <body> par l'action mentionChips.
 	import { t, locale } from '$lib/i18n'
 	import type { MentionGroupCard } from '$lib/mentions'
+	import EventVisual from '$lib/components/EventVisual.svelte'
+	import { hasLook } from '$lib/eventGames'
 
 	let { group, name, x, y, onenter, onleave }: {
 		group: MentionGroupCard; name: string; x: number; y: number
@@ -14,6 +16,12 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="nx-gcard" style="left:{x}px; top:{y}px" role="dialog" tabindex="-1" aria-label={name} onmouseenter={onenter} onmouseleave={onleave}>
+	{#if group.event && hasLook(group.event)}
+		<div class="nx-gcard-game">
+			<EventVisual look={group.event} size="md" shape={group.event.game_cover ? 'jaq' : 'tile'} />
+			{#if group.event.game_name}<span>{group.event.game_name}</span>{/if}
+		</div>
+	{/if}
 	<div class="nx-gcard-h">
 		<span class="nx-gcard-dot" style={group.color ? `background:${group.color}` : ''} aria-hidden="true"></span>
 		<b>{name}</b>
@@ -34,6 +42,7 @@
 
 <style>
 	.nx-gcard { position: fixed; z-index: 80; width: 260px; background: var(--nx-surface); color: var(--nx-text); border: 1px solid color-mix(in srgb, var(--nx-text) 12%, transparent); border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.2); padding: 12px; font-size: 13px; line-height: 1.45; }
+	.nx-gcard-game { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--nx-text-muted); }
 	.nx-gcard-h { display: flex; align-items: center; gap: 8px; }
 	.nx-gcard-h b { font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.nx-gcard-dot { width: 10px; height: 10px; border-radius: 99px; background: color-mix(in srgb, var(--nx-text) 35%, transparent); flex: none; }

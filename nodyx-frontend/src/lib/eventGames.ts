@@ -37,6 +37,31 @@ export const isGameColor = (v: unknown): v is GameColor => typeof v === 'string'
 /** Une jaquette servie par l'instance, et rien d'autre. */
 export const isGameCover = (v: unknown): v is string => typeof v === 'string' && /^\/uploads\/games\/[0-9a-f-]{36}\.webp$/.test(v)
 
+/** L'événement a-t-il un visuel à montrer (jaquette valide ou icône connue) ? */
+export const hasLook = (l: EventLook | null | undefined): boolean => !!l && (isGameCover(l.game_cover) || isGameIcon(l.icon))
+
+/**
+ * Le même visuel qu'EventVisual, en élément DOM nu : pour les puces posées par une
+ * action sur du HTML déjà rendu (mentionChips). Taille carrée en pixels.
+ */
+export function lookNode(l: EventLook, px: number): HTMLElement {
+	const el = document.createElement('span')
+	el.className = 'nx-evlook'
+	el.setAttribute('aria-hidden', 'true')
+	el.style.width = el.style.height = `${px}px`
+	if (isGameCover(l.game_cover)) {
+		el.style.backgroundImage = `url(${l.game_cover})`
+		return el
+	}
+	el.style.background = COLOR_BG[isGameColor(l.icon_color) ? l.icon_color : 'grey']
+	const ns = 'http://www.w3.org/2000/svg'
+	const svg = document.createElementNS(ns, 'svg')
+	svg.setAttribute('viewBox', '0 0 24 24')
+	svg.innerHTML = isGameIcon(l.icon) ? ICON_PATHS[l.icon] : CALENDAR_PATH   // dessins constants, jamais une donnée
+	el.appendChild(svg)
+	return el
+}
+
 export interface Game { id: string; name: string; cover_path: string; source: 'upload' | 'steam' }
 /** Ce qu'un événement porte pour s'afficher. */
 export interface EventLook { game_name?: string | null; game_cover?: string | null; icon?: string | null; icon_color?: string | null }

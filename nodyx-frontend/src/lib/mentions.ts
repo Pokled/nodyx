@@ -13,7 +13,8 @@ export interface MentionSuggestion {
 	/** Couleur d'un grade */
 	color?: string | null
 	/** @inscrits d'un événement (§10) : date, qui vient, le rôle de celui qui écrit */
-	event?: { starts_at: string; going: number; maybe: number; role: 'organizer' | 'attending' | 'team'; private: boolean; cancelled: boolean }
+	event?: { starts_at: string; going: number; maybe: number; role: 'organizer' | 'attending' | 'team'; private: boolean; cancelled: boolean
+		game_cover?: string | null; icon?: string | null; icon_color?: string | null }
 }
 
 /** « event:<id> » (tous les inscrits) ou « event-going:<id> » (ceux qui viennent). */
@@ -156,7 +157,7 @@ export async function suggestMentions(q: string, token: string | null, ctx: { ch
 export interface MentionGroupCard {
 	key: string; label: string | null; color: string | null; count: number; sample: { username: string; display_name: string | null }[]
 	/** @inscrits : l'événement ; private : le lecteur ne peut pas le lire (ni titre, ni noms) */
-	event?: { id: string; starts_at: string; is_cancelled: boolean }
+	event?: { id: string; starts_at: string; is_cancelled: boolean; game_name?: string | null; game_cover?: string | null; icon?: string | null; icon_color?: string | null }
 	private?: true
 }
 const groupCache = new Map<string, { at: number; p: Promise<MentionGroupCard | null> }>()

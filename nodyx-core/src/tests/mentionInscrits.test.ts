@@ -18,11 +18,11 @@ let rsvps: { user_id: string; status: string }[]
 
 beforeEach(() => {
   vi.clearAllMocks()
-  ev = { id: EV, title: 'Raid Veloren', starts_at: '2026-11-21T19:00:00Z', is_public: true, is_cancelled: false, author_id: 'lea', community_id: C, open: true }
+  ev = { id: EV, title: 'Raid Veloren', starts_at: '2026-11-21T19:00:00Z', is_public: true, is_cancelled: false, author_id: 'lea', community_id: C, open: true, game_name: 'Veloren', game_cover: '/uploads/games/22222222-2222-4222-8222-222222222222.webp', icon: null, icon_color: null }
   rsvps = [{ user_id: 'max', status: 'going' }, { user_id: 'rem', status: 'going' }, { user_id: 'kim2', status: 'maybe' }, { user_id: 'no', status: 'not_going' }]
   vi.mocked(db.query).mockImplementation(async (sql: any, params?: any) => {
     const s = String(sql)
-    if (s.includes('FROM events WHERE id = $1 AND community_id = $2')) return { rows: params[0] === EV && params[1] === C ? [ev] : [] } as any
+    if (s.includes('WHERE e.id = $1 AND e.community_id = $2')) return { rows: params[0] === EV && params[1] === C ? [ev] : [] } as any
     if (s.includes("FROM event_rsvps WHERE event_id = $1 AND user_id = $2")) return { rows: rsvps.some(r => r.user_id === params[1] && ['going', 'maybe'].includes(r.status)) ? [{}] : [] } as any
     if (s.includes('COUNT(*) FILTER')) return { rows: [{ going: rsvps.filter(r => r.status === 'going').length, maybe: rsvps.filter(r => r.status === 'maybe').length }] } as any
     if (s.includes('FROM event_rsvps r') && s.includes('r.status = ANY')) return { rows: rsvps.filter(r => params[2].includes(r.status)).map(r => ({ user_id: r.user_id })) } as any
@@ -101,6 +101,15 @@ describe('la puce, selon qui lit (D63)', () => {
     ev.is_public = false
     const [g] = await groupCards(C, [`event:${EV}`], 'max')
     expect(g).toMatchObject({ label: 'Raid Veloren', count: 3, sample: [{ username: 'max' }] })
+  })
+  it('la puce porte la jaquette du jeu (D66)', async () => {
+    const [g] = await groupCards(C, [`event:${EV}`], 'max')
+    expect(g.event).toMatchObject({ game_name: 'Veloren', game_cover: '/uploads/games/22222222-2222-4222-8222-222222222222.webp' })
+  })
+  it('événement privé : pas de jaquette non plus pour un visiteur', async () => {
+    ev.is_public = false
+    const [g] = await groupCards(C, [`event:${EV}`], null)
+    expect(g.event).toBeUndefined()
   })
   it('événement public, visiteur : le titre et le nombre, pas les noms', async () => {
     const [g] = await groupCards(C, [`event:${EV}`], null)
