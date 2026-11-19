@@ -51,6 +51,7 @@
 	import { activeCommunityNameStore, panelCollapsedStore, membersCollapsedStore } from '$lib/communityStore';
 	import { playMention, playDm } from '$lib/sounds';
 	import ReportDialog from '$lib/components/ReportDialog.svelte';
+	import CharterDoor from '$lib/components/charter/CharterDoor.svelte';
 	import HelpOverlay from '$lib/components/HelpOverlay.svelte';
 	const tFn = $derived($t)
 
@@ -255,6 +256,20 @@
 	// Une vignette qui ne charge pas retombe sur l'image d'origine (lib/thumb)
 	onMount(() => installThumbFallback());
 
+	// ── La charte des membres (lot 7d, CDC §E4j) ─────────────────────────────
+	// Un membre connecté qui doit la signer la voit à chaque page, et la porte ne se
+	// ferme pas. Pas sur l'administration (l'équipe doit pouvoir éteindre ou corriger une
+	// charte) ni sur les pages de connexion. Le serveur refuse de toute façon toute
+	// écriture tant qu'elle n'est pas signée.
+	let charterDoor = $state(false)
+	const charterHere = $derived(!/^\/(admin|login|register|auth|reset-password|banned)(\/|$)/.test(page.url.pathname))
+	async function checkCharter(token: string) {
+		try {
+			const res = await fetch('/api/v1/charter/status', { headers: { Authorization: `Bearer ${token}` } })
+			if (res.ok) charterDoor = (await res.json()).members === true
+		} catch { /* en panne : personne n'est enfermé dehors */ }
+	}
+
 	onMount(() => {
 		if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
 
@@ -351,6 +366,7 @@
 		if (data.user && data.token && !data.user.is_banned) {
 			// SSR provided a valid session — use it directly (skip if banned)
 			initSocket(data.token, data.unreadCount ?? 0)
+			checkCharter(data.token)
 
 			// Clé de chiffrement DM : enregistrée ici, sur TOUTE page, pas
 			// seulement en ouvrant une conversation. Avant ce correctif, la
@@ -1375,6 +1391,11 @@
 	<MemberScreenPreview {...screenPreview} />
 {/if}
 
+
+<!-- La charte des membres (lot 7d) : une vraie porte, sur toute page, tant qu'elle n'est pas signée -->
+{#if charterDoor && charterHere && user}
+	<CharterDoor audience="members" username={user.username} token={data.token} onclose={() => (charterDoor = false)} />
+{/if}
 
 <!-- Fenêtre « Signaler », une pour tout le site (lib/report.ts) -->
 {#if user}

@@ -3,7 +3,7 @@
 	// celle des membres (la porte d'entrée) et celle de l'équipe. Tout se voit sans
 	// chercher : allumer, prête à allumer, les chiffres, le parcours, l'éditeur, la case,
 	// la signature, les pièges, qui a signé, qui attend, les robots, le journal, les versions.
-	// « Voir côté membre » et « Aperçu » arrivent avec la porte des membres (lot 7d).
+	// « Voir côté membre » et « Aperçu » : la porte des membres (lot 7d), avec le brouillon.
 	import { onMount, onDestroy, untrack } from 'svelte'
 	import { page } from '$app/state'
 	import { t, locale } from '$lib/i18n'
@@ -11,6 +11,7 @@
 	import { mayOpenAdmin } from '$lib/adminAccess'
 	import Icon from '$lib/components/octoguard/Icon.svelte'
 	import CharterEditor from '$lib/components/charter/CharterEditor.svelte'
+	import CharterDoor from '$lib/components/charter/CharterDoor.svelte'
 	import { tokens } from '$lib/charter/blocks'
 	import { fmtDuration, ago } from '$lib/charter/format'
 	import type { PageData } from './$types'
@@ -235,6 +236,12 @@
 		]
 	})
 
+	// L'aperçu : la porte telle qu'un membre la verra, avec le BROUILLON, sans rien envoyer
+	let previewOpen = $state(false)
+	const EYE = 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 9a3 3 0 100 6 3 3 0 000-6z'
+	// « Pas encore » : tant que la charte est éteinte (ou sans version), personne n'attend
+	const waiting = $derived(!!ch?.enabled && ch?.current_version !== null)
+
 	const PEN = 'M4 20h4L19 9l-4-4L4 16z M14 6l4 4'
 	const USERS = 'M9 4.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z M2.5 20a6.5 6.5 0 0113 0 M16 4.6a3.5 3.5 0 010 6.8 M21.5 20a6.5 6.5 0 00-4-6'
 	const SHIELD = 'M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z'
@@ -286,10 +293,11 @@
 				</ul>
 				{#if ch.enabled && ch.current_version === null}<p class="og-help warn">{tFn('chpage.no_version_hint')}</p>{/if}
 				{#if setErr}<p class="og-error" role="alert">{setErr}</p>{/if}
+				<button type="button" class="adm-btn adm-btn--sm" onclick={() => (previewOpen = true)}><Icon d={EYE} />{tFn('chpage.see_member')}</button>
 			</section>
 			<div class="adm-stats ch-stats">
 				<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('chpage.st_signed')}</span><Icon d={CHECK} cls="adm-stat-icon" /></div><div class="adm-stat-value">{overview?.signed ?? '·'}</div><div class="adm-stat-sub">{ch.current_version ? tFn('chpage.st_signed_sub', { v: String(ch.current_version) }) : tFn('chpage.not_published')}</div></div>
-				<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('chpage.st_pending')}</span><Icon d={CLOCK} cls="adm-stat-icon" /></div><div class="adm-stat-value">{overview?.pending ?? '·'}</div><div class="adm-stat-sub">{tFn(`chpage.st_pending_sub_${aud}`)}</div></div>
+				<div class="adm-stat"><div class="adm-stat-top"><span>{tFn('chpage.st_pending')}</span><Icon d={CLOCK} cls="adm-stat-icon" /></div><div class="adm-stat-value">{overview?.pending ?? '·'}</div><div class="adm-stat-sub">{waiting ? tFn(`chpage.st_pending_sub_${aud}`) : tFn('chpage.st_pending_sub_off')}</div></div>
 				<div class="adm-stat robots"><div class="adm-stat-top"><span>{tFn('chpage.st_bots')}</span><Icon d={BOT} cls="adm-stat-icon" /></div><div class="adm-stat-value">{overview?.bots_week ?? '·'}</div><div class="adm-stat-sub">{tFn('chpage.st_bots_sub')}</div></div>
 			</div>
 		</div>
@@ -445,9 +453,13 @@
 						<p class="og-help">{tFn('chpage.pub_first_help')}</p>
 					{/if}
 				</div>
-				<div class="adm-actions"><button type="button" class="adm-btn adm-btn--primary" disabled={publishing} onclick={publish}><Icon d={CHECK} />{tFn('chpage.publish')}</button></div>
+				<div class="adm-actions"><button type="button" class="adm-btn" onclick={() => (previewOpen = true)}><Icon d={EYE} />{tFn('chpage.preview')}</button><button type="button" class="adm-btn adm-btn--primary" disabled={publishing} onclick={publish}><Icon d={CHECK} />{tFn('chpage.publish')}</button></div>
 				{#if pubMsg}<p class="small pub-msg" class:bad={!pubMsg.ok} role="status">{pubMsg.text}</p>{/if}
 			</section>
+		{/if}
+
+		{#if previewOpen}
+			<CharterDoor audience={aud} username={(page.data as any).user?.username ?? ''} preview={{ html: ch.draft_html, tone: ch.pledge_tone, own: ch.pledge_own, drawEnabled: ch.draw_enabled, community: (page.data as any).communityName ?? '' }} onclose={() => (previewOpen = false)} />
 		{/if}
 
 		<details class="adm-card more">
