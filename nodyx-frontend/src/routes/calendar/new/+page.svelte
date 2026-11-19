@@ -5,6 +5,7 @@
 	import { PUBLIC_API_URL } from '$app/env/public';
 	import NodyxEditor from '$lib/components/editor/NodyxEditor.svelte';
 	import LocationFinder from '$lib/components/LocationFinder.svelte';
+	import EventGamePicker from '$lib/components/EventGamePicker.svelte';
 	import { defaultLocal, inputValue, sendIso, browserZone } from '$lib/eventTime';
 	import { page } from '$app/state';
 	import { readStartParam, readTitleParam } from '$lib/eventCommand';
@@ -186,6 +187,9 @@
 				       class="w-full bg-[var(--nx-surface-raised)]/80 border border-[var(--nx-border)] rounded-xl px-4 py-3 text-[var(--nx-text)] placeholder-[var(--nx-text-muted)] text-sm
 				              focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/40 transition-colors"/>
 			</div>
+
+			<!-- Le jeu de l'événement (D66) -->
+			<EventGamePicker token={data.token ?? null} />
 
 			<!-- Dates -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

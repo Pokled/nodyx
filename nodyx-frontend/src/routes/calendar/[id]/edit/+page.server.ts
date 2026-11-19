@@ -2,6 +2,7 @@ import { redirect, fail, error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/api';
 import { isoFromForm, eventErrorKey } from '$lib/eventTime';
+import { gameFieldsFromForm } from '$lib/eventGames';
 
 export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const token = cookies.get('token');
@@ -66,6 +67,7 @@ export const actions: Actions = {
 				is_all_day, is_public, rsvp_enabled,
 				max_attendees, tags, cover_url,
 				ticket_price, ticket_currency, ticket_url,
+				...gameFieldsFromForm(form),
 			}),
 		});
 

@@ -14,6 +14,7 @@ import { announceCalendarEvent } from '../services/webhooks/announce'
 import { sanitize } from '../utils/sanitize'
 import { rehostExternalImages } from '../services/inlineImageRehost'
 import { isContainedUploadPath } from '../utils/uploadPath'
+import { GAME_ICONS, GAME_COLORS, gameInCommunity } from '../services/eventGames'
 import { canReadEvent } from '../services/eventAccess'
 import { ownOrigins } from '../utils/instanceOrigins'
 import { getAccess, rankOf, outranks } from '../services/permissions'
@@ -77,6 +78,10 @@ const EventFields = {
   ticket_price:    z.number().nonnegative().nullable(),
   ticket_currency: z.string().length(3),
   ticket_url:      HttpsUrl.nullable(),
+  // Le jeu (catalogue de la communauté) OU une icône + une couleur (D66)
+  game_id:         z.string().uuid().nullable(),
+  icon:            z.enum(GAME_ICONS).nullable(),
+  icon_color:      z.enum(GAME_COLORS).nullable(),
 }
 
 const CreateEventSchema = z.object({
@@ -95,6 +100,9 @@ const CreateEventSchema = z.object({
   ticket_price:    EventFields.ticket_price.optional(),
   ticket_currency: EventFields.ticket_currency.optional().default('EUR'),
   ticket_url:      EventFields.ticket_url.optional(),
+  game_id:         EventFields.game_id.optional(),
+  icon:            EventFields.icon.optional(),
+  icon_color:      EventFields.icon_color.optional(),
   // Fuseau de l'organisateur, donné par son navigateur. Fixé à la création, jamais
   // modifié ensuite : il dit d'où l'heure a été pensée, il ne la change pas.
   timezone:        z.string().max(64).refine(isTimeZone, { message: 'TIMEZONE_INVALID' }).nullable().optional(),
@@ -179,6 +187,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       ? await db.query(
           `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
                   e.starts_at, e.ends_at, e.is_all_day, e.timezone, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+                  e.game_id, e.icon, e.icon_color, g.name AS game_name, g.cover_path AS game_cover,
                   e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
                   e.created_at, e.updated_at,
                   u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
@@ -186,6 +195,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
                   (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $3 LIMIT 1) AS my_rsvp
            FROM events e
            LEFT JOIN users u ON u.id = e.author_id
+           LEFT JOIN event_games g ON g.id = e.game_id
            WHERE ${where} AND e.is_cancelled = false
            ORDER BY e.starts_at DESC
            LIMIT $1 OFFSET $2`,
@@ -194,6 +204,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       : await db.query(
           `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
                   e.starts_at, e.ends_at, e.is_all_day, e.timezone, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+                  e.game_id, e.icon, e.icon_color, g.name AS game_name, g.cover_path AS game_cover,
                   e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
                   e.created_at, e.updated_at,
                   u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
@@ -201,6 +212,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
                   (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $3 LIMIT 1) AS my_rsvp
            FROM events e
            LEFT JOIN users u ON u.id = e.author_id
+           LEFT JOIN event_games g ON g.id = e.game_id
            WHERE ${where} AND e.is_cancelled = false
            ORDER BY e.starts_at ASC
            LIMIT $1 OFFSET $2`,
@@ -216,6 +228,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
     const { rows } = await db.query(
       `SELECT e.id, e.title, e.description, e.location, e.location_lat, e.location_lng,
               e.starts_at, e.ends_at, e.is_all_day, e.timezone, e.is_public, e.cover_url, e.tags, e.is_cancelled,
+                  e.game_id, e.icon, e.icon_color, g.name AS game_name, g.cover_path AS game_cover,
               e.rsvp_enabled, e.max_attendees, e.ticket_price::float8 AS ticket_price, e.ticket_currency, e.ticket_url,
               e.created_at, e.updated_at, e.community_id,
               u.id AS author_id, u.username AS author_name, u.avatar AS author_avatar,
@@ -224,6 +237,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
               (SELECT er2.status FROM event_rsvps er2 WHERE er2.event_id = e.id AND er2.user_id = $2 LIMIT 1) AS my_rsvp
        FROM events e
        LEFT JOIN users u ON u.id = e.author_id
+           LEFT JOIN event_games g ON g.id = e.game_id
        WHERE e.id = $1`,
       [req.params.id, userId]
     )
@@ -264,6 +278,9 @@ export default async function eventsRoutes(app: FastifyInstance) {
       if (!comm[0]) return reply.status(400).send({ error: "Tu dois faire partie d'une communauté", code: 'NOT_A_MEMBER' })
 
       if (body.cover_url && !isOwnUploadUrl(body.cover_url)) return reply.status(400).send(COVER_INVALID)
+      if (body.game_id && !(await gameInCommunity(comm[0].community_id, body.game_id))) {
+        return reply.status(400).send({ error: 'Jeu introuvable dans le catalogue', code: 'GAME_NOT_FOUND' })
+      }
 
       const description = await cleanDescription(body.description ?? '')
 
@@ -271,8 +288,9 @@ export default async function eventsRoutes(app: FastifyInstance) {
         `INSERT INTO events
            (community_id, author_id, title, description, location, location_lat, location_lng,
             starts_at, ends_at, is_all_day, is_public, cover_url, tags,
-            rsvp_enabled, max_attendees, ticket_price, ticket_currency, ticket_url, timezone)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13::text[],$14,$15,$16,$17,$18,$19)
+            rsvp_enabled, max_attendees, ticket_price, ticket_currency, ticket_url, timezone,
+            game_id, icon, icon_color)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz,$9::timestamptz,$10,$11,$12,$13::text[],$14,$15,$16,$17,$18,$19,$20,$21,$22)
          RETURNING *`,
         [
           comm[0].community_id, userId,
@@ -288,6 +306,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
           body.ticket_currency ?? 'EUR',
           body.ticket_url ?? null,
           body.timezone ?? null,
+          body.game_id ?? null, body.icon ?? null, body.icon_color ?? null,
         ]
       )
 
@@ -343,6 +362,17 @@ export default async function eventsRoutes(app: FastifyInstance) {
       if (body.ticket_price    !== undefined) addField('ticket_price',    body.ticket_price)
       if (body.ticket_currency !== undefined) addField('ticket_currency', body.ticket_currency)
       if (body.ticket_url      !== undefined) addField('ticket_url',      body.ticket_url)
+      if (body.game_id         !== undefined) {
+        if (body.game_id) {
+          const { rows: ec } = await db.query<{ community_id: string }>(`SELECT community_id FROM events WHERE id = $1`, [req.params.id])
+          if (!ec[0] || !(await gameInCommunity(ec[0].community_id, body.game_id))) {
+            return reply.status(400).send({ error: 'Jeu introuvable dans le catalogue', code: 'GAME_NOT_FOUND' })
+          }
+        }
+        addField('game_id', body.game_id)
+      }
+      if (body.icon            !== undefined) addField('icon',            body.icon)
+      if (body.icon_color      !== undefined) addField('icon_color',      body.icon_color)
 
       if (sets.length === 0) return reply.status(400).send({ error: 'Aucun champ a modifier', code: 'EVENT_NOTHING_TO_UPDATE' })
 
