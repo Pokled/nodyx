@@ -1205,9 +1205,11 @@ select option {
 
 /* Animations décoratives (use:pauseOffscreen) : en pause hors de l'écran ou onglet
    caché ; absentes pour qui demande « moins d'animations » à son système. */
-[data-nx-paused], [data-nx-paused] * { animation-play-state: paused !important; }
+[data-nx-paused], [data-nx-paused] *, [data-nx-paused]::before, [data-nx-paused]::after,
+[data-nx-paused] *::before, [data-nx-paused] *::after { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) {
-  [data-nx-deco], [data-nx-deco] * { animation: none !important; }
+  [data-nx-deco], [data-nx-deco] *, [data-nx-deco]::before, [data-nx-deco]::after,
+  [data-nx-deco] *::before, [data-nx-deco] *::after { animation: none !important; }
 }
 
 /* ── Mode « au stylo » (lib/actions/editZone.ts, EditOverlay.svelte) ────────
