@@ -51,7 +51,8 @@ export interface Suggestion {
   /** Couleur d'un grade */
   color?: string | null
   /** @inscrits : de quoi choisir le bon événement (date, inscrits, son rôle) */
-  event?: { starts_at: string; going: number; maybe: number; role: 'organizer' | 'attending' | 'team'; private: boolean; cancelled: boolean }
+  event?: { starts_at: string; going: number; maybe: number; role: 'organizer' | 'attending' | 'team'; private: boolean; cancelled: boolean
+           game_cover: string | null; icon: string | null; icon_color: string | null }
 }
 
 // @inscrits (§10, D62) : mots qui ouvrent la liste des événements, FR et EN
@@ -67,12 +68,12 @@ async function suggestEvents(communityId: string, me: string, q: string): Promis
   const byWord = q.length >= 2 && EVENT_WORDS.some(w => w.startsWith(q))
   if (!byWord && q.length < 3) return []
   const team = await isTeam(communityId, me)
-  const { rows } = await db.query<{ id: string; title: string; starts_at: string; is_public: boolean; is_cancelled: boolean; author_id: string | null; going: number; maybe: number; mine: boolean }>(
-    `SELECT e.id, e.title, e.starts_at, e.is_public, e.is_cancelled, e.author_id,
+  const { rows } = await db.query<{ id: string; title: string; starts_at: string; is_public: boolean; is_cancelled: boolean; author_id: string | null; going: number; maybe: number; mine: boolean; game_cover: string | null; icon: string | null; icon_color: string | null }>(
+    `SELECT e.id, e.title, e.starts_at, e.is_public, e.is_cancelled, e.author_id, g.cover_path AS game_cover, e.icon, e.icon_color,
             (SELECT COUNT(*)::int FROM event_rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS going,
             (SELECT COUNT(*)::int FROM event_rsvps r WHERE r.event_id = e.id AND r.status = 'maybe') AS maybe,
             EXISTS (SELECT 1 FROM event_rsvps r WHERE r.event_id = e.id AND r.user_id = $2 AND r.status IN ('going', 'maybe')) AS mine
-     FROM events e
+     FROM events e LEFT JOIN event_games g ON g.id = e.game_id
      WHERE e.community_id = $1 AND COALESCE(e.ends_at, e.starts_at) > NOW() - INTERVAL '24 hours'
        AND ($3::boolean OR e.author_id = $2
             OR EXISTS (SELECT 1 FROM event_rsvps r WHERE r.event_id = e.id AND r.user_id = $2 AND r.status IN ('going', 'maybe')))
@@ -88,6 +89,7 @@ async function suggestEvents(communityId: string, me: string, q: string): Promis
         starts_at: new Date(e.starts_at).toISOString(), going: e.going, maybe: e.maybe,
         role: e.author_id === me ? 'organizer' as const : e.mine ? 'attending' as const : 'team' as const,
         private: !e.is_public, cancelled: e.is_cancelled,
+        game_cover: e.game_cover, icon: e.icon, icon_color: e.icon_color,
       },
     }))
 }

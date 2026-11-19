@@ -37,14 +37,18 @@ export function eventKey(key: string): { id: string; goingOnly: boolean } | null
 export interface MentionEvent {
   id: string; title: string; starts_at: string; is_public: boolean; is_cancelled: boolean
   author_id: string | null; community_id: string; open: boolean
+  /** Le jeu de l'événement, ou son icône (D66) */
+  game_name: string | null; game_cover: string | null; icon: string | null; icon_color: string | null
 }
 
 /** L'événement d'une clé, dans CETTE communauté ; `open` : encore appelable (D62, 24 h après la fin). */
 export async function eventInCommunity(communityId: string, id: string): Promise<MentionEvent | null> {
   const { rows } = await db.query<MentionEvent>(
-    `SELECT id, title, starts_at, is_public, is_cancelled, author_id, community_id,
-            COALESCE(ends_at, starts_at) > NOW() - INTERVAL '24 hours' AS open
-     FROM events WHERE id = $1 AND community_id = $2`, [id, communityId])
+    `SELECT e.id, e.title, e.starts_at, e.is_public, e.is_cancelled, e.author_id, e.community_id,
+            COALESCE(e.ends_at, e.starts_at) > NOW() - INTERVAL '24 hours' AS open,
+            g.name AS game_name, g.cover_path AS game_cover, e.icon, e.icon_color
+     FROM events e LEFT JOIN event_games g ON g.id = e.game_id
+     WHERE e.id = $1 AND e.community_id = $2`, [id, communityId])
   return rows[0] ?? null
 }
 
@@ -195,7 +199,7 @@ export async function groupRecipients(html: string, communityId: string, actorId
 export interface GroupCard {
   key: string; label: string | null; color: string | null; count: number; sample: { username: string; display_name: string | null }[]
   /** @inscrits : l'événement (absent si introuvable ou interdit au lecteur : private = true) */
-  event?: { id: string; starts_at: string; is_cancelled: boolean }
+  event?: { id: string; starts_at: string; is_cancelled: boolean; game_name: string | null; game_cover: string | null; icon: string | null; icon_color: string | null }
   private?: true
 }
 
@@ -229,7 +233,8 @@ export async function groupCards(communityId: string, keys: string[], viewerId: 
              WHERE u.id = ANY($1::uuid[]) ORDER BY u.username LIMIT 5`, [ids.slice(0, 200)])
         : { rows: [] as { username: string; display_name: string | null }[] }
       return { key, label: ev.title, color: null, count: Math.min(ids.length, MAX_GROUP_RECIPIENTS), sample: rows,
-               event: { id: ev.id, starts_at: new Date(ev.starts_at).toISOString(), is_cancelled: ev.is_cancelled } }
+               event: { id: ev.id, starts_at: new Date(ev.starts_at).toISOString(), is_cancelled: ev.is_cancelled,
+                        game_name: ev.game_name, game_cover: ev.game_cover, icon: ev.icon, icon_color: ev.icon_color } }
     }
     const ids = key.startsWith('grade:') && !grades.has(key) ? [] : await membersOf(communityId, key)
     const { rows } = ids.length
