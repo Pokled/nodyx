@@ -418,8 +418,8 @@
 		letter-spacing: .15em;
 		font-family: var(--nfont, 'Space Grotesk', sans-serif);
 		color: #fff;
-		background: rgba(0,0,0,.6);
-		backdrop-filter: blur(8px);
+		/* Fond plein, pas de flou : recalculé à chaque image du zoom au survol */
+		background: rgba(0,0,0,.78);
 		border: 1px solid rgba(255,255,255,.1);
 	}
 	.as-cat-badge--hero { top: auto; bottom: 1rem; left: 1rem; padding: .35rem .75rem; background: var(--accent); border: 0; }
@@ -652,8 +652,7 @@
 		transform: translateY(-50%);
 		width: 40px; height: 40px;
 		display: flex; align-items: center; justify-content: center;
-		background: rgba(0,0,0,.55);
-		backdrop-filter: blur(8px);
+		background: rgba(0,0,0,.7);
 		border: 1px solid rgba(255,255,255,.12);
 		color: #fff; cursor: pointer;
 		transition: background .2s, border-color .2s;

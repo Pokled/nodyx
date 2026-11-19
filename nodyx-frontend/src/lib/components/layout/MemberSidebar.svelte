@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
 	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
@@ -326,7 +327,7 @@
 	</div>
 	{:else}
 		<!-- Not logged in — invite card -->
-		<a href="/auth/login" class="guest-members-card" aria-label={tFn('members.guest_aria')}>
+		<a href="/auth/login" class="guest-members-card" use:pauseOffscreen aria-label={tFn('members.guest_aria')}>
 			<!-- Radar animé -->
 			<div class="guest-radar">
 				<div class="guest-radar-ring r1"></div>
@@ -417,8 +418,7 @@
 	  text-shadow: 0 1px 4px rgba(0, 0, 0, .85);
 	}
 	.members-c.has-bg .members-header {
-	  background: color-mix(in srgb, var(--nx-surface) 65%, transparent);
-	  backdrop-filter: blur(3px);
+	  background: color-mix(in srgb, var(--nx-surface) 80%, transparent);
 	}
 
 	.members-c.collapsed {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
 	import { onMount, onDestroy } from 'svelte'
 	import { t, locale } from '$lib/i18n'
 
@@ -172,7 +173,7 @@
 	}
 </script>
 
-<div class="as-root" style="height: {height}">
+<div class="as-root" style="height: {height}" use:pauseOffscreen>
 	{#if loading}
 		<div class="as-loading">
 			<span class="as-spinner"></span>

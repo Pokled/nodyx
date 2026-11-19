@@ -242,26 +242,34 @@ html, body {
   }
 }
 
-/* Le « matériau » commun des plaques : fond translucide, flou de ce qui est
-   derrière, liseré lumineux en haut (le reflet d'une vitre), bord sombre
-   très fin, ombre douce à trois couches. Les coins deviennent de vrais
-   squircles là où le navigateur sait les dessiner (Chrome 139+). */
+/* Le « matériau » commun des plaques : fond translucide, liseré lumineux en
+   haut (le reflet d'une vitre), bord sombre très fin, ombre douce à trois
+   couches. Les coins deviennent de vrais squircles là où le navigateur sait
+   les dessiner (Chrome 139+).
+   Le FLOU de ce qui est derrière (backdrop-filter) n'est posé que sur la barre
+   du haut (.nx-plate--glass), sous laquelle du contenu défile. Derrière le rail
+   et les colonnes, il n'y a que le papier peint, DÉJÀ flouté : les flouter une
+   seconde fois ne se voyait pas (écart mesuré : 6/255 en moyenne), mais coûtait
+   très cher, recalculé à chaque image dès que quelque chose bougeait sur la page.
+   Mesuré le 19/11/2026 : survol d'un article 13 → 45 images/s, salon 31 → 48. */
 .nx-plate {
   background: var(--nx-glass);
-  /* --zone-blur / --zone-bw / --zone-bc : style propre à une zone
-     (CDC partie 3), sinon les valeurs de l'ambiance. */
-  -webkit-backdrop-filter: blur(var(--zone-blur, 28px)) saturate(1.7);
-  backdrop-filter: blur(var(--zone-blur, 28px)) saturate(1.7);
+  /* --zone-bw / --zone-bc : style propre à une zone (CDC partie 3). */
   box-shadow: inset 0 1px 0 0 var(--nx-glass-rim), 0 0 0 1px var(--nx-glass-edge),
               0 0 0 var(--zone-bw, 0px) var(--zone-bc, transparent), var(--nx-glass-shadow);
   border-radius: var(--shell-radius);
+}
+/* --zone-blur : réglable dans Apparence pour la barre du haut, 16 px sinon */
+.nx-plate--glass {
+  -webkit-backdrop-filter: blur(var(--zone-blur, 16px)) saturate(1.5);
+  backdrop-filter: blur(var(--zone-blur, 16px)) saturate(1.5);
 }
 @supports (corner-shape: squircle) {
   .nx-plate { corner-shape: squircle; border-radius: calc(var(--shell-radius) * 1.7); }
 }
 @media (max-width: 1023px) {
   /* Mobile : pas de plaque, le tiroir garde son rendu plein actuel. */
-  .nx-plate {
+  .nx-plate, .nx-plate--glass {
     background: var(--nx-surface);
     -webkit-backdrop-filter: none; backdrop-filter: none;
     box-shadow: none; border-radius: 0;
@@ -269,7 +277,8 @@ html, body {
 }
 
 /* Papier peint : la bannière de l'instance, floutée très fort, derrière tout.
-   Image statique composée une seule fois : aucun coût au défilement. */
+   Dessinée une seule fois dans un canvas (WallpaperStill) : même un GIF animé
+   y est figé, rien ne se recalcule au défilement. */
 .nx-wallpaper { display: none; }
 @media (min-width: 1024px) {
   .nx-wallpaper {
@@ -277,7 +286,7 @@ html, body {
     overflow: hidden; pointer-events: none;
     background: var(--nx-bg);
   }
-  .nx-wallpaper img {
+  .nx-wallpaper img, .nx-wallpaper canvas {
     position: absolute; inset: -12%; width: 124%; height: 124%;
     object-fit: cover; filter: var(--nx-wallpaper-filter);
   }
@@ -1192,6 +1201,13 @@ select option {
 .nx-oscroll-thumb.dragging { cursor: grabbing; }
 @media (prefers-reduced-motion: reduce) {
   .nx-oscroll, .nx-oscroll-thumb { transition: none; }
+}
+
+/* Animations décoratives (use:pauseOffscreen) : en pause hors de l'écran ou onglet
+   caché ; absentes pour qui demande « moins d'animations » à son système. */
+[data-nx-paused], [data-nx-paused] * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  [data-nx-deco], [data-nx-deco] * { animation: none !important; }
 }
 
 /* ── Mode « au stylo » (lib/actions/editZone.ts, EditOverlay.svelte) ────────

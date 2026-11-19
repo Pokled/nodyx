@@ -365,8 +365,7 @@
 	.gr-col-overlay {
 		position: absolute;
 		inset: 0;
-		background: rgba(5,5,10,.6);
-		backdrop-filter: blur(2px);
+		background: rgba(5,5,10,.72);
 		display: flex;
 		align-items: center;
 		justify-content: center;
