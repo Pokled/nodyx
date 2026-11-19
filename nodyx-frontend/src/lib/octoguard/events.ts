@@ -1,6 +1,7 @@
 // Les événements d'OctoGuard (admin_audit_log), racontés en phrases.
 // Partagé par la Vue d'ensemble et le Journal. Aucune chaîne affichée ici.
 import { LEVEL_ICON, type Level } from './rules'
+import { fmtDuration } from '$lib/charter/format'
 
 export type EventKind = Level | 'ok' | 'acc' | 'team'
 export type OgLog = {
@@ -35,6 +36,11 @@ export function eventVars(l: Pick<OgLog, 'metadata' | 'actor_username' | 'target
 		name: l.target_label ?? '',
 		step: md.step ?? '',
 		d: typeof md.sanction === 'string' && md.sanction !== 'warn' ? tFn(`og2.lad_d_${md.sanction}`) : '',
+		// Les chartes (lot 7) : quelle charte, quelle version, comment, combien de temps de lecture
+		v: md.version ?? '',
+		charter: md.audience === 'members' || md.audience === 'team' ? tFn(`og2.ev_charter_aud_${md.audience}`) : '',
+		how: md.way === 'hand' || md.way === 'phrase' ? tFn(`og2.ev_charter_how_${md.way}`) : '',
+		read: typeof md.read_ms === 'number' ? fmtDuration(md.read_ms, tFn) : '',
 	}
 }
 
@@ -77,6 +83,12 @@ export function eventOf(l: Pick<OgLog, 'action' | 'metadata'>): { kind: EventKin
 		case 'appeal_overturned': return { kind: 'ok', key: 'ev_appeal_overturned', source: 'team' }
 		case 'ladder_undone': return { kind: 'ok', key: 'ev_ladder_undone', source: 'team' }
 		case 'ladder_settings': return { kind: 'acc', key: 'ev_config', source: 'team' }
+		// Lot 7 : les chartes. Un robot arrêté l'est par OctoGuard ; le reste vient d'une personne.
+		case 'charter_signed': return { kind: 'ok', key: 'ev_charter_signed', source: 'team' }
+		case 'charter_bot_stopped': return { kind: 'delete', key: l.metadata?.trap === 'clock' ? 'ev_charter_bot_clock' : 'ev_charter_bot_decoy', source: 'octoguard' }
+		case 'charter_published': return { kind: 'acc', key: l.metadata?.important ? 'ev_charter_published_important' : 'ev_charter_published', source: 'team' }
+		case 'charter_enabled': return { kind: 'acc', key: 'ev_charter_on', source: 'team' }
+		case 'charter_disabled': return { kind: 'acc', key: 'ev_charter_off', source: 'team' }
 	}
 	if (/^(rule|profile|command|welcome|webhook)_/.test(a)) return { kind: 'acc', key: 'ev_config', source: 'team' }
 	return { kind: 'observe', key: 'ev_other', source: auto ? 'octoguard' : 'team' }

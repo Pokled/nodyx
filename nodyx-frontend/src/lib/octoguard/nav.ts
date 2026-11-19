@@ -13,9 +13,10 @@ export const OG_NAV: OgNavGroup[] = [
 		{ href: '/admin/octoguard/sandbox', labelKey: 'og2.nav_sandbox', iconPath: 'M9 3h6 M10 3v6L4.5 19A1.5 1.5 0 006 21h12a1.5 1.5 0 001.5-2L14 9V3 M7 15h10' },
 		{ href: '/admin/octoguard/automod', labelKey: 'og2.nav_advanced', iconPath: 'M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6' },
 	] },
-	// Protection : le bouclier anti-raid (lot 6) ; la charte d'accueil viendra ici (lot 7)
+	// Protection : le bouclier anti-raid (lot 6) et les chartes (lot 7)
 	{ sectionKey: 'og2.nav_sec_protect', items: [
 		{ href: '/admin/octoguard/shield', labelKey: 'og2.nav_shield', iconPath: 'M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z' },
+		{ href: '/admin/octoguard/charter', labelKey: 'og2.nav_charter', iconPath: 'M4 20h4L19 9l-4-4L4 16z M14 6l4 4' },
 	] },
 	{ sectionKey: 'og2.nav_sec_team', items: [
 		{ href: '/admin/octoguard/reports', labelKey: 'og2.nav_reports', reports: true, iconPath: 'M5 21V4h11l-1.5 4L16 12H5' },
