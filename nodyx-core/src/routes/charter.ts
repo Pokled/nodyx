@@ -14,6 +14,7 @@
 //   POST /:audience/publish    publier le brouillon ({ important })
 //   GET  /:audience/overview   chiffres, parcours des 30 jours, où l'on abandonne
 //   GET  /:audience/people     ?tab=recent|pending|bots&q=
+//   GET  /:audience/journal    les dernières entrées du journal (signatures, robots, versions)
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth } from '../middleware/auth'
@@ -22,7 +23,7 @@ import { instanceCommunityId } from '../services/mentionPeople'
 import { getAccess } from '../services/permissions'
 import {
   isAudience, mustSign, openCharter, recordProgress, signCharter, CharterError, type Audience,
-  charterAdmin, updateCharterSettings, saveCharterDraft, publishCharter, charterOverview, charterPeople,
+  charterAdmin, updateCharterSettings, saveCharterDraft, publishCharter, charterOverview, charterPeople, charterJournal,
 } from '../services/charter'
 
 function fail(reply: FastifyReply, e: unknown) {
@@ -123,6 +124,12 @@ export async function charterAdminRoutes(app: FastifyInstance) {
     const aud = audienceOf(request.params, reply); if (!aud) return
     reply.header('Cache-Control', 'private, no-store')
     return reply.send(await charterOverview(aud))
+  })
+
+  app.get('/:audience/journal', { preHandler: [rateLimit, read] }, async (request, reply) => {
+    const aud = audienceOf(request.params, reply); if (!aud) return
+    reply.header('Cache-Control', 'private, no-store')
+    return reply.send({ entries: await charterJournal(aud) })
   })
 
   app.get('/:audience/people', { preHandler: [rateLimit, read] }, async (request, reply) => {

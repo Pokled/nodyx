@@ -13,7 +13,7 @@ describe('menu d\'OctoGuard selon les droits', () => {
 
 	it('un modérateur des membres voit le bouclier, les signalements, les sourdines et le barème', () => {
 		// Le bouclier anti-raid (lot 6) : pendant un raid, on n'attend pas un admin
-		expect(visible({ role: 'moderator', permissions: ['moderate_members'] })).toEqual(['/admin/octoguard/shield', '/admin/octoguard/reports', '/admin/octoguard/mutes', '/admin/octoguard/ladder'])
+		expect(visible({ role: 'moderator', permissions: ['moderate_members'] })).toEqual(['/admin/octoguard/shield', '/admin/octoguard/charter', '/admin/octoguard/reports', '/admin/octoguard/mutes', '/admin/octoguard/ladder'])
 	})
 
 	it('le droit « gérer OctoGuard » ouvre les règles, le bac à sable et le journal', () => {

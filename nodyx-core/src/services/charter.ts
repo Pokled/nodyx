@@ -252,6 +252,14 @@ export async function recordProgress(aud: Audience, userId: string, p: { version
   return { ok: true, throttled: false }
 }
 
+/** Le pseudo, pour que le journal se lise sans jointure (« Léa a signé… »). */
+async function usernameOf(userId: string): Promise<string | null> {
+  try {
+    const { rows } = await db.query<{ username: string }>(`SELECT username FROM users WHERE id = $1`, [userId])
+    return rows[0]?.username ?? null
+  } catch { return null }
+}
+
 /** Signer. Renvoie le refus à montrer ; un robot reçoit le même que tout le monde. */
 export async function signCharter(aud: Audience, userId: string, input: SignInput) {
   const s = await charterState(aud)
@@ -264,7 +272,7 @@ export async function signCharter(aud: Audience, userId: string, input: SignInpu
   if (!d.ok && 'bot' in d) {
     await db.query(`INSERT INTO charter_bot_stops (audience, user_id, trap) VALUES ($1, $2, $3)`, [aud, userId, d.bot])
     logOctoGuardAction({
-      action: 'octoguard.charter_bot_stopped', target_type: 'user', target_id: userId, target_label: null,
+      action: 'octoguard.charter_bot_stopped', target_type: 'user', target_id: userId, target_label: await usernameOf(userId),
       metadata: { event_id: randomUUID(), actor: 'octoguard:auto', audience: aud, trap: d.bot },
     })
     throw new CharterError(400, 'CHARTER_REFUSED', 'Signature refused')
@@ -279,7 +287,7 @@ export async function signCharter(aud: Audience, userId: string, input: SignInpu
   try { await redis.del(needKey(aud, s, userId)) } catch { /* le TTL de 60 s rattrape */ }
   if (ins.rows.length) {
     logOctoGuardAction({
-      action: 'octoguard.charter_signed', target_type: 'user', target_id: userId, target_label: null, actor_id: userId,
+      action: 'octoguard.charter_signed', target_type: 'user', target_id: userId, target_label: await usernameOf(userId), actor_id: userId,
       metadata: { event_id: randomUUID(), actor: userId, audience: aud, version: s.current, way: input.way, read_ms: readMs },
     })
   }
@@ -465,5 +473,15 @@ export async function charterPeople(aud: Audience, tab: 'recent' | 'pending' | '
        AND ($6::text IS NULL OR u.username ILIKE $6)
      ORDER BY cm.joined_at DESC LIMIT 50`,
     [communityId, aud, [...GRADE_PERMISSIONS], required, s.current ?? 0, like])
+  return rows
+}
+
+/** Les dernières entrées du journal pour une charte (carte « Dans le journal »). */
+export async function charterJournal(aud: Audience) {
+  const { rows } = await db.query(
+    `SELECT id, action, actor_username, target_label, metadata, created_at
+       FROM admin_audit_log
+      WHERE action LIKE 'octoguard.charter\\_%' AND metadata->>'audience' = $1
+      ORDER BY created_at DESC LIMIT 8`, [aud])
   return rows
 }
