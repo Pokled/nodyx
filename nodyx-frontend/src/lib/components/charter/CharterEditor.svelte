@@ -182,7 +182,14 @@
 			const res = await apiFetch(fetch, '/assets?type=image&limit=100', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
 			if (res.ok) {
 				const j = await res.json()
-				media = (j.assets ?? []).filter((a: any) => typeof a.file_path === 'string').map((a: any) => ({ src: `/uploads/${a.file_path}`, name: a.name ?? '' }))
+				// Une MÊME image peut figurer deux fois dans la médiathèque (le fichier est nommé par
+				// son empreinte : deux envois identiques partagent le fichier). La liste est clée par
+				// adresse : un doublon faisait tomber toute la page (vu sur nodyx.org le 19/11/2026).
+				const seen = new Set<string>()
+				media = (j.assets ?? [])
+					.filter((a: any) => typeof a.file_path === 'string')
+					.map((a: any) => ({ src: `/uploads/${a.file_path}`, name: a.name ?? '' }))
+					.filter((m: { src: string }) => !seen.has(m.src) && seen.add(m.src))
 			}
 		} catch { /* la médiathèque reste vide, les photos de Nodyx suffisent */ }
 	}
