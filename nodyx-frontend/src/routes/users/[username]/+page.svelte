@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types'
+	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import GitHubWidget from '$lib/components/widgets/GitHubWidget.svelte'
 	import ReputationRings from '$lib/components/ReputationRings.svelte'
 	import GenerativeBanner from '$lib/components/GenerativeBanner.svelte'
@@ -340,7 +342,7 @@
 		<div class="absolute inset-0 will-change-transform"
 		     style="transform: translateY({Math.min(parallaxY * 0.35, 60)}px)">
 			{#if bannerSrc}
-				<img src={bannerSrc} alt="" aria-hidden="true"
+				<img src={thumb(bannerSrc, 1536)} alt="" aria-hidden="true" decoding="async"
 				     class="absolute inset-0 w-full h-full object-cover"
 				     style="opacity: 0.55; mix-blend-mode: luminosity"/>
 				<div class="profile-aurora-a" style="background: radial-gradient(ellipse 70% 90% at 20% 55%, {accent}cc, transparent 65%)"></div>
@@ -372,36 +374,26 @@
 		<div class="max-w-[1600px] mx-auto px-6 lg:px-12 flex flex-wrap items-end gap-6 pb-6">
 
 			<!-- Avatar with frame -->
-			<div class="relative shrink-0 translate-y-10" style="width:128px;height:128px;overflow:visible">
-				<!-- Spinning arcs (SVG-native animateTransform) -->
-				<svg class="absolute pointer-events-none select-none"
-				     style="inset:-14px;width:calc(100% + 28px);height:calc(100% + 28px);z-index:20"
-				     viewBox="0 0 156 156" aria-hidden="true">
-					<!-- Arc 1 — clockwise, 3.5s -->
-					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="2.5"
-					        stroke-linecap="round" stroke-dasharray="55 403" opacity="0.85">
-						<animateTransform attributeName="transform" type="rotate"
-						  from="0 78 78" to="360 78 78" dur="3.5s" repeatCount="indefinite"/>
-					</circle>
-					<!-- Arc 2 — counter-clockwise, 7s -->
-					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="1.5"
-					        stroke-linecap="round" stroke-dasharray="22 436" stroke-dashoffset="-200" opacity="0.45">
-						<animateTransform attributeName="transform" type="rotate"
-						  from="0 78 78" to="-360 78 78" dur="7s" repeatCount="indefinite"/>
-					</circle>
-					<!-- Dot — fast clockwise, 2s -->
-					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="3.5"
-					        stroke-linecap="round" stroke-dasharray="6 452" opacity="0.9">
-						<animateTransform attributeName="transform" type="rotate"
-						  from="90 78 78" to="450 78 78" dur="2s" repeatCount="indefinite"/>
-					</circle>
+			<div class="relative shrink-0 translate-y-10" style="width:128px;height:128px;overflow:visible" use:pauseOffscreen>
+				<!-- Les arcs qui tournent autour de l'avatar. Un calque par arc, tourné en CSS :
+				     c'est la carte graphique qui le fait tourner, le navigateur n'a rien à
+				     redessiner. Avant (19/11/2026), animateTransform dans le SVG : l'avatar
+				     était repeint à chaque image, page au repos comprise. -->
+				<svg class="profile-arc profile-arc-1" viewBox="0 0 156 156" aria-hidden="true">
+					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="2.5" stroke-linecap="round" stroke-dasharray="55 403" opacity="0.85" />
+				</svg>
+				<svg class="profile-arc profile-arc-2" viewBox="0 0 156 156" aria-hidden="true">
+					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="1.5" stroke-linecap="round" stroke-dasharray="22 436" stroke-dashoffset="-200" opacity="0.45" />
+				</svg>
+				<svg class="profile-arc profile-arc-3" viewBox="0 0 156 156" aria-hidden="true">
+					<circle cx="78" cy="78" r="73" fill="none" stroke={accent} stroke-width="3.5" stroke-linecap="round" stroke-dasharray="6 452" opacity="0.9" />
 				</svg>
 
 				<div class="profile-avatar-ring w-32 h-32" style="--accent: {accent}">
 					<div class="w-full h-full rounded-full overflow-hidden"
 					     style="background: var(--p-accent)">
 						{#if profile.avatar_url}
-							<img src={profile.avatar_url} alt={tFn('user_profile.avatar_alt', { name: profile.display_name || profile.username })} class="w-full h-full object-cover" />
+							<img src={thumb(profile.avatar_url, 128)} srcset={thumbSrcset(profile.avatar_url, 128)} alt={tFn('user_profile.avatar_alt', { name: profile.display_name || profile.username })} class="w-full h-full object-cover" />
 						{:else}
 							<div class="w-full h-full flex items-center justify-center text-white text-5xl font-black select-none"
 							     aria-hidden="true">{initials}</div>
@@ -442,7 +434,7 @@
 						</span>
 					{/if}
 					{#if badgeSrc}
-						<img src={badgeSrc} alt={profile.badge_asset_name ?? 'Badge'}
+						<img src={thumb(badgeSrc, 40)} srcset={thumbSrcset(badgeSrc, 40)} alt={profile.badge_asset_name ?? 'Badge'}
 						     title={profile.badge_asset_name ?? 'Badge'}
 						     class="w-10 h-10 object-contain drop-shadow" />
 					{/if}
@@ -555,7 +547,7 @@
      XP STRIP — full width, cinematic
      ═══════════════════════════════════════════════════════════════ -->
 <div class="max-w-[1600px] mx-auto px-6 mb-6">
-	<div class="profile-xp-strip p-5" style="--accent: {accent}">
+	<div class="profile-xp-strip p-5" style="--accent: {accent}" use:pauseOffscreen>
 		<div class="flex items-center justify-between mb-3 gap-4 flex-wrap">
 			<div class="flex items-center gap-3">
 				<span class="text-4xl font-black tabular-nums leading-none profile-xp-level"
@@ -863,7 +855,7 @@
 							<div class="profile-post-text nodyx-prose" hidden={sole.has(post.id)} use:mentionChips={{ html: post.content ?? '', token: (page.data as any)?.token ?? null, me: (page.data as any)?.user?.id ?? null }} use:placeChips={{ html: post.content ?? '', token: (page.data as any)?.token ?? null }}>{@html post.content}</div>
 							<LinkCards html={post.content ?? ''} token={(page.data as any)?.token ?? null} onsole={(v) => sole.set(post.id, v)} />
 							{#if post.media_url}
-								<img src={post.media_url} alt="" class="profile-post-media" loading="lazy" />
+								<img src={thumb(post.media_url, 768)} srcset={thumbSrcset(post.media_url, 768)} alt="" class="profile-post-media" loading="lazy" decoding="async" />
 							{/if}
 							<div class="profile-post-meta">
 								<time>{timeAgo(post.created_at)}</time>
@@ -950,25 +942,49 @@
 	}
 
 	/* ── Avatar ring ──────────────────────────────────────────────── */
+	/* Tout ce qui bouge autour de l'avatar bouge par la carte graphique (transform,
+	   opacity) : animer une ombre (box-shadow) ou un SVG obligeait le navigateur à
+	   repeindre à chaque image, sans fin (mesuré le 19/11/2026 sur nodyx.org). */
+	.profile-arc {
+		position: absolute; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px);
+		z-index: 20; pointer-events: none; user-select: none; will-change: transform;
+	}
+	.profile-arc-1 { animation: profile-arc-cw 3.5s linear infinite; }
+	.profile-arc-2 { animation: profile-arc-ccw 7s linear infinite; }
+	.profile-arc-3 { animation: profile-arc-dot 2s linear infinite; }
+	@keyframes profile-arc-cw  { from { transform: rotate(0deg); }  to { transform: rotate(360deg); } }
+	@keyframes profile-arc-ccw { from { transform: rotate(0deg); }  to { transform: rotate(-360deg); } }
+	@keyframes profile-arc-dot { from { transform: rotate(90deg); } to { transform: rotate(450deg); } }
+
 	.profile-avatar-ring {
 		position: relative;
 		border-radius: 9999px;
 		padding: 3px;
 		background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, transparent));
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-bg) 80%, transparent), 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent);
+	}
+	/* Le halo qui respire : une ombre FIXE dont seule la transparence varie */
+	.profile-avatar-ring::after {
+		content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+		box-shadow: 0 0 48px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 80px color-mix(in srgb, var(--accent) 25%, transparent);
+		opacity: 0; will-change: opacity;
 		animation: avatar-glow-breathe 3s ease-in-out infinite;
 	}
-	@keyframes avatar-glow-breathe {
-		0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-bg) 80%, transparent), 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent); }
-		50%       { box-shadow: 0 0 0 2px color-mix(in srgb, var(--p-bg) 80%, transparent), 0 0 48px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 80px color-mix(in srgb, var(--accent) 25%, transparent); }
-	}
+	@keyframes avatar-glow-breathe { 50% { opacity: 1; } }
 
-	/* ── Online dot pulse ─────────────────────────────────────────── */
-	.profile-online-dot {
+	/* ── Online dot pulse : un anneau qui grandit et s'efface ─────── */
+	.profile-online-dot::after {
+		content: ''; position: absolute; inset: -2px; border-radius: 9999px; pointer-events: none;
+		background: rgba(34, 197, 94, 0.4); opacity: 0; will-change: transform, opacity;
 		animation: profile-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	}
 	@keyframes profile-pulse {
-		0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-		50%       { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+		0%, 100% { transform: scale(1); opacity: 0; }
+		10%      { opacity: 1; }
+		50%      { transform: scale(1.7); opacity: 0; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.profile-arc, .profile-avatar-ring::after, .profile-online-dot::after { animation: none; }
 	}
 
 	/* ── Level badge — flat, cohérent avec le shell ──────────────── */

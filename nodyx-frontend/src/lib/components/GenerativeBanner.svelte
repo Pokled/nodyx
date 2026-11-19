@@ -121,29 +121,19 @@
 	<!-- Background -->
 	<rect width={W} height={H} fill="url(#bg-grad-{username})"/>
 
-	<!-- Curves — animateTransform (SVG-native, works everywhere) -->
-	<!-- curve 1 — clockwise, 80s -->
-	<g filter="url(#glow-{username})" opacity="0.55">
-		<animateTransform attributeName="transform" type="rotate"
-			from="0 {cx} {cy}" to="360 {cx} {cy}"
-			dur="80s" repeatCount="indefinite"/>
+	<!-- Les courbes, FIXES. Elles tournaient sans fin (animateTransform 55 à 120 s) sous
+	     une lueur floue et un grain calculé (feTurbulence, 4 octaves) : le navigateur
+	     recalculait flou et grain à CHAQUE image, page au repos comprise, soit plus de 3 s
+	     de travail par tranche de 3 s (mesuré sur nodyx.org le 19/11/2026, la même
+	     cause que le papier peint animé de l'accueil, retiré par #1033). Chaque profil
+	     garde son dessin unique : ses courbes, ses couleurs, sa rotation propre. -->
+	<g filter="url(#glow-{username})" opacity="0.55" transform="rotate({rot1} {cx} {cy})">
 		<path d={path1} fill="none" stroke={col1} stroke-width="2.5" stroke-linecap="round"/>
 	</g>
-
-	<!-- curve 2 — counter-clockwise, 55s -->
-	<g filter="url(#glow-{username})" opacity="0.45">
-		<animateTransform attributeName="transform" type="rotate"
-			from="0 {cx} {cy}" to="-360 {cx} {cy}"
-			dur="55s" repeatCount="indefinite"/>
+	<g filter="url(#glow-{username})" opacity="0.45" transform="rotate({rot2} {cx} {cy})">
 		<path d={path2} fill="none" stroke={col2} stroke-width="2" stroke-linecap="round"/>
 	</g>
-
-	<!-- curve 3 — clockwise, 120s + breathe -->
-	<g filter="url(#glow-{username})">
-		<animate attributeName="opacity" values="0.35;0.15;0.35" dur="8s" repeatCount="indefinite"/>
-		<animateTransform attributeName="transform" type="rotate"
-			from="0 {cx} {cy}" to="360 {cx} {cy}"
-			dur="120s" repeatCount="indefinite"/>
+	<g filter="url(#glow-{username})" opacity="0.3" transform="rotate({rot3} {cx} {cy})">
 		<path d={path3} fill="none" stroke={col3} stroke-width="1.5" stroke-linecap="round"/>
 	</g>
 
