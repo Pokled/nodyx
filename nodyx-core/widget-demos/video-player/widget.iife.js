@@ -1,5 +1,5 @@
 (function () {
-  /* ── nodyx-widget-video-player v1.2.0 ──
+  /* ── nodyx-widget-video-player v1.3.0 ──
      Lecteur multimédia universel.
      Vidéo : YouTube, Vimeo, Dailymotion, Twitch (live/VOD/clip), fichier
              direct (MP4 / WebM / MOV / HLS).
@@ -7,7 +7,12 @@
 
      L'URL est auto-détectée. Aucun script tiers chargé : tout est rendu via
      un iframe dont le src pointe sur l'embed officiel de la plateforme, ou
-     via une balise <video>/<audio> native pour les fichiers hébergés. */
+     via une balise <video>/<audio> native pour les fichiers hébergés.
+
+     1.3.0 : sans lecture auto, le lecteur de la plateforme n'est chargé QU'AU
+     CLIC. Avant, chaque visite téléchargeait ~1 Mo de YouTube (et contactait
+     la plateforme avec l'adresse du visiteur) même si personne ne lançait la
+     vidéo. Une affiche légère tient la place, rien n'est demandé avant le clic. */
 
   var STYLE = `
     :host { display: block; }
@@ -108,6 +113,19 @@
       text-align: center;
       padding: 0 12px;
     }
+    .poster {
+      position: absolute; inset: 0; width: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      background: linear-gradient(145deg, #0d0d12 0%, #16162a 100%);
+      border: 0; cursor: pointer; color: #e2e8f0; font: inherit;
+    }
+    .poster .play-btn { width: 64px; height: 64px; transition: transform .15s ease; }
+    .poster:hover .play-btn, .poster:focus-visible .play-btn { transform: scale(1.08); }
+    .poster:focus-visible { outline: 2px solid #a78bfa; outline-offset: -2px; }
+    .poster-label { font-size: 13px; font-weight: 700; }
+    .poster-hint  { font-size: 10px; color: #6b7280; max-width: 80%; text-align: center; line-height: 1.5; }
+
     .placeholder-hint {
       font-size: 10px; color: #1f2937;
       max-width: 80%;
@@ -264,6 +282,20 @@
     return null;
   }
 
+  // Textes de l'affiche : français ou anglais selon la langue de la page.
+  function texts() {
+    var fr = (typeof document !== 'undefined' && /^fr/i.test(document.documentElement.lang || ''));
+    return fr
+      ? { play: 'Lire', hint: function (l) { return 'Le lecteur ' + l + ' se charge quand tu cliques : rien ne lui est envoyé avant.'; }, aria: function (l) { return 'Lire (' + l + ')'; } }
+      : { play: 'Play', hint: function (l) { return 'The ' + l + ' player loads when you click: nothing is sent to it before that.'; }, aria: function (l) { return 'Play (' + l + ')'; } };
+  }
+
+  function iframeHtml(p) {
+    return '<iframe src="' + escAttr(p.embed) + '"' +
+           ' allow="' + escAttr(p.allow) + '"' +
+           ' allowfullscreen loading="lazy"></iframe>';
+  }
+
   class NodyxVideoPlayer extends HTMLElement {
     connectedCallback() { this._render(); }
     static get observedAttributes() { return ['data-config', 'data-title']; }
@@ -279,6 +311,7 @@
       var controls = cfg.show_controls !== false;
 
       var media   = '';
+      var deferred = null;
       var badge   = 'média';
       var wrapCls = 'video-wrap';
 
@@ -308,10 +341,20 @@
                   ' controls preload="metadata"></audio>';
           badge = 'audio';
           wrapCls += ' video-wrap--audio-file';
+        } else if (!autoplay) {
+          // Affiche : l'iframe (en lecture auto, puisqu'on a cliqué) n'arrive qu'au clic
+          var tx = texts();
+          var onClick = detectPlatform(url, { autoplay: true, controls: controls });
+          deferred = onClick;
+          media = '<button type="button" class="poster" aria-label="' + escAttr(tx.aria(p.label)) + '">' +
+                  '<span class="play-btn"><svg width="26" height="26" viewBox="0 0 24 24" fill="rgba(167,139,250,.9)"><path d="M8 5v14l11-7z"/></svg></span>' +
+                  '<span class="poster-label">' + escAttr(tx.play) + '</span>' +
+                  '<span class="poster-hint">' + escAttr(tx.hint(p.label)) + '</span>' +
+                  '</button>';
+          badge = p.label.toLowerCase();
+          if (p.aspect) wrapCls += ' video-wrap--' + p.aspect;
         } else {
-          media = '<iframe src="' + escAttr(p.embed) + '"' +
-                  ' allow="' + escAttr(p.allow) + '"' +
-                  ' allowfullscreen loading="lazy"></iframe>';
+          media = iframeHtml(p);
           badge = p.label.toLowerCase();
           if (p.aspect) wrapCls += ' video-wrap--' + p.aspect;
         }
@@ -344,6 +387,15 @@
             <span class="footer-badge">Nodyx Widget</span>
           </div>
         </div>`;
+
+      if (deferred) {
+        var root = this.shadowRoot;
+        var btn  = root.querySelector('.poster');
+        if (btn) btn.addEventListener('click', function () {
+          var wrap = root.querySelector('.video-wrap');
+          if (wrap) wrap.innerHTML = iframeHtml(deferred);
+        }, { once: true });
+      }
     }
   }
 
