@@ -271,6 +271,10 @@ Every outside contribution earns a star, and every star goes on [our Hall of Fam
       <a href="https://github.com/lukasMega"><img src="https://github.com/lukasMega.png?size=80" width="64" height="64" alt="Lukáš Melega"/></a><br/>
       <b>Lukáš Melega</b><br/><sub>🌟🌟 Docs search</sub>
     </td>
+    <td align="center" width="140">
+      <a href="https://github.com/PedroFlores199"><img src="https://github.com/PedroFlores199.png?size=80" width="64" height="64" alt="Pedro Flores"/></a><br/>
+      <b>Pedro Flores</b><br/><sub>🌟 Spanish to 100%</sub>
+    </td>
   </tr>
 </table>
 

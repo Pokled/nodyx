@@ -158,6 +158,21 @@ One merged PR = one star. Typos count. Translations count. Bug reports that turn
       <br/>
       <sub><strong>First dual-stack hunter 🌐</strong></sub>
     </td>
+    <td align="center" width="200">
+      <a href="https://github.com/PedroFlores199">
+        <img src="https://github.com/PedroFlores199.png?size=120" width="120" height="120" style="border-radius:50%;" alt="Pedro Flores"/>
+        <br/>
+        <sub><b>Pedro Flores</b></sub>
+      </a>
+      <br/>
+      <sub>🌟 × 1</sub>
+      <br/>
+      <sub><a href="https://github.com/Pokled/nodyx/pull/1028">PR #1028</a></sub>
+      <br/>
+      <sub><em>Spanish interface, 1,052 to 7,059 keys</em></sub>
+      <br/>
+      <sub><strong>Spanish to 100% 🇪🇸</strong></sub>
+    </td>
   </tr>
 </table>
 
@@ -187,6 +202,7 @@ Sometimes a contribution isn't a PR. Sometimes it's just being there at exactly 
 
 | Contributor | Contribution | Type | Issue / PR | Fix / polish | Date |
 |---|---|---|---|---|---|
+| [@PedroFlores199](https://github.com/PedroFlores199) | Completed the Spanish interface: 6,007 new strings, from 1,052 to 7,059 keys (100% of the source). Every variable, token and HTML tag matches the English source; the informal tú register is kept throughout. Kept `@everyone`, `@online`, `@team`, `@attendees` and `/event` in English on purpose because the server only parses French and English, and spotted that `i18nLazy.test.ts` would stop exercising the English fallback. | `i18n(es)` | [#1028](https://github.com/Pokled/nodyx/pull/1028) | _merged as-is, 0 placeholder errors_ | 2026-11-19 |
 | [@oorpheas](https://github.com/oorpheas) | Finished the Brazilian Portuguese interface: the last ~1,500 strings, bringing `pt-BR` from 67% to full parity with the source (4,567 / 4,567 keys). First non-source locale to reach 100%. Documentation and a real-world test with a small group are planned for September. | `feat(i18n)` | [#647](https://github.com/Pokled/nodyx/pull/647) | _follow-up: 2 malformed keys (`aset. saving`, `canvas_r.canvas_r.loading`) corrected so coverage reads a true 100%_ | 2026-08-29 |
 | [@oorpheas](https://github.com/oorpheas) | Second Brazilian Portuguese translation pass: ~1,050 new/fixed strings, coverage jumped from 23% to 67%. Also corrected an earlier mistranslation (`"Stream Deck"` → `"Painel de Transmissão"` instead of the literal `"Conjunto de Stream"`). | `feat(i18n)` | [#644](https://github.com/Pokled/nodyx/pull/644) | _merged as-is, 0 placeholder errors_ | 2026-08-25 |
 | [@oorpheas](https://github.com/oorpheas) | Reported the frontend install failure on a clean machine: `install.sh` pinned Node 20, but `mediasoup-client`/`awaitqueue` (voice frontend) require Node ≥22, so `npm install` always failed with `EBADENGINE`. Included the full install log and traced it to the exact dependency. | `bug(installer)` | [#642](https://github.com/Pokled/nodyx/issues/642) | [#643](https://github.com/Pokled/nodyx/pull/643) | 2026-08-24 |
