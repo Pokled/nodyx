@@ -31,7 +31,7 @@
 		surface: base['--nx-surface'],
 		accent: base['--nx-header-accent'],
 		opacity: dark ? 62 : 72,
-		blur: 28,
+		blur: 16,
 		radius: 18,
 		shadow: 100,
 		border_width: 0,
@@ -78,9 +78,11 @@
 	])
 
 	type RangeKey = 'opacity' | 'blur' | 'radius' | 'shadow' | 'border_width'
+	// Le flou de ce qui est derrière n'existe plus que sur la barre du haut (app.css,
+	// .nx-plate--glass, 19/11/2026) : ailleurs le curseur ne ferait rien, on ne le montre pas.
 	const ranges = $derived<{ k: RangeKey; label: string; min: number; max: number; unit: string }[]>([
 		{ k: 'opacity',      label: tFn('zone.opacity'),      min: 0, max: 100, unit: '%' },
-		{ k: 'blur',         label: tFn('zone.blur'),         min: 0, max: 40,  unit: 'px' },
+		...(zone === 'header' ? [{ k: 'blur' as RangeKey, label: tFn('zone.blur'), min: 0, max: 40, unit: 'px' }] : []),
 		{ k: 'shadow',       label: tFn('zone.shadow'),       min: 0, max: 100, unit: '%' },
 		{ k: 'radius',       label: tFn('zone.radius'),       min: 0, max: 32,  unit: 'px' },
 		{ k: 'border_width', label: tFn('zone.border_width'), min: 0, max: 3,   unit: 'px' },

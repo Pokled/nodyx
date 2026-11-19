@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
 	import { useFollowAmbiance } from '../followAmbiance'
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/env'
@@ -174,7 +175,7 @@
 	</div>
 
 {:else}
-	<div class="twitch-widget relative overflow-hidden"
+	<div class="twitch-widget relative overflow-hidden" use:pauseOffscreen
 	     class:is-live={isMainLive || isFallbackLive}
 	     style="--accent:{accent}; background:var(--nc, rgba(255,255,255,.03)); border:var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.07)); border-radius:var(--nr, 0px)">
 
@@ -184,7 +185,7 @@
 		{#if showHeader}
 			<!-- Header : logo + pseudo + badge live + CTA -->
 			<div class="relative flex items-center justify-between gap-3 px-4 py-2.5"
-			     style="background:rgba(0,0,0,.35); border-bottom:var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06)); backdrop-filter:blur(12px)">
+			     style="background:rgba(0,0,0,.55); border-bottom:var(--nbw, 1px) solid var(--nborder, rgba(255,255,255,.06))">
 
 				<div class="flex items-center gap-2.5 min-w-0 flex-1">
 					<!-- Twitch glyph -->

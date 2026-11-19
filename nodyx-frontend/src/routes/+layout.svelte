@@ -16,6 +16,7 @@
 	import { isAdminThemed } from '$lib/adminTheme';
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded, GOOGLE_FONTS_URL } from '$lib/nameEffects';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
+	import WallpaperStill from '$lib/components/layout/WallpaperStill.svelte';
 	import StageView from '$lib/components/StageView.svelte';
 	import { stageOpenStore } from '$lib/stageStore';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
@@ -894,10 +895,10 @@
 
 	{#if shellBackdrop && !hasMatrix}
 		<!-- Papier peint du contenant flottant : le décor choisi dans l'ambiance
-		     (la bannière par défaut), flouté (app.css, .nx-wallpaper).
+		     (la bannière par défaut), flouté (app.css, .nx-wallpaper), FIXE (WallpaperStill).
 		     Décoratif, masqué sous 1024px. -->
 		<div class="nx-wallpaper" aria-hidden="true">
-			<img src={shellBackdrop} alt="" decoding="async" fetchpriority="low" />
+			<WallpaperStill src={shellBackdrop} />
 		</div>
 	{/if}
 

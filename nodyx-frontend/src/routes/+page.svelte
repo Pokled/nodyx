@@ -127,7 +127,6 @@
 	.glass {
 		background: rgba(255,255,255,.035);
 		border: 1px solid rgba(255,255,255,.07);
-		backdrop-filter: blur(8px);
 		transition: background .2s, border-color .2s;
 	}
 	.glass:hover { background: rgba(255,255,255,.06); border-color: rgb(var(--nx-accent-2-rgb) / .3); }
