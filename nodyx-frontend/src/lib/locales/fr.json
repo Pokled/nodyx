@@ -7516,5 +7516,9 @@
   "charter.load_error": "La charte n'a pas pu se charger.",
   "charter.retry": "Réessayer",
   "charter.preview_badge": "Aperçu",
-  "charter.preview_close": "Fermer l'aperçu"
+  "charter.preview_close": "Fermer l'aperçu",
+  "og2.mv_charter": "La charte",
+  "og2.mv_charter_on": "Avant d'écrire, chaque nouveau lit et signe la charte. Son accueil (étape 2) part au moment de sa signature.",
+  "og2.mv_charter_off": "Éteinte : personne n'a rien à signer, l'accueil part dès l'inscription.",
+  "og2.mv_s1_help_charter": "Le message est publié par OctoGuard dans le salon choisi, au moment où le nouveau signe la charte. Ceux qui étaient déjà là ne sont pas accueillis une deuxième fois."
 }

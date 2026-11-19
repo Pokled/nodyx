@@ -10,6 +10,7 @@
 	import { untrack } from 'svelte'
 	import { og } from '$lib/octoguard/api'
 	import NudgeBanner from '$lib/components/octoguard/NudgeBanner.svelte'
+	import CharterDoor from '$lib/components/charter/CharterDoor.svelte'
 	import type { Nudge } from '$lib/octoguard/nudge'
 	import type { PageData } from './$types'
 
@@ -28,6 +29,9 @@
 			.replace(/\{rulesUrl\}/g, tFn('og2.wel_sample_rules')),
 	)
 	const welcomeOn = $derived(!!data.welcome?.enabled && !!data.welcome?.public_message)
+	// La charte des membres : active = allumée ET publiée (sinon personne n'a rien à signer)
+	const charterOn = $derived(!!data.charter?.enabled && !!data.charter?.published)
+	let charterPreview = $state(false)
 	const until = $derived(new Date(Date.now() + 2 * 3600_000).toLocaleString(String($locale ?? 'fr'), { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }))
 	const CATS = ['spam', 'harassment', 'hate', 'illegal', 'other']
 
@@ -70,9 +74,28 @@
 	<div class="og-note"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 11v5 M12 8h.01" />{tFn('og2.mv_real')}</div>
 
 	<div class="og-grid2">
-		<!-- 1. L'arrivée -->
+		<!-- 1. La charte (lot 7) : la porte d'entrée, avant tout le reste -->
+		<section class="adm-card og-scene" aria-labelledby="mv0">
+			<div class="og-scene-head">
+				<p class="og-step"><span>1</span><span id="mv0">{tFn('og2.mv_charter')}</span></p>
+				<span class="adm-pill" class:og-tone={charterOn} class:og-k-ok={charterOn}>{charterOn ? tFn('chpage.on') : tFn('chpage.off')}</span>
+			</div>
+			<div class="og-phone">
+				<div class="og-door-mini">
+					<b>{tFn('charter.door_title_members', { community: data.communityName })}</b>
+					<span>1 · {tFn('charter.step_read')} &nbsp; 2 · {tFn('charter.step_commit')} &nbsp; 3 · {tFn('charter.step_welcome')}</span>
+				</div>
+			</div>
+			<p class="og-help">{tFn(charterOn ? 'og2.mv_charter_on' : 'og2.mv_charter_off')} <a class="og-linkbtn" href="/admin/octoguard/charter">{tFn('og2.nav_charter')}</a></p>
+			{#if data.charter}<button type="button" class="adm-btn adm-btn--sm" onclick={() => (charterPreview = true)}>{tFn('chpage.see_member')}</button>{/if}
+		</section>
+		{#if charterPreview && data.charter}
+			<CharterDoor audience="members" username={sampleUser} preview={{ html: data.charter.html, tone: data.charter.tone, own: data.charter.own, drawEnabled: data.charter.draw, community: data.communityName }} onclose={() => (charterPreview = false)} />
+		{/if}
+
+		<!-- 2. L'arrivée -->
 		<section class="adm-card og-scene" aria-labelledby="mv1">
-			<p class="og-step"><span>1</span><span id="mv1">{tFn('og2.mv_s1')}</span></p>
+			<p class="og-step"><span>2</span><span id="mv1">{tFn('og2.mv_s1')}</span></p>
 			<div class="og-phone">
 				<div class="og-phone-top"># {data.welcomeChannel ?? tFn('og2.mv_channel')}</div>
 				{#if welcomeOn}
@@ -81,13 +104,13 @@
 					<div class="og-phone-empty">{tFn('og2.mv_welcome_off')}</div>
 				{/if}
 			</div>
-			<p class="og-help">{tFn(welcomeOn ? 'og2.mv_s1_help' : 'og2.mv_s1_off')} <a class="og-linkbtn" href="/admin/octoguard/welcome">{tFn('og2.nav_welcome')}</a></p>
+			<p class="og-help">{tFn(welcomeOn ? (charterOn ? 'og2.mv_s1_help_charter' : 'og2.mv_s1_help') : 'og2.mv_s1_off')} <a class="og-linkbtn" href="/admin/octoguard/welcome">{tFn('og2.nav_welcome')}</a></p>
 		</section>
 
 		<!-- 2. Avant d'envoyer : « Tu es sûr ? » (lot 5) -->
 		<section class="adm-card og-scene" aria-labelledby="mv2">
 			<div class="og-scene-head">
-				<p class="og-step"><span>2</span><span id="mv2">{tFn('og2.mv_nudge')}</span></p>
+				<p class="og-step"><span>3</span><span id="mv2">{tFn('og2.mv_nudge')}</span></p>
 				<label class="og-switch">
 					<input type="checkbox" checked={nudgeOn} disabled={nudgeSaving} onchange={(e) => setNudge(e.currentTarget.checked)} />
 					<span class="og-track"></span>
@@ -111,7 +134,7 @@
 
 		<!-- 3. Un message retenu -->
 		<section class="adm-card og-scene" aria-labelledby="mv3">
-			<p class="og-step"><span>3</span><span id="mv3">{tFn('og2.mv_s2')}</span></p>
+			<p class="og-step"><span>4</span><span id="mv3">{tFn('og2.mv_s2')}</span></p>
 			<div class="og-phone">
 				<div class="og-phone-top"># {tFn('og2.mv_channel')}</div>
 				<div class="og-alert og-k-delete" role="note"><Icon d={'M12 9v4 M12 17h.01 M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z'} />{octoguardMessage(tFn, core('message', 'deleted'))}</div>
@@ -122,7 +145,7 @@
 
 		<!-- 4. Un avertissement -->
 		<section class="adm-card og-scene" aria-labelledby="mv4">
-			<p class="og-step"><span>4</span><span id="mv4">{tFn('og2.mv_s3')}</span></p>
+			<p class="og-step"><span>5</span><span id="mv4">{tFn('og2.mv_s3')}</span></p>
 			<div class="og-phone"><div class="og-phone-top"># {tFn('og2.mv_channel')}</div>
 				<div class="og-alert og-k-warn" role="note"><Icon d={'M12 9v4 M12 17h.01 M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z'} />{octoguardMessage(tFn, core('warn', 'given'))}</div>
 			</div>
@@ -131,7 +154,7 @@
 
 		<!-- 5. En sourdine -->
 		<section class="adm-card og-scene" aria-labelledby="mv5">
-			<p class="og-step"><span>5</span><span id="mv5">{tFn('og2.mv_s4')}</span></p>
+			<p class="og-step"><span>6</span><span id="mv5">{tFn('og2.mv_s4')}</span></p>
 			<div class="og-phone"><div class="og-phone-top"># {tFn('og2.mv_channel')}</div>
 				<div class="og-alert og-k-delete" role="note"><Icon d="M11 5L6 9H3v6h3l5 4z M22 9l-6 6 M16 9l6 6" />{octoguardMessage(tFn, core('mute', 'applied'))}</div>
 				<div class="og-composer"><span class="adm-input og-disabled">{tFn('chat.muted_until', { date: until })}</span></div>
@@ -141,14 +164,14 @@
 
 		<!-- 6. Exclusion temporaire -->
 		<section class="adm-card og-scene" aria-labelledby="mv6">
-			<p class="og-step"><span>6</span><span id="mv6">{tFn('og2.mv_s5')}</span></p>
+			<p class="og-step"><span>7</span><span id="mv6">{tFn('og2.mv_s5')}</span></p>
 			<div class="og-alert og-k-delete" role="note"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M5.6 5.6l12.8 12.8" />{octoguardMessage(tFn, core('ban_temp', 'applied'))}</div>
 			<p class="og-help">{tFn('og2.mv_s5_help')}</p>
 		</section>
 
 		<!-- 7. Les commandes -->
 		<section class="adm-card og-scene" aria-labelledby="mv7">
-			<p class="og-step"><span>7</span><span id="mv7">{tFn('og2.mv_s6')}</span></p>
+			<p class="og-step"><span>8</span><span id="mv7">{tFn('og2.mv_s6')}</span></p>
 			{#if data.commands.length}
 				<div class="og-phone"><div class="og-phone-top"># {tFn('og2.mv_channel')}</div>
 					{#each data.commands as c (c.id)}
@@ -164,7 +187,7 @@
 
 		<!-- 8. Signaler -->
 		<section class="adm-card og-scene" aria-labelledby="mv8">
-			<p class="og-step"><span>8</span><span id="mv8">{tFn('og2.mv_s7')}</span></p>
+			<p class="og-step"><span>9</span><span id="mv8">{tFn('og2.mv_s7')}</span></p>
 			<div class="og-phone"><div class="og-phone-top">{tFn('report.title')}</div>
 				<div style="padding:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
 					<b style="font-size:0.8125rem">{tFn('report.why')}</b>
@@ -176,7 +199,7 @@
 
 		<!-- 9. Ce qui ne se voit jamais -->
 		<section class="adm-card og-scene" aria-labelledby="mv9">
-			<p class="og-step"><span>9</span><span id="mv9">{tFn('og2.mv_s8')}</span></p>
+			<p class="og-step"><span>10</span><span id="mv9">{tFn('og2.mv_s8')}</span></p>
 			<ul class="og-keys-mv">
 				<li><span class="adm-pill og-tone og-k-observe">{tFn('og2.lv_observe')}</span>{tFn('og2.mv_s8_observe')}</li>
 				<li><span class="adm-pill og-tone og-k-report">{tFn('og2.lv_report')}</span>{tFn('og2.mv_s8_report')}</li>
@@ -188,6 +211,8 @@
 
 <style>
 	.og-scene { display: flex; flex-direction: column; gap: 0.75rem; }
+	.og-door-mini { display: flex; flex-direction: column; gap: 6px; margin: 10px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--nx-border); background: color-mix(in srgb, var(--nx-header-accent) 9%, var(--nx-surface)); font-size: 0.8125rem; }
+	.og-door-mini span { color: var(--nx-text-muted); font-size: 0.75rem; }
 	.og-step { margin: 0; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 0.875rem; }
 	.og-step span:first-child { width: 1.375rem; height: 1.375rem; border-radius: 99px; display: grid; place-items: center; font-size: 0.75rem; background: color-mix(in srgb, var(--nx-header-accent) 15%, transparent); color: var(--nx-header-accent); }
 	.og-phone { border: 1px solid var(--nx-border); border-radius: 10px; overflow: hidden; background: var(--nx-surface); }

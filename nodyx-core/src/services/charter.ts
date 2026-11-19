@@ -303,6 +303,8 @@ export async function signCharter(aud: Audience, userId: string, input: SignInpu
      ON CONFLICT (audience, user_id, version) DO NOTHING RETURNING id`,
     [aud, userId, s.current, input.way, Math.min(readMs, 2_147_483_647)])
   try { await redis.del(needKey(aud, s, userId)) } catch { /* le TTL de 60 s rattrape */ }
+  // La charte des membres signée : l'accueil d'un nouvel inscrit part maintenant
+  if (aud === 'members') void releasePendingWelcome(userId)
   if (ins.rows.length) {
     logOctoGuardAction({
       action: 'octoguard.charter_signed', target_type: 'user', target_id: userId, target_label: await usernameOf(userId), actor_id: userId,
@@ -502,4 +504,40 @@ export async function charterJournal(aud: Audience) {
       WHERE action LIKE 'octoguard.charter\\_%' AND metadata->>'audience' = $1
       ORDER BY created_at DESC LIMIT 8`, [aud])
   return rows
+}
+
+// ── L'accueil (message de bienvenue + grade) attend la signature ─────────────
+
+/**
+ * À l'inscription : si la charte des membres est active pour ce nouvel inscrit, son
+ * accueil attend sa signature. Renvoie vrai si l'accueil a été mis en attente.
+ * Tolérant aux pannes : en cas d'erreur, l'accueil part tout de suite (comme avant).
+ */
+export async function deferWelcomeIfCharter(userId: string): Promise<boolean> {
+  try {
+    if (!(await mustSign('members', userId))) return false
+    await db.query(`INSERT INTO charter_welcome_pending (user_id) VALUES ($1) ON CONFLICT DO NOTHING`, [userId])
+    return true
+  } catch (err) {
+    console.warn('[charter] deferWelcome failed, welcoming now:', err)
+    return false
+  }
+}
+
+/**
+ * L'accueil en attente part : à la signature, ou à la visite suivante si la charte a été
+ * éteinte entre-temps (personne ne reste sans accueil). Une seule fois : la ligne est
+ * retirée avant d'accueillir. Jamais bloquant.
+ */
+export async function releasePendingWelcome(userId: string): Promise<void> {
+  try {
+    const { rows } = await db.query<{ username: string }>(
+      `WITH gone AS (DELETE FROM charter_welcome_pending WHERE user_id = $1 RETURNING user_id)
+       SELECT u.username FROM gone JOIN users u ON u.id = gone.user_id`, [userId])
+    if (!rows[0] || process.env.OCTOGUARD_ENABLED !== 'true') return
+    const { runWelcomeFor } = await import('./octoguard')
+    await runWelcomeFor(userId, rows[0].username)
+  } catch (err) {
+    console.warn('[charter] releasePendingWelcome failed:', err)
+  }
 }

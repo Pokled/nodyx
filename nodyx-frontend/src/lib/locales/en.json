@@ -7516,5 +7516,9 @@
   "charter.load_error": "The charter couldn't load.",
   "charter.retry": "Try again",
   "charter.preview_badge": "Preview",
-  "charter.preview_close": "Close the preview"
+  "charter.preview_close": "Close the preview",
+  "og2.mv_charter": "The charter",
+  "og2.mv_charter_on": "Before writing, every newcomer reads and signs the charter. Their welcome (step 2) goes out when they sign.",
+  "og2.mv_charter_off": "Off: nobody has anything to sign, the welcome goes out at sign-up.",
+  "og2.mv_s1_help_charter": "OctoGuard posts the message in the chosen channel when the newcomer signs the charter. Those already here are not welcomed a second time."
 }
