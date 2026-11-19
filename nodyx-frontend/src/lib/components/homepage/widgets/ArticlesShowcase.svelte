@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { useFollowAmbiance } from '../followAmbiance'
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/env'
@@ -170,7 +171,7 @@
 				<a class="as-hero" href={articleUrl(magazineHero)}>
 					<div class="as-hero-cover">
 						{#if magazineHero.cover_url}
-							<img src={magazineHero.cover_url} alt="" loading="lazy" />
+							<img src={thumb(magazineHero.cover_url, 900)} srcset={thumbSrcset(magazineHero.cover_url, 900)} alt="" loading="lazy" decoding="async" />
 						{:else}
 							<!-- --cat: variable morte retirée (jamais lue, le CSS lit var(--accent)
 							     hérité du .as-root ancêtre — même valeur, pas besoin de la reposer ici) -->
@@ -203,7 +204,7 @@
 					{#each magazineRest as a}
 						<a class="as-card as-card--sm" href={articleUrl(a)}>
 							<div class="as-card-cover">
-								{#if a.cover_url}<img src={a.cover_url} alt="" loading="lazy" />{:else}<div class="as-cover-placeholder"></div>{/if}
+								{#if a.cover_url}<img src={thumb(a.cover_url, 448)} srcset={thumbSrcset(a.cover_url, 448)} alt="" loading="lazy" decoding="async" />{:else}<div class="as-cover-placeholder"></div>{/if}
 								{#if showCategory}<span class="as-cat-badge">{a.category_name}</span>{/if}
 							</div>
 							<div class="as-card-body">
@@ -224,7 +225,7 @@
 			{#each articles as a}
 				<a class="as-card" href={articleUrl(a)}>
 					<div class="as-card-cover">
-						{#if a.cover_url}<img src={a.cover_url} alt="" loading="lazy" />{:else}<div class="as-cover-placeholder"></div>{/if}
+						{#if a.cover_url}<img src={thumb(a.cover_url, 448)} srcset={thumbSrcset(a.cover_url, 448)} alt="" loading="lazy" decoding="async" />{:else}<div class="as-cover-placeholder"></div>{/if}
 						{#if showCategory}<span class="as-cat-badge">{a.category_name}</span>{/if}
 					</div>
 					<div class="as-card-body">
@@ -247,7 +248,7 @@
 			{#each articles as a}
 				<a class="as-horiz-item" href={articleUrl(a)}>
 					<div class="as-horiz-cover">
-						{#if a.cover_url}<img src={a.cover_url} alt="" loading="lazy" />{:else}<div class="as-cover-placeholder"></div>{/if}
+						{#if a.cover_url}<img src={thumb(a.cover_url, 192)} srcset={thumbSrcset(a.cover_url, 192)} alt="" loading="lazy" decoding="async" />{:else}<div class="as-cover-placeholder"></div>{/if}
 					</div>
 					<div class="as-horiz-body">
 						{#if showCategory}<span class="as-cat-inline">{a.category_name}</span>{/if}
@@ -276,7 +277,7 @@
 				{#if i === sliderIdx}
 					<a class="as-slide" href={articleUrl(a)}>
 						<div class="as-slide-cover">
-							{#if a.cover_url}<img src={a.cover_url} alt="" />{:else}<div class="as-cover-placeholder"></div>{/if}
+							{#if a.cover_url}<img src={thumb(a.cover_url, 900)} srcset={thumbSrcset(a.cover_url, 900)} alt="" decoding="async" />{:else}<div class="as-cover-placeholder"></div>{/if}
 							<div class="as-hero-gradient"></div>
 						</div>
 						<div class="as-slide-body">
@@ -318,7 +319,7 @@
 				{#each [...articles, ...articles] as a}
 					<a class="as-ticker-item" href={articleUrl(a)}>
 						{#if a.cover_url}
-							<div class="as-ticker-cover"><img src={a.cover_url} alt="" loading="lazy" /></div>
+							<div class="as-ticker-cover"><img src={thumb(a.cover_url, 56)} srcset={thumbSrcset(a.cover_url, 56)} alt="" loading="lazy" decoding="async" /></div>
 						{/if}
 						<div class="as-ticker-body">
 							{#if showCategory}<span class="as-cat-inline">{a.category_name}</span>{/if}

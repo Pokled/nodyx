@@ -31,6 +31,7 @@ import geoRoutes from './routes/geo'
 import linksRoutes           from './routes/links'
 import commandsRoutes        from './routes/commands'
 import gamesRoutes           from './routes/games'
+import thumbnailRoutes       from './routes/thumbnails'
 import mentionsRoutes        from './routes/mentions'
 import authenticatorRoutes   from './routes/authenticator'
 import taskRoutes            from './routes/tasks'
@@ -152,6 +153,9 @@ server.register(fastifyStatic, {
   prefix:     '/uploads/',
   decorateReply: false,
 })
+
+// Vignettes : /uploads/_w/<largeur>/… (plus précis que /uploads/*, il passe avant)
+server.register(thumbnailRoutes)
 
 // ── Multipart (file uploads) ─────────────────────────────────
 server.register(fastifyMultipart, {
