@@ -21,6 +21,7 @@ import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
 import { can, getAccess, communityOfThread, outranks, rankOf } from '../services/permissions'
 import { isUserMuted } from '../services/octoguard'
+import { charterGate, charterRefusal } from '../services/charter'
 import { moderateText, textForModeration, blockedBody, heldBody } from '../services/octoguard/moderate'
 import { holdContent, holdRefusal } from '../services/octoguard/held'
 import { fileAutoReport } from '../services/octoguard/autoReport'
@@ -611,6 +612,8 @@ app.get('/threads', {
 
     // Authors without mod rights can only edit the title
     if (isAuthor && !modAccess) {
+      // La charte des membres (lot 7) : pas de modification avant de l'avoir signée
+      if (!(await charterGate(userId)).allow) return reply.code(403).send(charterRefusal)
       const cleanTitle = body.title ? stripTitleTags(body.title) : ''
       if (!cleanTitle) {
         return reply.code(403).send({ error: 'Authors can only edit the title', code: 'FORBIDDEN' })

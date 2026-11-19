@@ -1,3 +1,4 @@
+import { charterGate } from '../services/charter'
 import { registerVoiceHandlers, sendVoiceSnapshot } from './voice'
 import { registerVoiceSfuHandlers } from './voiceSfu'
 import { registerWhisperHandlers } from './whisper'
@@ -416,6 +417,11 @@ export function registerSocketIO(server: Server): void {
         // Bouclier anti-raid (lot 6) : AVANT OctoGuard, et même OctoGuard éteint
         // (D21c). Compte tout neuf : lecture seule. Tout le monde sauf l'équipe :
         // un message toutes les 10 s, et un lien attend d'être relu (à l'appelant).
+        // La charte des membres (lot 7) : qui ne l'a pas signée n'écrit pas
+        if (!(await charterGate(userId)).allow) {
+          socket.emit('chat:blocked', { reason: 'charter_unsigned', octoguard: { i18n_key: 'charter.unsigned' } })
+          return null
+        }
         const gate = await shieldGate(userId, 'chat', { isNew: true })
         if (!gate.allow) {
           socket.emit('chat:blocked', {
@@ -738,6 +744,10 @@ export function registerSocketIO(server: Server): void {
         // Bouclier anti-raid : compte tout neuf en lecture seule ; ajouter un lien
         // pendant le bouclier est refusé comme une modification à relire
         {
+          if (!(await charterGate(userId)).allow) {
+            socket.emit('chat:blocked', { reason: 'charter_unsigned', octoguard: { i18n_key: 'charter.unsigned' } })
+            return
+          }
           const gate = await shieldGate(userId, 'chat', { isNew: false })
           if (!gate.allow) {
             socket.emit('chat:blocked', { reason: 'shield_new_account', octoguard: { i18n_key: gate.i18n_key, expires_at: gate.until } })
@@ -915,6 +925,10 @@ export function registerSocketIO(server: Server): void {
 
         // Bouclier anti-raid (D21b) : un compte tout neuf n'envoie pas de message
         // privé pendant le bouclier (un raid passe souvent par des MP en masse)
+        if (!(await charterGate(userId)).allow) {
+          socket.emit('chat:blocked', { reason: 'charter_unsigned', octoguard: { i18n_key: 'charter.unsigned' } })
+          return
+        }
         const dmGate = await shieldGate(userId, 'dm', { isNew: true })
         if (!dmGate.allow) {
           socket.emit('chat:blocked', { reason: 'shield_new_account', octoguard: { i18n_key: dmGate.i18n_key, expires_at: dmGate.until } })

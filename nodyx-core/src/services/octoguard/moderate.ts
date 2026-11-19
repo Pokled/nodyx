@@ -14,6 +14,7 @@
  * Ne lève jamais : en cas de panne, on laisse passer (fail-open, comme le chat).
  */
 
+import { charterGate } from '../charter'
 import { db } from '../../config/database'
 import { getInstanceCommunityId } from '../../middleware/adminOnly'
 import { isOctoGuardEnabled } from './index'
@@ -132,6 +133,12 @@ export async function moderateText(userId: string, surface: Surface, texts: Arra
     // Le bouclier anti-raid passe AVANT OctoGuard et marche même éteint (D21c) :
     // un compte tout neuf n'écrit plus nulle part ; un lien du forum attend
     // d'être relu (l'équipe n'est jamais concernée, cf. shieldGate).
+    // La charte des membres (lot 7) passe avant tout : qui ne l'a pas signée
+    // n'écrit ni sujet, ni réponse, ni sondage (validé le 19/11/2026)
+    if (surface === 'forum' || surface === 'poll') {
+      const charter = await charterGate(userId)
+      if (!charter.allow) return { blocked: true, reason: charter.code, i18n_key: charter.i18n_key }
+    }
     const gate = await shieldGate(userId, surface === 'forum' ? 'forum' : 'other', { isNew: false })
     if (!gate.allow) return { blocked: true, reason: gate.code, i18n_key: gate.i18n_key }
     if (surface === 'forum' && gate.holdLinks && content && hasLink(content)) return { blocked: false, hold: shieldHoldRule(content) }
@@ -163,5 +170,5 @@ export function heldBody(h: { id: string }) {
 
 /** Corps de la réponse 422 quand OctoGuard refuse une publication. */
 export function blockedBody(v: { reason: string; i18n_key: string }) {
-  return { error: v.reason, code: 'OCTOGUARD_BLOCKED', i18n_key: v.i18n_key }
+  return { error: v.reason, code: v.reason === 'CHARTER_UNSIGNED' ? 'CHARTER_UNSIGNED' : 'OCTOGUARD_BLOCKED', i18n_key: v.i18n_key }
 }

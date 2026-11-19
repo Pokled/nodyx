@@ -6770,6 +6770,7 @@
   "og2.sh_t_fail_sub": "if the server cannot check (database or cache down), it lets people write. The shield protects from a crisis, it must never create one.",
   "ogmsg.shield_new_account": "The raid shield is up: brand-new accounts can read, and will be able to write as soon as it is lowered.",
   "ogmsg.shield_slow": "The raid shield is up: one message every 10 seconds. Wait a moment, then send again.",
+  "ogmsg.charter_unsigned": "Sign the community charter first: then you can write here.",
   "ogshield.title": "Raid shield up.",
   "ogshield.readonly": "Your account is brand new: you can read everything, and you will be able to write at {{at}}.",
   "ogshield.member_chat": "Until {{at}}: one message every {{s}} seconds, and links wait for review.",

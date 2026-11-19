@@ -181,3 +181,68 @@ export function sanitize(raw: string, opts: SanitizeOptions = {}): string {
     },
   })
 }
+
+// ── La charte (lot 7, SPECS/NODYX_OCTOGUARD_V2_CDC.md §E4j) ──────────────────
+// Une liste plus COURTE que celle du forum : exactement les blocs de l'aide-mémoire
+// de l'éditeur (maquette validée le 19/11/2026). Tout le reste est retiré à
+// l'enregistrement, y compris ce qu'un admin colle dans la vue « Code source » :
+// un bout de code trouvé sur Internet (un programme qui espionne, un lien piégé)
+// ne passe pas. Pas d'iframe, pas de tableau, pas d'image d'ailleurs.
+//   bannière   <figure class="nx-banner"><img><figcaption>…</figcaption></figure>
+//   accroche   <p class="lead">
+//   encadré    <aside class="nx-callout" data-color="…">
+//   titre      <h2 data-color="…"> (et h3)
+//   + paragraphe, gras, italique, souligné, barré, couleur du texte, centré,
+//     liste, ligne, image, lien.
+export const CHARTER_COLORS = ['green', 'blue', 'violet', 'orange', 'red'] as const
+const CHARTER_COLOR = new Set<string>(CHARTER_COLORS)
+// Images : celles de l'instance (/uploads/…) et les photos livrées avec Nodyx (/biomes/…)
+const BIOME_IMG = /^\/biomes\/[a-zA-Z-]+-\d\.webp$/
+
+function charterImgSrc(src: string): boolean {
+  if (!src) return false
+  if (src.startsWith('/uploads/')) return isContainedUploadPath(src)
+  return BIOME_IMG.test(src)
+}
+
+export function sanitizeCharter(raw: string): string {
+  const keepColor = (tagName: string, attribs: Record<string, string>) => {
+    const out: Record<string, string> = { ...attribs }
+    if (out['data-color'] !== undefined && !CHARTER_COLOR.has(out['data-color'])) delete out['data-color']
+    return { tagName, attribs: out }
+  }
+  return sanitizeHtml(raw, {
+    allowedTags: ['p', 'br', 'strong', 'em', 'u', 's', 'span', 'h2', 'h3', 'ul', 'ol', 'li', 'hr', 'a', 'img', 'figure', 'figcaption', 'aside'],
+    allowedAttributes: {
+      'p':      ['class', 'style'],
+      'h2':     ['data-color', 'style'],
+      'h3':     ['data-color', 'style'],
+      'span':   ['style'],
+      'aside':  ['class', 'data-color'],
+      'figure': ['class'],
+      'a':      ['href'],
+      'img':    ['src', 'alt'],
+    },
+    allowedClasses: { p: ['lead'], aside: ['nx-callout'], figure: ['nx-banner'] },
+    allowedStyles: {
+      '*': {
+        'color':      [/^#[0-9a-f]{3,8}$/i, /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/i],
+        'text-align': [/^(left|center|right)$/],
+      },
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowProtocolRelative: false,
+    transformTags: { h2: keepColor, h3: keepColor, aside: keepColor },
+    exclusiveFilter: (frame) => {
+      if (frame.tag === 'img') return !charterImgSrc(frame.attribs?.src ?? '')
+      if (frame.tag === 'a') {
+        const href = frame.attribs?.href ?? ''
+        try {
+          const hostname = new URL(href).hostname.toLowerCase().replace(/^www\./, '')
+          return BLOCKED_LINK_DOMAINS.has(hostname)
+        } catch { return false }
+      }
+      return false
+    },
+  })
+}
