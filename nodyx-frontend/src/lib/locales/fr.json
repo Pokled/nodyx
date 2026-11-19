@@ -6770,6 +6770,7 @@
   "og2.sh_t_fail_sub": "si le serveur n'arrive pas à vérifier (base ou cache indisponible), il laisse écrire. Le bouclier protège d'une crise, il ne doit jamais en créer une.",
   "ogmsg.shield_new_account": "Le bouclier anti-raid est levé : les comptes tout neufs peuvent lire, et pourront écrire dès qu'il sera baissé.",
   "ogmsg.shield_slow": "Le bouclier anti-raid est levé : un message toutes les 10 secondes. Attends un instant, puis renvoie.",
+  "ogmsg.charter_unsigned": "Signe d'abord la charte de la communauté : ensuite, tu pourras écrire ici.",
   "ogshield.title": "Bouclier anti-raid levé.",
   "ogshield.readonly": "Ton compte est tout neuf : tu peux tout lire, et tu pourras écrire à {{at}}.",
   "ogshield.member_chat": "Jusqu'à {{at}} : un message toutes les {{s}} secondes, et les liens attendent d'être relus.",

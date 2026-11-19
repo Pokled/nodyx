@@ -16,6 +16,8 @@ const BY_CORE_KEY: Record<string, string> = {
 	// Bouclier anti-raid (lot 6)
 	[OG + 'shield' + '.new_account']: 'ogmsg.shield_new_account',
 	[OG + 'shield' + '.slow']: 'ogmsg.shield_slow',
+	// La charte des membres (lot 7) : pas signée, pas d'écriture
+	['charter' + '.unsigned']: 'ogmsg.charter_unsigned',
 }
 
 export function octoguardMessage(tFn: (k: string) => string, coreKey: string | null | undefined): string {
