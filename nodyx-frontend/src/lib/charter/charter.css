@@ -1,0 +1,43 @@
+/* Le rendu d'une charte : le MÊME dans l'éditeur, l'aperçu, l'aide-mémoire et la porte
+   des membres (maquette v3 validée le 19/11/2026, charte-maquette.html). Les blocs sont
+   ceux de lib/charter/blocks.ts. */
+
+.charter-doc { padding: 18px 22px 22px; font-size: 14px; line-height: 1.65; color: var(--nx-text); }
+.charter-doc h2, .charter-doc h3 { font-size: 16px; font-weight: 700; margin: 18px 0 6px; }
+.charter-doc h3 { font-size: 14.5px; }
+.charter-doc p { margin: 0 0 8px; }
+.charter-doc hr { border: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--nx-border) 20%, var(--nx-border) 80%, transparent); margin: 18px 0; }
+.charter-doc a { color: var(--nx-header-accent); font-weight: 600; }
+.charter-doc ul, .charter-doc ol { margin: 4px 0 8px; padding-left: 20px; }
+.charter-doc ul { list-style: disc; } .charter-doc ol { list-style: decimal; }
+.charter-doc li p { margin: 0; }
+.charter-doc img { max-width: 100%; height: auto; border-radius: 8px; }
+.charter-doc .lead { font-size: 15px; text-align: center; color: var(--nx-text); margin: 4px 0 14px; }
+.charter-doc p[style*="center"] { text-align: center; }
+
+/* Bannière : une grande photo, un titre par-dessus */
+.nx-banner { position: relative; margin: 0; height: 170px; overflow: hidden; }
+.nx-banner img { width: 100%; height: 100%; object-fit: cover; object-position: center 60%; display: block; border-radius: 0; max-width: none; }
+.nx-banner::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgb(0 0 0 / .62)); z-index: 1; pointer-events: none; }
+.nx-banner figcaption { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 0 22px 16px; color: #fff; font-size: 24px; font-weight: 700; letter-spacing: -.01em; text-shadow: 0 1px 8px rgb(0 0 0 / .4); }
+.charter-doc .nx-banner { margin: 0 -22px 14px; }
+.charter-doc > .nx-banner:first-child { margin-top: -18px; }
+
+/* Titre à pastille */
+.charter-doc h2[data-color]::before, .charter-doc h3[data-color]::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 99px; margin-right: 8px; vertical-align: 1px; background: var(--c); }
+.charter-doc [data-color="green"] { --c: #22c55e; } .charter-doc [data-color="blue"] { --c: #3b82f6; } .charter-doc [data-color="violet"] { --c: #8b5cf6; }
+.charter-doc [data-color="orange"] { --c: #f59e0b; } .charter-doc [data-color="red"] { --c: #e5484d; }
+
+/* Le gras et l'italique gardent la couleur choisie par l'admin : le kit admin colore
+   tout <strong> (.adm-page :where(strong)), ce qui effaçait « jamais des personnes » en vert */
+.charter-doc strong, .charter-doc b, .charter-doc em { color: inherit; }
+
+/* Encadré coloré */
+.nx-callout { display: block; border-radius: 10px; padding: 10px 14px; margin: 12px 0; border-left: 4px solid var(--c, #f59e0b); background: color-mix(in srgb, var(--c, #f59e0b) 10%, var(--nx-surface)); }
+.nx-callout strong { color: var(--c, #f59e0b); }
+
+@media (max-width: 560px) {
+	.charter-doc { padding: 14px 16px 18px; }
+	.nx-banner { height: 130px; } .nx-banner figcaption { font-size: 20px; padding: 0 16px 12px; }
+	.charter-doc .nx-banner { margin: 0 -16px 12px; } .charter-doc > .nx-banner:first-child { margin-top: -14px; }
+}

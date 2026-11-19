@@ -20,6 +20,8 @@ export const ADMIN_THEMED_ROUTES: readonly string[] = [
 	'/admin/octoguard/ladder',
 	// Lot 6 : le bouclier anti-raid
 	'/admin/octoguard/shield',
+	// Lot 7 : les chartes
+	'/admin/octoguard/charter',
 	// Intégrations : les webhooks de la communauté (D38-D39)
 	'/admin/webhooks',
 ]
