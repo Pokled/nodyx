@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte'
 	import { t } from '$lib/i18n'
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	const tFn = $derived($t)
 
 	interface OnlineMember {
@@ -134,7 +135,7 @@
 	<div class="hdr-canvas noise" style="height:{height}">
 
 		{#if showBackground && bgImageUrl}
-			<img src={bgImageUrl} alt="" class="hdr-bg"
+			<img src={thumb(bgImageUrl, 1536)} alt="" class="hdr-bg" decoding="async"
 				style="object-position:{bgOffsetX}% {bgOffsetY}%; transform-origin:{bgOffsetX}% {bgOffsetY}%; transform: scale({bgScale})" />
 			<div class="hdr-overlay" style="opacity:{overlayOpacity}"></div>
 		{/if}
@@ -142,7 +143,7 @@
 		{#if showLogo}
 			<div class="hdr-logo-wrap" style="left:{logoOffsetX}%; top:{logoOffsetY}%; width:{logoSize}px; height:{logoSize}px;">
 				{#if logoUrl}
-					<img src={logoUrl} alt={name} class="hdr-logo-img" />
+					<img src={thumb(logoUrl, logoSize)} srcset={thumbSrcset(logoUrl, logoSize)} alt={name} class="hdr-logo-img" />
 				{:else}
 					<div class="hdr-logo-fallback" style="font-size:{Math.round(logoSize * 0.42)}px">{heroLetter}</div>
 				{/if}
@@ -197,7 +198,7 @@
 					{#each visibleMembers as m (m.userId)}
 						<div class="hdr-avatar" style={glowStyle(m)}>
 							{#if m.avatar}
-								<img src={m.avatar} alt="" />
+								<img src={thumb(m.avatar, 28)} srcset={thumbSrcset(m.avatar, 28)} alt="" />
 							{:else}
 								<span class="hdr-avatar-letter">{m.username.charAt(0).toUpperCase()}</span>
 							{/if}

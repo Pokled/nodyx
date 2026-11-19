@@ -6,7 +6,15 @@
 //
 // `cssWidth` : la largeur d'affichage en pixels CSS ; la vignette est la plus petite
 // largeur prédéfinie qui la couvre (et le double pour les écrans haute densité).
+import { PUBLIC_API_URL } from '$app/env/public'
+
 export const THUMB_WIDTHS = [64, 128, 256, 384, 512, 768, 1024, 1536] as const
+
+// Les avatars et bannières de profil sont enregistrés en adresse COMPLÈTE de l'instance
+// (« https://nodyx.org/uploads/avatars/… », cf. routes/users/me/edit) : ce sont bien
+// des images de l'instance, on les réduit aussi. Comparaison sur « origine + / » exacte :
+// « https://nodyx.org.ailleurs.com/uploads/… » n'en est pas une.
+const SELF = (() => { try { return new URL(PUBLIC_API_URL).origin + '/' } catch { return '' } })()
 
 const LOCAL = /^\/uploads\/(?!_)([^?#]+\.(?:jpe?g|png|webp|gif|avif))$/i
 
@@ -17,8 +25,9 @@ function widthFor(px: number): number {
 /** La vignette, ou l'adresse d'origine si ce n'est pas une image de l'instance. */
 export function thumb(url: string | null | undefined, cssWidth: number, opts: { still?: boolean } = {}): string {
 	if (!url) return ''
-	const m = LOCAL.exec(url)
-	if (!m || url.includes('..')) return url
+	const local = SELF && url.startsWith(SELF) ? url.slice(SELF.length - 1) : url
+	const m = LOCAL.exec(local)
+	if (!m || local.includes('..')) return url
 	return `/uploads/_w/${widthFor(Math.max(1, Math.round(cssWidth)))}${opts.still ? 's' : ''}/${m[1]}`
 }
 

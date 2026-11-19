@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+// Avant l'import de thumb : l'instance testée est nodyx.org
+vi.hoisted(() => { process.env.PUBLIC_API_URL = 'https://nodyx.org' })
 import { thumb, thumbSrcset, originalOf } from './thumb'
 
 describe('thumb', () => {
@@ -14,6 +16,16 @@ describe('thumb', () => {
     for (const u of ['https://exemple.org/x.png', '/uploads/_w/256/posts/a.webp', '/uploads/posts/../../x.png', '/uploads/posts/a.svg', '/static/x.png'])
       expect(thumb(u, 100)).toBe(u)
     expect(thumb(null, 100)).toBe('')
+  })
+})
+
+describe('thumb : adresse complète', () => {
+  it('une image de l’instance enregistrée en adresse complète est réduite aussi (les avatars de profil)', () => {
+    expect(thumb('https://nodyx.org/uploads/avatars/u.png', 34)).toBe('/uploads/_w/64/avatars/u.png')
+  })
+  it('un autre domaine, même ressemblant, reste tel quel', () => {
+    for (const u of ['https://nodyx.org.ailleurs.com/uploads/avatars/u.png', 'https://nexusnode.app/uploads/avatars/u.png', 'http://nodyx.org/uploads/avatars/u.png', 'https://nodyx.org/uploads/avatars/../../x.png'])
+      expect(thumb(u, 34)).toBe(u)
   })
 })
 
