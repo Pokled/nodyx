@@ -279,13 +279,19 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // OctoGuard welcome (Module 2). Fire-and-forget : ne bloque jamais
     // l'inscription, toute erreur est loggée silencieusement.
+    // Charte des membres active : l'accueil attend la signature (lot 7d-2, CDC §E4j).
     if (process.env.OCTOGUARD_ENABLED === 'true') {
-      // Import dynamique pour éviter de charger octoguard quand désactivé
-      import('../services/octoguard').then(({ runWelcomeFor }) =>
-        runWelcomeFor(user.id, username).catch(err =>
+      void (async () => {
+        try {
+          const { deferWelcomeIfCharter } = await import('../services/charter')
+          if (await deferWelcomeIfCharter(user.id)) return
+          // Import dynamique pour éviter de charger octoguard quand désactivé
+          const { runWelcomeFor } = await import('../services/octoguard')
+          await runWelcomeFor(user.id, username)
+        } catch (err) {
           console.warn('[auth] OctoGuard welcome failed:', err)
-        )
-      ).catch(() => { /* ignore */ })
+        }
+      })()
     }
 
     // Email verification — only when SMTP is configured

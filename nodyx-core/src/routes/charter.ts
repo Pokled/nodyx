@@ -22,7 +22,7 @@ import { requirePermission, requireAnyPermission } from '../middleware/permissio
 import { instanceCommunityId } from '../services/mentionPeople'
 import { getAccess } from '../services/permissions'
 import {
-  isAudience, mustSign, openCharter, recordProgress, signCharter, CharterError, type Audience,
+  isAudience, mustSign, openCharter, recordProgress, signCharter, CharterError, type Audience, releasePendingWelcome,
   charterAdmin, updateCharterSettings, saveCharterDraft, publishCharter, charterOverview, charterPeople, charterJournal,
 } from '../services/charter'
 
@@ -50,7 +50,10 @@ export async function charterRoutes(app: FastifyInstance) {
   app.get('/status', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
     const userId = userIdOf(request)
     reply.header('Cache-Control', 'private, no-store')
-    return reply.send({ members: await mustSign('members', userId), team: await mustSign('team', userId) })
+    const members = await mustSign('members', userId)
+    // Plus rien à signer (charte éteinte entre-temps) : l'accueil en attente part maintenant
+    if (!members) void releasePendingWelcome(userId)
+    return reply.send({ members, team: await mustSign('team', userId) })
   })
 
   app.get('/:audience', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
