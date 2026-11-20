@@ -54,31 +54,26 @@
 	// ── Slideshow ──────────────────────────────────────────────────────────
 	const slideArticles = $derived(articles.length > 0 ? articles : []);
 	let slideIndex  = $state(0);
-	let progressPct = $state(0);
+	let cycle       = $state(0); // relance la barre de progression (animation CSS)
 	let slideTimer: ReturnType<typeof setInterval> | null = null;
-	let progressTimer: ReturnType<typeof setInterval> | null = null;
 	const SLIDE_MS = 6000;
 
 	function slideTo(i: number) {
 		slideIndex  = ((i % slideArticles.length) + slideArticles.length) % slideArticles.length;
-		progressPct = 0;
+		cycle++;
 	}
 	function slideNext() { slideTo(slideIndex + 1); }
 	function slidePrev() { slideTo(slideIndex - 1); }
 	function startTimers() {
 		if (slideArticles.length < 2) return;
-		if (slideTimer)    clearInterval(slideTimer);
-		if (progressTimer) clearInterval(progressTimer);
-		progressPct = 0;
-		slideTimer    = setInterval(slideNext, SLIDE_MS);
-		progressTimer = setInterval(() => {
-			progressPct = Math.min(progressPct + 100 / (SLIDE_MS / 100), 100);
-		}, 100);
+		if (slideTimer) clearInterval(slideTimer);
+		cycle++;
+		slideTimer = setInterval(slideNext, SLIDE_MS);
 	}
-	onMount(startTimers);
+	// Ce diaporama n'existe que sans grille publiée : avec une grille, il ne tourne pas du tout.
+	onMount(() => { if (!hasGrid) startTimers(); });
 	onDestroy(() => {
-		if (slideTimer)    clearInterval(slideTimer);
-		if (progressTimer) clearInterval(progressTimer);
+		if (slideTimer) clearInterval(slideTimer);
 	});
 
 	const recentThreads   = $derived(threads.slice(0, 5));
@@ -143,6 +138,9 @@
 	.tile:hover::after { transform: scaleX(1); }
 
 	/* ── Slide cross-fade ── */
+	/* 60 crans, pas du continu : voir .as-progress dans ArticleSlideshow.svelte */
+	.slide-progress { transform-origin: left; animation: slide-progress 6s steps(60, end) both; }
+	@keyframes slide-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 	.sfade { animation: sfade .5s ease forwards; }
 	@keyframes sfade {
 		from { opacity: 0; transform: scale(1.04); }
@@ -499,8 +497,10 @@
 							        style="background: rgba(255,255,255,.15)"
 							        aria-label={tFn('home.slide_aria', { n: i+1 })}>
 								{#if i === slideIndex}
-									<span class="absolute top-[-1px] left-0 h-[3px] transition-none"
-									      style="width:{progressPct}%; background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
+									{#key cycle}
+										<span class="slide-progress absolute top-[-1px] left-0 h-[3px] w-full"
+										      style="animation-duration:{SLIDE_MS}ms; background: linear-gradient(to right, var(--nx-accent-2-strong), var(--nx-cyan))"></span>
+									{/key}
 								{/if}
 							</button>
 						{/each}
