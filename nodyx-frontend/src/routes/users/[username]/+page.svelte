@@ -13,7 +13,7 @@
 	import { DEFAULT_SHELL_THEME } from '$lib/shellTheme'
 	import { socket } from '$lib/socket'
 	import { apiFetch } from '$lib/api'
-	import { t } from '$lib/i18n'
+	import { t, locale } from '$lib/i18n'
 	import { openReport } from '$lib/report'
 	import { can } from '$lib/permissions'
 	import { untrack } from 'svelte'
@@ -658,7 +658,7 @@
 					<ul class="space-y-1.5">
 						{#each socialLinks as social}
 							<li>
-								<a href={social.url} target="_blank" rel="noopener noreferrer"
+								<a href={social.url} target="_blank" rel="noopener noreferrer nofollow ugc"
 								   class="flex items-center gap-3 py-1.5 px-2 transition-all group hover:bg-white/5">
 									<span class="w-4 h-4 shrink-0" style="color: var(--p-text-muted)">
 										{#if social.label === 'GitHub'}
@@ -699,6 +699,14 @@
 
 		<!-- ─── MAIN CONTENT ─────────────────────────────────────────── -->
 		<main class="flex-1 min-w-0">
+			{#if profile.banned}
+				<!-- Bannir cache tout (20/11) : seule l'équipe voit encore ce profil -->
+				<div class="pf-banned" role="note">
+					<b>{tFn('profile.banned_title')}</b>
+					<span>{tFn(profile.banned.expires_at ? 'profile.banned_until' : 'profile.banned_since', { date: new Date(profile.banned.banned_at).toLocaleDateString($locale, { day: 'numeric', month: 'long', year: 'numeric' }), until: profile.banned.expires_at ? new Date(profile.banned.expires_at).toLocaleDateString($locale, { day: 'numeric', month: 'long', year: 'numeric' }) : '' })}{profile.banned.reason ? ` ${tFn('profile.banned_reason', { reason: profile.banned.reason })}` : ''}</span>
+					<span class="pf-banned-hint">{tFn('profile.banned_hint')}</span>
+				</div>
+			{/if}
 
 			<!-- Tab switcher -->
 			<div class="profile-tabs">
@@ -776,7 +784,7 @@
 					<p class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--p-text-muted)">{tFn('user.links_section')}</p>
 					<div class="grid grid-cols-2 gap-2">
 						{#each profile.links as link}
-							<a href={link.url} target="_blank" rel="noopener noreferrer"
+							<a href={link.url} target="_blank" rel="noopener noreferrer nofollow ugc"
 							   class="flex items-center justify-between gap-3 p-3 transition-all group hover:scale-[1.02]"
 							   style="background: color-mix(in srgb, var(--p-card-border) 40%, transparent); border: 1px solid var(--p-card-border)">
 								<span class="text-sm font-medium truncate" style="color: var(--p-accent)">{link.label}</span>
@@ -1191,4 +1199,8 @@
 	.profile-post-replies {
 		display: flex; align-items: center; gap: 0.3rem;
 	}
+	.pf-banned { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; padding: 12px 14px; border-radius: 10px;
+		border: 1px solid color-mix(in srgb, var(--nx-bad, #dc2626) 40%, transparent); background: color-mix(in srgb, var(--nx-bad, #dc2626) 8%, transparent); color: var(--p-text, var(--nx-text)); font-size: 14px; }
+	.pf-banned b { color: var(--nx-bad, #dc2626); }
+	.pf-banned-hint { font-size: 13px; opacity: .75; }
 </style>

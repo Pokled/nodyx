@@ -7604,5 +7604,10 @@
   "og2.rp_banned_by": "Banni le {{date}} par {{by}}.",
   "og2.rp_banned_on": "Banni le {{date}}.",
   "og2.rp_banned_reason": "Motif : {{reason}}",
-  "og2.rp_banned_hint": "Ce compte est déjà banni : inutile de le sanctionner à nouveau. Classe le signalement, ou retire le contenu s'il est encore en ligne."
+  "og2.rp_banned_hint": "Ce compte est déjà banni : inutile de le sanctionner à nouveau. Classe le signalement, ou retire le contenu s'il est encore en ligne.",
+  "profile.banned_title": "Compte banni",
+  "profile.banned_since": "Banni depuis le {{date}}.",
+  "profile.banned_until": "Banni du {{date}} au {{until}}.",
+  "profile.banned_reason": "Motif : {{reason}}",
+  "profile.banned_hint": "Seule l'équipe voit ce profil : pour les membres et les visiteurs, il n'existe plus, ses publications du fil non plus."
 }

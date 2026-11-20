@@ -7,6 +7,7 @@ import path from 'path'
 import sharp from 'sharp'
 import { rateLimit } from '../middleware/rateLimit'
 import { requireAuth, optionalAuth } from '../middleware/auth'
+import { ACTIVE_BAN, viewerIsTeam } from '../services/bannedUsers'
 import { validate } from '../middleware/validate'
 import { sanitize } from '../utils/sanitize'
 import { awardPoints, REPUTATION } from '../models/reputation'
@@ -439,6 +440,9 @@ export default async function socialRoutes(app: FastifyInstance) {
       JOIN users u ON u.id = sp.author_id
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE sp.reply_to_id IS NULL
+        AND NOT ${ACTIVE_BAN('sp.author_id')}
+        AND (sp.reshare_of IS NULL OR NOT EXISTS (
+              SELECT 1 FROM status_posts o WHERE o.id = sp.reshare_of AND ${ACTIVE_BAN('o.author_id')}))
         ${authorFilter}
         ${cursor}
       ORDER BY sp.created_at DESC
@@ -449,7 +453,7 @@ export default async function socialRoutes(app: FastifyInstance) {
   })
 
   // GET /:username/posts — public posts of a given user
-  app.get('/:username/posts', { preHandler: [rateLimit] }, async (request, reply) => {
+  app.get('/:username/posts', { preHandler: [rateLimit, optionalAuth] }, async (request, reply) => {
     const { username } = request.params as { username: string }
     const { before, limit = '20' } = request.query as { before?: string; limit?: string }
     // Best-effort viewer ID (no auth required)
@@ -485,6 +489,7 @@ export default async function socialRoutes(app: FastifyInstance) {
       JOIN users u ON u.id = sp.author_id
       LEFT JOIN user_profiles p ON p.user_id = u.id
       WHERE LOWER(u.username) = LOWER($1) AND sp.reply_to_id IS NULL
+      ${(await viewerIsTeam(viewerId)) ? '' : `AND NOT ${ACTIVE_BAN('u.id')}`}
       ${cursor}
       ORDER BY sp.created_at DESC
       LIMIT $2
@@ -510,7 +515,16 @@ export default async function socialRoutes(app: FastifyInstance) {
       WHERE sp.id = $1
     `, postParams)
 
-    if (!postRes.rows[0]) return reply.code(404).send({ error: 'Post introuvable' })
+    if (!postRes.rows[0]) return reply.code(404).send({ error: 'Post introuvable', code: 'NOT_FOUND' })
+    const team = await viewerIsTeam(viewerId)
+    // L'auteur (ou l'auteur de l'original repartagé) est banni : rien à montrer, sauf à l'équipe
+    if (!team) {
+      const { rows: hidden } = await db.query(
+        `SELECT 1 FROM status_posts sp WHERE sp.id = $1
+            AND (${ACTIVE_BAN('sp.author_id')}
+                 OR (sp.reshare_of IS NOT NULL AND EXISTS (SELECT 1 FROM status_posts o WHERE o.id = sp.reshare_of AND ${ACTIVE_BAN('o.author_id')})))`, [id])
+      if (hidden[0]) return reply.code(404).send({ error: 'Post introuvable', code: 'NOT_FOUND' })
+    }
 
     const replyParams: unknown[] = [id]
     let viewerRef2 = 'NULL'
@@ -533,6 +547,7 @@ export default async function socialRoutes(app: FastifyInstance) {
       LEFT JOIN status_posts parent ON parent.id = sp.reply_to_id
       LEFT JOIN users pu ON pu.id = parent.author_id
       WHERE sp.id IN (SELECT id FROM thread)
+        ${team ? '' : `AND NOT ${ACTIVE_BAN('sp.author_id')}`}
       ORDER BY sp.created_at ASC
       LIMIT 100
     `, replyParams)

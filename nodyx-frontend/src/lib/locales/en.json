@@ -7604,5 +7604,10 @@
   "og2.rp_banned_by": "Banned on {{date}} by {{by}}.",
   "og2.rp_banned_on": "Banned on {{date}}.",
   "og2.rp_banned_reason": "Reason: {{reason}}",
-  "og2.rp_banned_hint": "This account is already banned: no need to sanction it again. Close the report, or remove the content if it is still online."
+  "og2.rp_banned_hint": "This account is already banned: no need to sanction it again. Close the report, or remove the content if it is still online.",
+  "profile.banned_title": "Banned account",
+  "profile.banned_since": "Banned since {{date}}.",
+  "profile.banned_until": "Banned from {{date}} to {{until}}.",
+  "profile.banned_reason": "Reason: {{reason}}",
+  "profile.banned_hint": "Only the team can see this profile: for members and visitors it no longer exists, and neither do its feed posts."
 }
