@@ -32,6 +32,7 @@
 		id: string; target_type: string; target_id: string; category: string | null; reason: string; source?: string
 		status: string; created_at: string; reporter_username: string | null
 		target_author_id: string | null; target_author_username: string | null
+		target_author_ban?: { reason: string | null; banned_at: string; expires_at: string | null; by: string | null } | null
 		snapshot: string | null; target_label: string | null; target_link: string | null
 		claimed_by_username: string | null; reviewed_by_username: string | null; reviewed_at: string | null; resolution: string | null
 	}
@@ -483,6 +484,13 @@
 					{#if r.target_author_id}
 						<div class="adm-card og-rp-card">
 							<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: r.target_author_username ?? '' })}</h2>
+							{#if r.target_author_ban}
+								{@const b = r.target_author_ban}
+								<p class="og-banned" role="note">
+									<b>{tFn('og2.rp_already_banned')}</b>
+									{tFn(b.by ? 'og2.rp_banned_by' : 'og2.rp_banned_on', { date: new Date(b.banned_at).toLocaleString($locale, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }), by: b.by ?? '' })}{b.reason ? ` ${tFn('og2.rp_banned_reason', { reason: b.reason })}` : ''}
+								</p>
+							{/if}
 							{#if ctxOk?.author}{@render facts(ctxOk.author)}{/if}
 							{#if data.tab === 'open'}<LadderGauge {ladder} />{/if}
 							<a class="adm-btn adm-btn--sm" href="/admin/members/{r.target_author_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
@@ -491,6 +499,7 @@
 					{#if data.tab === 'open'}
 						<div class="adm-card og-rp-card">
 							<h2 class="og-rp-h">{tFn('og2.rp_decide')}</h2>
+							{#if r.target_author_ban}<p class="og-help">{tFn('og2.rp_banned_hint')}</p>{/if}
 							{#if r.target_author_id}
 								<LadderAction {token} userId={r.target_author_id} username={r.target_author_username ?? ''} reportId={r.id}
 									{ladder} {canMembers} {canBan} {myId} onChanged={ladderChanged} />
@@ -544,4 +553,7 @@
 	.og-tipwrap { position: relative; display: inline-block; vertical-align: middle; }
 	/* La colonne de droite : la bulle s'ouvre vers la gauche, jamais hors de l'écran */
 	@media (min-width: 641px) { .og-tipwrap .og-tip { left: auto; right: -0.5rem; } }
+	.og-banned { margin: 0 0 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; line-height: 1.45;
+		border: 1px solid color-mix(in srgb, var(--nx-bad, #dc2626) 40%, transparent); background: color-mix(in srgb, var(--nx-bad, #dc2626) 8%, transparent); }
+	.og-banned b { display: block; color: var(--nx-bad, #dc2626); }
 </style>
