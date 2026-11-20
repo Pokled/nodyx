@@ -24,6 +24,9 @@ export interface AroundItem {
   created_at: string
   edited: boolean
   is_target: boolean
+  /** Chat : le message porte un sondage / un jeu (dés, boule magique…), souvent sans texte. */
+  poll?: boolean
+  game?: boolean
 }
 export interface EditItem { old_content: string; edited_at: string; editor_username: string | null; by_author: boolean }
 export interface AuthorBrief { id: string; username: string; created_at: string; warns_active: number; muted_until: string | null; muted: boolean }
@@ -58,7 +61,9 @@ interface Window { items: AroundItem[]; more_before: boolean; more_after: boolea
 async function chatWindow(channelId: string, at: string, targetId: string | null, nb: number, na: number): Promise<Window> {
   const sel = `SELECT m.id, m.author_id, u.username AS author_username,
                       CASE WHEN m.is_deleted THEN NULL ELSE m.content END AS content,
-                      m.created_at, (m.edited_at IS NOT NULL) AS edited
+                      m.created_at, (m.edited_at IS NOT NULL) AS edited,
+                      -- un sondage ou un jeu n'a pas de texte : le dossier le dit au lieu d'un vide (20/11)
+                      (m.poll_id IS NOT NULL) AS poll, (m.game IS NOT NULL) AS game
                  FROM channel_messages m LEFT JOIN users u ON u.id = m.author_id`
   const [before, target, after] = await Promise.all([
     db.query(`${sel} WHERE m.channel_id = $1 AND m.created_at < $2::timestamptz AND m.id IS DISTINCT FROM $3::uuid

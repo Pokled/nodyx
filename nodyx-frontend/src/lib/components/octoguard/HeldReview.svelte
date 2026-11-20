@@ -20,8 +20,9 @@
 	import { goto } from '$app/navigation'
 	import { tick } from 'svelte'
 	import { htmlToText } from '$lib/octoguard/text'
+	import { startsDay, dayLabel, noTextKind } from '$lib/octoguard/heldThread'
 
-	type Around = { id: string; author_id: string | null; author_username: string | null; content: string | null; created_at: string; is_target: boolean }
+	type Around = { id: string; author_id: string | null; author_username: string | null; content: string | null; created_at: string; is_target: boolean; poll?: boolean; game?: boolean }
 	type Nearby = { id: string; author_id: string; author_username: string | null; content: string | null; created_at: string }
 	type Brief = { id: string; username: string; created_at: string; warns_active: number; muted: boolean; muted_until: string | null }
 	type Ctx = { around: Around[]; current: string | null; edits: { old_content: string; edited_at: string }[]; author: Brief | null; more_before?: boolean; more_after?: boolean; held_nearby?: Nearby[] }
@@ -90,25 +91,27 @@
 	})
 	const ctxOk = $derived(ctx && ctx !== 'error' ? ctx : null)
 
-	type Line = { key: string; who: string; authorId: string | null; at: string; text: string | null; mark: 'this' | 'also' | 'author' | null }
+	type Line = { key: string; who: string; authorId: string | null; at: string; text: string | null; html: string | null; poll?: boolean; game?: boolean; mark: 'this' | 'also' | 'author' | null }
 	const lines = $derived.by((): Line[] => {
 		if (!h) return []
-		const self: Line = { key: `held-${h.id}`, who: h.author_username, authorId: h.author_id, at: h.created_at, text: htmlToText(h.payload.content), mark: 'this' }
+		const self: Line = { key: `held-${h.id}`, who: h.author_username, authorId: h.author_id, at: h.created_at, text: htmlToText(h.payload.content), html: h.payload.content, mark: 'this' }
 		if (!ctxOk) return [self]
 		const out: Line[] = []
 		for (const a of ctxOk.around) {
 			// Une modification retenue : le message publié prend la place du dossier
 			if (a.is_target) { out.push({ ...self, at: a.created_at }); continue }
 			out.push({ key: a.id, who: a.author_username ?? tFn('areports.deleted_account'), authorId: a.author_id, at: a.created_at,
-				text: a.content === null ? null : htmlToText(a.content), mark: a.author_id === h.author_id ? 'author' : null })
+				text: a.content === null ? null : htmlToText(a.content), html: a.content, poll: a.poll, game: a.game, mark: a.author_id === h.author_id ? 'author' : null })
 		}
 		for (const n of ctxOk.held_nearby ?? []) {
-			out.push({ key: `held-${n.id}`, who: n.author_username ?? tFn('areports.deleted_account'), authorId: n.author_id, at: n.created_at, text: n.content === null ? null : htmlToText(n.content), mark: 'also' })
+			out.push({ key: `held-${n.id}`, who: n.author_username ?? tFn('areports.deleted_account'), authorId: n.author_id, at: n.created_at, text: n.content === null ? null : htmlToText(n.content), html: n.content, mark: 'also' })
 		}
 		if (h.kind !== 'post_edit') out.push(self)
 		return out.sort((a, b) => a.at.localeCompare(b.at))
 	})
 	const marks = $derived(lines.filter((l) => l.mark))
+	const ats = $derived(lines.map((l) => l.at))
+	const now = new Date()
 
 	// L'ancre : le fil s'ouvre centré sur le message du dossier ; ↑ ↓ sautent d'un surligné à l'autre
 	let fil = $state<HTMLElement | null>(null)
@@ -310,7 +313,9 @@
 						{/if}
 						{#if ctx === undefined}<p class="rv-faint rv-pad">{tFn('og2.cx_loading')}</p>{/if}
 						{#if ctx === 'error'}<p class="rv-faint rv-pad">{tFn('areports.err_generic')}</p>{/if}
-						{#each lines as l (l.key)}
+						{#each lines as l, i (l.key)}
+							{@const kind = l.text === null ? null : noTextKind(l.text, l.html, l)}
+							{#if startsDay(ats, i)}<div class="rv-day"><span>{dayLabel(l.at, now, $locale, tFn)}</span></div>{/if}
 							<div class="rv-msg" class:rv-this={l.mark === 'this'} class:rv-also={l.mark === 'also'} class:rv-author={l.mark === 'author'} data-line={l.key}>
 								<span class="rv-ava" style="background: {tint(l.who)}">{initial(l.who)}</span>
 								<span class="rv-msg-h">
@@ -319,7 +324,7 @@
 									{#if l.mark === 'also'}<span class="rv-tag">{tFn('og2.rv_tag_also')}</span>{/if}
 								</span>
 								{#if l.mark === 'this' && h.payload.title}<p class="rv-subject">{h.payload.title}</p>{/if}
-								{#if l.text === null}<p class="rv-faint">{tFn('og2.rv_deleted')}</p>{:else}<p>{l.text}</p>{/if}
+								{#if l.text === null}<p class="rv-faint">{tFn('og2.rv_deleted')}</p>{:else if kind}<p class="rv-notext">{tFn(`og2.rv_notext_${kind}`)}</p>{:else}<p>{l.text}</p>{/if}
 								{#if l.mark === 'this'}
 									{#if h.kind === 'post_edit' && ctxOk?.current}
 										<details class="rv-current"><summary>{tFn('og2.rv_current_text')}</summary><p>{htmlToText(ctxOk.current)}</p></details>
@@ -449,6 +454,10 @@
 	.rv-msg p { margin: 0; overflow-wrap: anywhere; white-space: pre-line; }
 	.rv-msg > p, .rv-msg > details, .rv-msg > .rv-decide, .rv-msg > .rv-error { grid-column: 2; }
 	.rv-subject { font-weight: 800; }
+	.rv-notext { color: var(--rv-faint); font-style: italic; }
+	/* Le jour : un fil peut couvrir des semaines, l'heure seule tromperait (vu sur nodyx.org le 20/11) */
+	.rv-day { display: flex; align-items: center; gap: 10px; padding: 10px 14px 4px; font-size: 12.5px; font-weight: 700; color: var(--rv-muted); }
+	.rv-day::before, .rv-day::after { content: ''; flex: 1; height: 1px; background: var(--rv-line); }
 	.rv-tag { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 8px; color: var(--pl-changed); }
 	.rv-this { background: var(--pl-changed-soft); box-shadow: inset 0 0 0 1.5px var(--pl-changed); }
 	.rv-this .rv-tag { background: var(--rv-surface); }
