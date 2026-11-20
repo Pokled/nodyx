@@ -35,6 +35,11 @@ describe('parseThumb : ce qu’on accepte de fabriquer', () => {
     for (const p of ['../../.env.png', 'posts/../../x.png', 'posts/%2e%2e/x.png', 'posts\\x.png', 'posts/notes.txt', '_thumbs/256/posts/big.webp', '', 'posts/x.svg'])
       expect([p, T.parseThumb('256', p)]).toEqual([p, null])
   })
+  it('refuse les fichiers et dossiers cachés, comme /uploads/', () => {
+    for (const p of ['.cachee.png', 'posts/.cachee.png', '.cache/x.png', 'posts/.x/y.jpg'])
+      expect([p, T.parseThumb('256', p)]).toEqual([p, null])
+    expect(T.parseThumb('256', 'posts/pas.cachee.png')).not.toBeNull()
+  })
 })
 
 describe('ensureThumb : la vignette', () => {
