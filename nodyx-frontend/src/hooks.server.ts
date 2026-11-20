@@ -95,6 +95,10 @@ export const handleFetch: HandleFetch = ({ event, request, fetch }) => {
 	if (url.includes('127.0.0.1') || url.includes('localhost')) {
 		if (INTERNAL_API_SECRET) {
 			headers.set('x-forwarded-for', event.getClientAddress());
+			// Caddy (127.0.0.1:3099) remplace X-Forwarded-For par 127.0.0.1 : l'adresse du
+			// visiteur voyage aussi dans un en-tête à nous, cru par le cœur avec le secret
+			// seulement (bannissement d'IP, 20/11/2026)
+			headers.set('x-nodyx-client-ip', event.getClientAddress());
 			headers.set('x-nodyx-internal', INTERNAL_API_SECRET);
 		}
 		// En développement seulement : le fetch de SvelteKit ajoute un en-tête Origin
