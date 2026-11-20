@@ -132,6 +132,16 @@ fi
 
 restart_if_built "$G" nodyx-docs nodyx-hub nodyx-landing
 
+# Le store (extensions.nodyx.org, PM2) et Signet (signet.nodyx.org, fichiers
+# statiques servis par Caddy depuis build/) : oubliés jusqu'au 20/11/2026, leurs
+# builds dataient du 29/10 et une PR fusionnée sur l'un d'eux restait invisible.
+# Groupe à part : un build raté ici ne bloque pas les trois satellites ci-dessus.
+head_ "Satellites : extensions.nodyx.org, signet.nodyx.org"
+G=ok
+build_app "nodyx-store"         /var/www/nexus/nodyx-store         || G=ko
+build_app "nodyx-authenticator" /var/www/nexus/nodyx-authenticator || G=ko
+restart_if_built "$G" nodyx-store
+
 # ── 4-6. Instances secondaires (un clone git chacune, build en nodyx) ────────
 # sync-instance.sh amène le clone sur origin/main en préservant l'overlay de
 # l'instance (/opt/overlays/<instance> : branding, patches en essai) et remet
@@ -165,6 +175,8 @@ check_url "demo.nodyx.org"        "https://demo.nodyx.org/"
 check_url "vieuxlooters.nodyx.org" "https://vieuxlooters.nodyx.org/"
 check_url "nodyx.dev"             "https://nodyx.dev/"
 check_url "start.nodyx.org"       "https://start.nodyx.org/"
+check_url "extensions.nodyx.org"  "https://extensions.nodyx.org/"
+check_url "signet.nodyx.org"      "https://signet.nodyx.org/"
 
 # Toute application PM2 qui ne serait plus en ligne
 BROKEN="$(sudo -u nodyx pm2 jlist 2>/dev/null \
