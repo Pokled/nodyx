@@ -912,16 +912,20 @@
 		position: absolute;
 		inset: 0;
 	}
+	/* Tout ce qui bouge sur le profil joue À L'ARRIVÉE, puis s'arrête : une animation sans
+	   fin tient la carte graphique éveillée en permanence. Enregistrement de Jonathan
+	   (20/11/2026, après #1044) : compositeur saturé, plus de la moitié des images
+	   abandonnées au défilement ; mesuré au banc, l'arrêt allège le repos ET le défilement. */
 	.profile-aurora-a {
-		animation: aurora-breathe-a 6s ease-in-out infinite;
+		animation: aurora-breathe-a 6s ease-in-out 1;
 		transform-origin: 20% 55%;
 	}
 	.profile-aurora-b {
-		animation: aurora-breathe-b 9s ease-in-out infinite;
+		animation: aurora-breathe-b 9s ease-in-out 1;
 		transform-origin: 78% 35%;
 	}
 	.profile-aurora-c {
-		animation: aurora-breathe-c 12s ease-in-out infinite;
+		animation: aurora-breathe-c 12s ease-in-out 1;
 		transform-origin: 55% 85%;
 	}
 	/* Scale + opacity uniquement — pas de translate pour éviter les bordures vides */
@@ -949,9 +953,9 @@
 		position: absolute; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px);
 		z-index: 20; pointer-events: none; user-select: none; will-change: transform;
 	}
-	.profile-arc-1 { animation: profile-arc-cw 3.5s linear infinite; }
-	.profile-arc-2 { animation: profile-arc-ccw 7s linear infinite; }
-	.profile-arc-3 { animation: profile-arc-dot 2s linear infinite; }
+	.profile-arc-1 { animation: profile-arc-cw 3.5s ease-out 2; }
+	.profile-arc-2 { animation: profile-arc-ccw 7s ease-out 1; }
+	.profile-arc-3 { animation: profile-arc-dot 2s ease-out 3; }
 	@keyframes profile-arc-cw  { from { transform: rotate(0deg); }  to { transform: rotate(360deg); } }
 	@keyframes profile-arc-ccw { from { transform: rotate(0deg); }  to { transform: rotate(-360deg); } }
 	@keyframes profile-arc-dot { from { transform: rotate(90deg); } to { transform: rotate(450deg); } }
@@ -968,7 +972,7 @@
 		content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
 		box-shadow: 0 0 48px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 80px color-mix(in srgb, var(--accent) 25%, transparent);
 		opacity: 0; will-change: opacity;
-		animation: avatar-glow-breathe 3s ease-in-out infinite;
+		animation: avatar-glow-breathe 3s ease-in-out 2;
 	}
 	@keyframes avatar-glow-breathe { 50% { opacity: 1; } }
 
@@ -976,7 +980,7 @@
 	.profile-online-dot::after {
 		content: ''; position: absolute; inset: -2px; border-radius: 9999px; pointer-events: none;
 		background: rgba(34, 197, 94, 0.4); opacity: 0; will-change: transform, opacity;
-		animation: profile-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+		animation: profile-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) 3;
 	}
 	@keyframes profile-pulse {
 		0%, 100% { transform: scale(1); opacity: 0; }
@@ -1019,7 +1023,7 @@
 		position: absolute;
 		inset: 0;
 		background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-		animation: profile-shimmer 2.5s infinite;
+		animation: profile-shimmer 2.5s 2;
 		transform: translateX(-100%);
 	}
 	@keyframes profile-shimmer {
