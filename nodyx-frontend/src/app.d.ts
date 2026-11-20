@@ -37,7 +37,10 @@ declare global {
 			shellDefaultMode?: 'dark' | 'light' | 'system'
 		}
 		// interface PageData {}
-		// interface PageState {}
+		interface PageState {
+			/** OctoGuard « À relire » : ce dossier a été ouvert depuis la file (« Retour à la file » = page précédente). */
+			rvQueue?: boolean
+		}
 		// interface Platform {}
 	}
 }

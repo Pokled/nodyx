@@ -16,6 +16,8 @@
 	import '$lib/charter/pilot.css'
 	import { t, locale } from '$lib/i18n'
 	import { og, OgError } from '$lib/octoguard/api'
+	import { page } from '$app/state'
+	import { goto } from '$app/navigation'
 	import { htmlToText } from '$lib/octoguard/text'
 
 	type Around = { id: string; author_id: string | null; author_username: string | null; content: string | null; created_at: string; is_target: boolean }
@@ -34,16 +36,32 @@
 		return [...m.values()]
 	})
 	const order = $derived(groups.flat())
-	let current = $state<string | null>(null)
-	const sel = $derived(current && order.some((h) => h.id === current) ? current : (order[0]?.id ?? null))
+	// La file, OU un dossier en pleine largeur, partout (Jonathan, 20/11 : plus d'écran partagé,
+	// le dossier se suffit). Le dossier ouvert est dans l'adresse (#id) : « précédent » ramène
+	// à la file, et le lien d'un dossier peut s'envoyer à un collègue.
+	// Le # se lit dans l'adresse elle-même, remise à jour à chaque retour arrière : page.url.hash ne
+	// suit pas toujours un # changé par le navigateur (trouvé au banc d'essai le 20/11).
+	let hash = $state('')
+	const syncHash = () => { hash = location.hash }
+	$effect(() => {
+		syncHash()
+		addEventListener('hashchange', syncHash); addEventListener('popstate', syncHash)
+		return () => { removeEventListener('hashchange', syncHash); removeEventListener('popstate', syncHash) }
+	})
+	const sel = $derived.by(() => { const id = hash.slice(1); return order.some((x) => x.id === id) ? id : null })
 	const h = $derived(order.find((x) => x.id === sel) ?? null)
-
-	// Téléphone : la file, ou un dossier en plein écran
-	let openOnPhone = $state(false)
-	const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
+	let lastOpened = $state<string | null>(null)
+	const queueUrl = () => page.url.pathname + page.url.search
 	function open(id: string) {
-		current = id; win = { before: 5, after: 3 }; error = null
-		if (isPhone()) { openOnPhone = true; window.scrollTo(0, 0) }
+		win = { before: 5, after: 3 }; error = null; lastOpened = id
+		// La marque « ouvert depuis la file » vit dans l'historique : le navigateur la restaure lui-même
+		goto(`#${id}`, { reset: false, state: { rvQueue: true } }).then(() => { syncHash(); window.scrollTo(0, 0) })
+	}
+	function backToQueue() {
+		// Ouvert depuis la file : on y revient d'un pas en arrière. Ouvert par un lien : on remplace l'adresse.
+		if (page.state.rvQueue) history.back()
+		else goto(queueUrl(), { replace: true, reset: false }).then(syncHash)
+		window.scrollTo(0, 0)
 	}
 
 	// ─── Le fil du dossier : chargé à l'ouverture, « afficher plus » élargit la fenêtre ───
@@ -117,8 +135,12 @@
 		try {
 			await og(token, `/held/${h.id}/${d}`, 'POST')
 			done = tFn(d === 'approve' ? 'og2.rp_ok_approved' : 'og2.rp_ok_refused')
-			current = next; win = { before: 5, after: 3 }
-			if (!next) openOnPhone = false
+			win = { before: 5, after: 3 }
+			// Le dossier suivant remplace celui-ci dans l'historique ; plus rien : retour à la file
+			if (next) { lastOpened = next; await goto(`#${next}`, { replace: true, reset: false, state: page.state }) }
+			else if (page.state.rvQueue) history.back()
+			else await goto(queueUrl(), { replace: true, reset: false })
+			syncHash()
 			await onDecided()
 		} catch (e) {
 			error = tFn((e instanceof OgError && e.code && ERR[e.code]) || 'areports.err_generic')
@@ -181,8 +203,9 @@
 	const authorCount = $derived(groups.length)
 </script>
 
-<div class="nx-pilot rv" class:rv-phone-open={openOnPhone}>
+<div class="nx-pilot rv">
 	<!-- La file -->
+	{#if !h}
 	<div class="rv-file">
 		<div class="rv-file-head">
 			<div class="rv-l1">
@@ -201,7 +224,7 @@
 						<span class="rv-summary">{summary(l)}</span>
 					</div>
 					{#each l as x (x.id)}
-						<button type="button" class="rv-row" role="option" aria-selected={x.id === sel} onclick={() => open(x.id)}>
+						<button type="button" class="rv-row" role="option" aria-selected={x.id === lastOpened} onclick={() => open(x.id)}>
 							<span class="rv-time">{time(x.created_at)}</span>
 							<span class="rv-body"><span class="rv-place">{placeShort(x)}</span><span class="rv-excerpt">{x.payload.title ? `${x.payload.title} : ` : ''}{htmlToText(x.payload.content)}</span></span>
 							<svg class="rv-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
@@ -212,12 +235,14 @@
 		</div>
 	</div>
 
+	{/if}
+
 	<!-- Le dossier -->
 	{#if h}
 		{@const mine = order.filter((x) => x.author_id === h.author_id)}
 		<section class="rv-dossier" aria-live="polite">
 			<div class="rv-d-head">
-				<button type="button" class="rv-back" onclick={() => { openOnPhone = false; window.scrollTo(0, 0) }}>
+				<button type="button" class="rv-back" onclick={backToQueue}>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>{tFn('og2.rv_back', { n: held.length })}
 				</button>
 				<div class="rv-l1"><h2>{tFn('og2.rv_dossier')}</h2><span class="rv-count">{mine.length > 1 ? tFn('og2.rv_rank_n', { i: mine.findIndex((x) => x.id === h.id) + 1, n: mine.length }) : tFn('og2.rv_rank_1')}</span></div>
@@ -323,8 +348,7 @@
 	.rv { --rv-surface: var(--nx-surface); --rv-text: var(--nx-text); --rv-muted: var(--nx-text-muted); --rv-faint: var(--nx-text-faint);
 		--rv-line: var(--nx-border); --rv-canvas: color-mix(in srgb, var(--nx-text) 4%, var(--nx-surface));
 		--rv-head: color-mix(in srgb, var(--pl-accent) 7%, var(--nx-surface)); --rv-red: var(--nx-bad, #c0362c);
-		display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 22px; align-items: start; color: var(--rv-text); font-size: 15px; line-height: 1.55; }
-	@media (max-width: 900px) { .rv { grid-template-columns: 1fr; } }
+		display: block; color: var(--rv-text); font-size: 15px; line-height: 1.55; }
 	h2, h3 { margin: 0; }
 
 	/* La file */
@@ -335,7 +359,7 @@
 	.rv-count { margin-left: auto; font-size: 13px; color: var(--rv-muted); white-space: nowrap; }
 	.rv-file-head p { margin: 2px 0 0; font-size: 13px; color: var(--rv-faint); }
 	.rv-touch { display: none; }
-	.rv-cards { display: grid; gap: 12px; }
+	.rv-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; align-items: start; }
 	.rv-card { background: var(--rv-surface); border: 1px solid var(--rv-line); border-radius: var(--pl-r-panel); overflow: hidden; }
 	.rv-card-head { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--rv-line);
 		background: color-mix(in srgb, var(--rv-c) 10%, var(--rv-surface)); }
@@ -362,7 +386,7 @@
 	/* Le dossier */
 	.rv-dossier { background: var(--rv-surface); border: 1px solid var(--rv-line); border-radius: var(--pl-r-panel); min-width: 0; }
 	.rv-d-head { padding: 14px 20px; border-bottom: 1px solid var(--rv-line); background: var(--rv-head); border-radius: var(--pl-r-panel) var(--pl-r-panel) 0 0; }
-	.rv-back { display: none; align-items: center; gap: 6px; margin: 0 0 10px; padding: 0; background: none; border: 0; color: var(--pl-accent); font: inherit; font-weight: 700; cursor: pointer; }
+	.rv-back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 0; background: none; border: 0; color: var(--pl-accent); font: inherit; font-weight: 700; cursor: pointer; }
 	.rv-l2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 8px; font-size: 14.5px; }
 	.rv-by { color: var(--rv-muted); }
 	.rv-ava-s { width: 26px; height: 26px; font-size: 12px; }
@@ -439,9 +463,6 @@
 	/* Téléphone : la file, ou un dossier en plein écran */
 	@media (max-width: 700px) {
 		.rv-pc { display: none; } .rv-touch { display: inline; }
-		.rv:not(.rv-phone-open) .rv-dossier { display: none; }
-		.rv-phone-open .rv-file { display: none; }
-		.rv-back { display: inline-flex; }
 		.rv-d-head, .rv-d-body { padding-left: 14px; padding-right: 14px; }
 		.rv-facts { grid-template-columns: 1fr; gap: 2px; }
 		.rv-facts dd { margin-bottom: 8px; }
