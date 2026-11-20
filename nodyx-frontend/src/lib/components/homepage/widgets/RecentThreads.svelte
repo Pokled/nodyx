@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sharedJson } from '$lib/homepage/sharedJson'
 	import { onMount } from 'svelte'
 	import { replyCount } from '$lib/forumCounts';
 	import { t, locale } from '$lib/i18n'
@@ -46,9 +47,10 @@
 
 	onMount(async () => {
 		try {
-			const res = await fetch('/api/v1/instance/threads/recent')
-			if (res.ok) {
-				const { threads: data } = await res.json() as { threads: Thread[] }
+			// Deux widgets « derniers sujets » sur l'accueil : un seul appel (sharedJson)
+			const body = await sharedJson<{ threads: Thread[] }>('/api/v1/instance/threads/recent')
+			if (body) {
+				const data = body.threads
 				let filtered = data
 				if (categoryId) {
 					filtered = data.filter(t =>
