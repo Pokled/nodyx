@@ -24,7 +24,7 @@
   "dependencies": {
     "@fastify/cors": "11.3.1",
     "@fastify/multipart": "10.1.6",
-    "@fastify/static": "^10.1.7",
+    "@fastify/static": "^10.1.12",
     "@types/adm-zip": "^0.6.0",
     "@types/pg": "8.23.1",
     "adm-zip": "0.6.1",
