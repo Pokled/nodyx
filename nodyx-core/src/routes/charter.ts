@@ -3,6 +3,7 @@
 // Côté membre (/api/v1/charter) :
 //   GET  /status               dois-je signer la charte des membres ? celle de l'équipe ?
 //   GET  /:audience            la charte à lire (ouvre la lecture : le chrono part de là)
+//   GET  /:audience/text       la relire (page « La charte ») : rien n'est compté
 //   POST /:audience/progress   jusqu'où j'ai lu (ne fait que monter)
 //   POST /:audience/sign       signer
 //
@@ -22,7 +23,7 @@ import { requirePermission, requireAnyPermission } from '../middleware/permissio
 import { instanceCommunityId } from '../services/mentionPeople'
 import { getAccess } from '../services/permissions'
 import {
-  isAudience, mustSign, openCharter, recordProgress, signCharter, CharterError, type Audience, releasePendingWelcome,
+  isAudience, mustSign, openCharter, readCharter, charterPublished, recordProgress, signCharter, CharterError, type Audience, releasePendingWelcome,
   charterAdmin, updateCharterSettings, saveCharterDraft, publishCharter, charterOverview, charterPeople, charterJournal,
 } from '../services/charter'
 
@@ -53,7 +54,20 @@ export async function charterRoutes(app: FastifyInstance) {
     const members = await mustSign('members', userId)
     // Plus rien à signer (charte éteinte entre-temps) : l'accueil en attente part maintenant
     if (!members) void releasePendingWelcome(userId)
-    return reply.send({ members, team: await mustSign('team', userId) })
+    // readable : une charte publiée que la personne peut relire (entrée « La charte » du menu)
+    const readable = {
+      members: await charterPublished('members'),
+      team: (await charterPublished('team')) && (await mayRead('team', userId)),
+    }
+    return reply.send({ members, team: await mustSign('team', userId), readable })
+  })
+
+  app.get('/:audience/text', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {
+    const aud = audienceOf(request.params, reply); if (!aud) return
+    const userId = userIdOf(request)
+    if (!(await mayRead(aud, userId))) return reply.code(403).send({ error: 'Team only', code: 'CHARTER_TEAM_ONLY' })
+    reply.header('Cache-Control', 'private, no-store')
+    return reply.send({ ...(await readCharter(aud, userId)), team_reader: await mayRead('team', userId) })
   })
 
   app.get('/:audience', { preHandler: [rateLimit, requireAuth] }, async (request, reply) => {

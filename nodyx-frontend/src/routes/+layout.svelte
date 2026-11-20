@@ -52,6 +52,7 @@
 	import { playMention, playDm } from '$lib/sounds';
 	import ReportDialog from '$lib/components/ReportDialog.svelte';
 	import CharterDoor from '$lib/components/charter/CharterDoor.svelte';
+	import { charterReadable } from '$lib/charter/readable';
 	import HelpOverlay from '$lib/components/HelpOverlay.svelte';
 	const tFn = $derived($t)
 
@@ -266,7 +267,11 @@
 	async function checkCharter(token: string) {
 		try {
 			const res = await fetch('/api/v1/charter/status', { headers: { Authorization: `Bearer ${token}` } })
-			if (res.ok) charterDoor = (await res.json()).members === true
+			if (res.ok) {
+				const j = await res.json()
+				charterDoor = j.members === true
+				charterReadable.set({ members: j.readable?.members === true, team: j.readable?.team === true })
+			}
 		} catch { /* en panne : personne n'est enfermé dehors */ }
 	}
 
@@ -664,7 +669,7 @@
 	// Une page qui peignait son propre fond les masquait (vieuxlooters, 29/10).
 	// main porte aussi .nx-themed : contenu rédigé, éditeur et menus déroulants
 	// de la page suivent le thème (variables --prose-*, variante themed:, app.css).
-	const SHEET_THEMED = ['/feed', '/help', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm', '/musique', '/garden', '/auth/login', '/auth/register', '/notifications', '/search', '/polls', '/library', '/discover', '/users', '/settings', '/canvas', '/about', '/communities', '/reputation', '/status']
+	const SHEET_THEMED = ['/feed', '/help', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm', '/musique', '/garden', '/auth/login', '/auth/register', '/notifications', '/search', '/polls', '/library', '/discover', '/users', '/settings', '/canvas', '/about', '/communities', '/reputation', '/status', '/charter']
 	// Exclusions : sous-routes pas encore migrées d'un préfixe thémé (éditeur de profil).
 	const SHEET_NOT_THEMED: string[] = []
 	const sheetThemed = $derived(

@@ -229,6 +229,23 @@ async function helloChannel(): Promise<{ id: string; name: string } | null> {
   } catch { return null }
 }
 
+/**
+ * Un message de bienvenue attend-il VRAIMENT cette personne à sa signature ? (OctoGuard
+ * allumé, accueil activé avec un salon, et un accueil en attente pour elle : un membre
+ * déjà là qui signe n'est pas accueilli, lot 7d-2.) Sinon l'écran Bienvenue n'emmène
+ * personne nulle part.
+ */
+async function welcomeAwaits(userId: string): Promise<boolean> {
+  if (process.env.OCTOGUARD_ENABLED !== 'true') return false
+  try {
+    const { rows } = await db.query<{ ok: boolean }>(
+      `SELECT (w.enabled AND w.channel_id IS NOT NULL
+               AND EXISTS (SELECT 1 FROM charter_welcome_pending p WHERE p.user_id = $1)) AS ok
+         FROM octoguard_welcome w WHERE w.id = 1`, [userId])
+    return rows[0]?.ok === true
+  } catch { return false }
+}
+
 /** La charte à lire. Ouvre (ou reprend) la lecture : le chrono part de la première ouverture. */
 export async function openCharter(aud: Audience, userId: string) {
   const s = await charterState(aud)
@@ -248,7 +265,55 @@ export async function openCharter(aud: Audience, userId: string) {
     draw_enabled: s.drawEnabled,
     community: await communityName(),
     hello_channel: aud === 'members' ? await helloChannel() : null,
+    crowd: aud === 'members' ? await crowdFor(userId) : null,
+    welcome: aud === 'members' ? await welcomeAwaits(userId) : false,
   }
+}
+
+/**
+ * Relire la charte (page « La charte », lot 7d-3). Rien n'est compté : aucune lecture
+ * n'est ouverte, le parcours de l'admin ne bouge pas. Dit aussi ce que la personne a signé.
+ */
+export async function readCharter(aud: Audience, userId: string) {
+  const s = await charterState(aud)
+  const community = await communityName()
+  if (s.current === null) return { version: null, community }
+  const { rows } = await db.query<{ body_html: string; published_at: Date }>(
+    `SELECT body_html, published_at FROM charter_versions WHERE audience = $1 AND version = $2`, [aud, s.current])
+  const { rows: sig } = await db.query<{ version: number; way: 'hand' | 'phrase'; signed_at: Date }>(
+    `SELECT version, way, signed_at FROM charter_signatures WHERE audience = $1 AND user_id = $2
+      ORDER BY version DESC LIMIT 1`, [aud, userId])
+  return {
+    version: s.current, enabled: s.enabled, community,
+    published_at: rows[0]?.published_at ?? null,
+    body_html: rows[0]?.body_html ?? '',
+    signed: sig[0] ?? null,
+  }
+}
+
+/** Une charte est-elle publiée ? (l'entrée « La charte » du menu n'apparaît que si oui) */
+export async function charterPublished(aud: Audience): Promise<boolean> {
+  try { return (await charterState(aud)).current !== null } catch { return false }
+}
+
+/**
+ * Pour l'écran Bienvenue : combien de membres on rejoint, et quatre visages récents
+ * (ceux qui ont un avatar d'abord). Jamais bloquant : en panne, l'écran s'en passe.
+ */
+async function crowdFor(userId: string): Promise<{ count: number; faces: Array<{ username: string; avatar: string | null }> } | null> {
+  try {
+    const communityId = await instanceCommunityId()
+    if (!communityId) return null
+    const { rows: c } = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM community_members WHERE community_id = $1 AND user_id <> $2`, [communityId, userId])
+    const { rows: faces } = await db.query<{ username: string; avatar: string | null }>(
+      `SELECT u.username, NULLIF(u.avatar, '') AS avatar
+         FROM community_members cm JOIN users u ON u.id = cm.user_id
+        WHERE cm.community_id = $1 AND cm.user_id <> $2
+        ORDER BY (NULLIF(u.avatar, '') IS NOT NULL) DESC, cm.joined_at DESC
+        LIMIT 4`, [communityId, userId])
+    return { count: c[0]?.n ?? 0, faces }
+  } catch { return null }
 }
 
 /** Jusqu'où on a lu. Ne fait que monter ; l'arrivée en bas passe toujours. */

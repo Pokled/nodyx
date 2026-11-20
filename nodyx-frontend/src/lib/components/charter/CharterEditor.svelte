@@ -390,7 +390,7 @@
 {/if}
 
 <div class="ed-foot">
-	<span class="small muted">{tFn('chb.vars_note', { community: tk.community, user: tk.user })}</span>
+	<span class="small muted">{tFn('chb.vars_note', { community: tk.community, user: tk.user })} {tFn('chb.outline_note')}</span>
 	<button type="button" class="adm-btn adm-btn--sm" aria-expanded={tplOpen} onclick={() => (tplOpen = !tplOpen)}>{tFn('chb.tpl_btn')}</button>
 </div>
 {#if tplOpen}

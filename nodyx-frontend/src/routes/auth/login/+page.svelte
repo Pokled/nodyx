@@ -324,6 +324,12 @@
 		</div>
 		{/if}
 
+			{#if data.redirectTo === '/charter' && !form}
+				<!-- La page « La charte » est réservée aux membres (lot 7d-3) : on dit pourquoi on est là -->
+				<div class="mb-4 rounded border border-[var(--nx-border)] bg-[color-mix(in_srgb,var(--nx-text)_4%,transparent)] px-4 py-2.5 text-sm text-[var(--nx-text)]">
+					{tFn('charter.login_reason', { community: data.communityName ?? '' })}
+				</div>
+			{/if}
 			{#if data.passwordReset}
 				<div class="mb-4 rounded border border-[color-mix(in_srgb,var(--nx-ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--nx-ok)_10%,transparent)] px-4 py-2.5 text-sm text-[var(--nx-ok)]">
 					{tFn('auth.password_reset.success_message')}

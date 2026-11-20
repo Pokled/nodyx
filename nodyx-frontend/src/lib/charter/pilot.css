@@ -1,0 +1,54 @@
+/* Le pilote des règles d'interface (validées le 20/11/2026 : Atkinson Hyperlegible Next,
+   Cobalt, statut « modifié » en ocre) : seulement sur les écrans de la charte pour
+   l'instant (page « La charte », écran Bienvenue de la porte). Le reste de Nodyx passera
+   page par page. Les couleurs de fond, de texte et de bordure restent celles du thème
+   (--nx-*) : seule la police et l'accent sont propres au pilote. Police auto-hébergée
+   (licence OFL, static/fonts/atkinson-hyperlegible-next/OFL.txt). */
+@font-face {
+	font-family: 'Atkinson Hyperlegible Next';
+	src: url('/fonts/atkinson-hyperlegible-next/atkinson-hyperlegible-next-latin-ext-wght-normal.woff2') format('woff2');
+	font-weight: 200 800; font-style: normal; font-display: swap;
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Atkinson Hyperlegible Next';
+	src: url('/fonts/atkinson-hyperlegible-next/atkinson-hyperlegible-next-latin-wght-normal.woff2') format('woff2');
+	font-weight: 200 800; font-style: normal; font-display: swap;
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+.nx-pilot {
+	--pl-accent: #1f56c9;
+	--pl-accent-soft: #eaf0fc;
+	--pl-on-accent: #ffffff;
+	--pl-ok: #1d7f47;
+	--pl-ok-soft: #e8f5ee;
+	--pl-changed: #8a5a00;
+	--pl-changed-soft: #fbf1dc;
+	--pl-r-control: 6px;
+	--pl-r-panel: 10px;
+	font-family: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+}
+:root[data-theme="dark"] .nx-pilot {
+	--pl-accent: #7ea6f5; --pl-accent-soft: #18233a; --pl-on-accent: #0f1625;
+	--pl-ok: #4cc283; --pl-ok-soft: #17291f; --pl-changed: #e3b55a; --pl-changed-soft: #2c2414;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) .nx-pilot {
+		--pl-accent: #7ea6f5; --pl-accent-soft: #18233a; --pl-on-accent: #0f1625;
+		--pl-ok: #4cc283; --pl-ok-soft: #17291f; --pl-changed: #e3b55a; --pl-changed-soft: #2c2414;
+	}
+}
+
+.nx-pilot .pl-btn { font-family: inherit; font-weight: 700; font-size: 14px; line-height: 1; border-radius: var(--pl-r-control); padding: 10px 15px; border: 1px solid transparent; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.nx-pilot .pl-btn--primary { background: var(--pl-accent); color: var(--pl-on-accent); }
+.nx-pilot .pl-btn--primary:hover { filter: brightness(1.08); }
+.nx-pilot .pl-btn--secondary { background: var(--nx-surface); border-color: var(--nx-border); color: var(--nx-text); }
+.nx-pilot .pl-btn--secondary:hover { border-color: var(--nx-text-faint); }
+.nx-pilot .pl-btn--quiet { background: none; color: var(--nx-text-muted); }
+.nx-pilot .pl-btn--quiet:hover { color: var(--nx-text); background: color-mix(in srgb, var(--nx-text) 6%, transparent); }
+.nx-pilot :focus-visible { outline: 2px solid var(--pl-accent); outline-offset: 2px; }
+.nx-pilot .pl-status { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; padding: 5px 11px 5px 9px; border-radius: 999px; white-space: nowrap; }
+.nx-pilot .pl-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.nx-pilot .pl-status--ok { color: var(--pl-ok); background: var(--pl-ok-soft); }
+.nx-pilot .pl-status--changed { color: var(--pl-changed); background: var(--pl-changed-soft); }
