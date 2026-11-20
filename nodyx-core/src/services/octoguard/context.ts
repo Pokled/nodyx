@@ -33,44 +33,66 @@ export interface ContentContext {
   current: string | null
   edits: EditItem[]
   author: AuthorBrief | null
+  /** Contenu retenu : reste-t-il des messages avant / après la fenêtre ? (« Afficher plus ») */
+  more_before?: boolean
+  more_after?: boolean
+  /** Contenu retenu : les AUTRES contenus retenus du même endroit, dans la fenêtre (surlignés « retenu aussi »). */
+  held_nearby?: HeldNearby[]
 }
+export interface HeldNearby { id: string; author_id: string; author_username: string | null; content: string | null; created_at: string }
+
+/** Fenêtre du fil d'un contenu retenu : par défaut 5 avant, 3 après ; jamais plus de 30 de chaque côté. */
+export const HELD_WINDOW = { before: 5, after: 3, max: 30 }
 
 const cut = (s: string | null, n: number) => (s === null ? null : s.length > n ? s.slice(0, n) + '…' : s)
 
 async function chatAround(channelId: string, at: string, targetId: string | null): Promise<AroundItem[]> {
+  return (await chatWindow(channelId, at, targetId, AROUND, AROUND)).items
+}
+async function forumAround(threadId: string, at: string, targetId: string | null): Promise<AroundItem[]> {
+  return (await forumWindow(threadId, at, targetId, AROUND, AROUND)).items
+}
+
+interface Window { items: AroundItem[]; more_before: boolean; more_after: boolean }
+
+async function chatWindow(channelId: string, at: string, targetId: string | null, nb: number, na: number): Promise<Window> {
   const sel = `SELECT m.id, m.author_id, u.username AS author_username,
                       CASE WHEN m.is_deleted THEN NULL ELSE m.content END AS content,
                       m.created_at, (m.edited_at IS NOT NULL) AS edited
                  FROM channel_messages m LEFT JOIN users u ON u.id = m.author_id`
   const [before, target, after] = await Promise.all([
     db.query(`${sel} WHERE m.channel_id = $1 AND m.created_at < $2::timestamptz AND m.id IS DISTINCT FROM $3::uuid
-              ORDER BY m.created_at DESC LIMIT ${AROUND}`, [channelId, at, targetId]),
+              ORDER BY m.created_at DESC LIMIT $4`, [channelId, at, targetId, nb + 1]),
     targetId ? db.query(`${sel} WHERE m.id = $1`, [targetId]) : Promise.resolve({ rows: [] }),
     db.query(`${sel} WHERE m.channel_id = $1 AND m.created_at > $2::timestamptz AND m.id IS DISTINCT FROM $3::uuid
-              ORDER BY m.created_at ASC LIMIT ${AROUND}`, [channelId, at, targetId]),
+              ORDER BY m.created_at ASC LIMIT $4`, [channelId, at, targetId, na + 1]),
   ])
-  return [
-    ...before.rows.reverse().map((r: any) => ({ ...r, is_target: false })),
-    ...target.rows.map((r: any) => ({ ...r, is_target: true })),
-    ...after.rows.map((r: any) => ({ ...r, is_target: false })),
-  ].map(r => ({ ...r, content: cut(r.content, AROUND_MAX_CHARS) }))
+  return assemble(before.rows, target.rows, after.rows, nb, na)
 }
 
-async function forumAround(threadId: string, at: string, targetId: string | null): Promise<AroundItem[]> {
+function assemble(before: any[], target: any[], after: any[], nb: number, na: number): Window {
+  return {
+    items: [
+      ...before.slice(0, nb).reverse().map((r: any) => ({ ...r, is_target: false })),
+      ...target.map((r: any) => ({ ...r, is_target: true })),
+      ...after.slice(0, na).map((r: any) => ({ ...r, is_target: false })),
+    ].map(r => ({ ...r, content: cut(r.content, AROUND_MAX_CHARS) })),
+    more_before: before.length > nb,
+    more_after: after.length > na,
+  }
+}
+
+async function forumWindow(threadId: string, at: string, targetId: string | null, nb: number, na: number): Promise<Window> {
   const sel = `SELECT p.id, p.author_id, u.username AS author_username, p.content, p.created_at, p.is_edited AS edited
                  FROM posts p LEFT JOIN users u ON u.id = p.author_id`
   const [before, target, after] = await Promise.all([
     db.query(`${sel} WHERE p.thread_id = $1 AND p.created_at < $2::timestamptz AND p.id IS DISTINCT FROM $3::uuid
-              ORDER BY p.created_at DESC LIMIT ${AROUND}`, [threadId, at, targetId]),
+              ORDER BY p.created_at DESC LIMIT $4`, [threadId, at, targetId, nb + 1]),
     targetId ? db.query(`${sel} WHERE p.id = $1`, [targetId]) : Promise.resolve({ rows: [] }),
     db.query(`${sel} WHERE p.thread_id = $1 AND p.created_at > $2::timestamptz AND p.id IS DISTINCT FROM $3::uuid
-              ORDER BY p.created_at ASC LIMIT ${AROUND}`, [threadId, at, targetId]),
+              ORDER BY p.created_at ASC LIMIT $4`, [threadId, at, targetId, na + 1]),
   ])
-  return [
-    ...before.rows.reverse().map((r: any) => ({ ...r, is_target: false })),
-    ...target.rows.map((r: any) => ({ ...r, is_target: true })),
-    ...after.rows.map((r: any) => ({ ...r, is_target: false })),
-  ].map(r => ({ ...r, content: cut(r.content, AROUND_MAX_CHARS) }))
+  return assemble(before.rows, target.rows, after.rows, nb, na)
 }
 
 async function editsOf(type: 'message' | 'post', id: string, authorId: string | null): Promise<EditItem[]> {
@@ -123,23 +145,52 @@ export async function reportContext(targetType: string, targetId: string): Promi
 }
 
 /** Le contexte d'un contenu retenu : ce qui s'est dit autour, au moment où il a été écrit. */
-export async function heldContext(heldId: string): Promise<ContentContext | null> {
-  const { rows } = await db.query(`SELECT kind, author_id, channel_id, thread_id, post_id, created_at FROM octoguard_held WHERE id = $1`, [heldId])
+const clampWin = (n: unknown, dflt: number) => {
+  const v = typeof n === 'number' && Number.isFinite(n) ? Math.trunc(n) : dflt
+  return Math.min(Math.max(v, 0), HELD_WINDOW.max)
+}
+
+/** Les AUTRES contenus retenus du même salon (ou du même sujet), entre deux instants. */
+async function heldNearby(h: { id: string; kind: string; channel_id: string | null; thread_id: string | null }, from: string | null, to: string | null): Promise<HeldNearby[]> {
+  const where = h.kind === 'chat' ? `h.kind = 'chat' AND h.channel_id = $2` : `h.kind = 'post' AND h.thread_id = $2`
+  const { rows } = await db.query(
+    `SELECT h.id, h.author_id, u.username AS author_username, h.payload->>'content' AS content, h.created_at
+       FROM octoguard_held h LEFT JOIN users u ON u.id = h.author_id
+      WHERE h.status = 'pending' AND h.id <> $1 AND ${where}
+        AND ($3::timestamptz IS NULL OR h.created_at >= $3::timestamptz)
+        AND ($4::timestamptz IS NULL OR h.created_at <= $4::timestamptz)
+      ORDER BY h.created_at ASC
+      LIMIT 50`,
+    [h.id, h.kind === 'chat' ? h.channel_id : h.thread_id, from, to]
+  )
+  return rows.map((r: any) => ({ ...r, content: cut(r.content, AROUND_MAX_CHARS) }))
+}
+
+/**
+ * Le contexte d'un contenu retenu (fil dans le dossier, maquette validée le 20/11/2026) :
+ * la conversation telle qu'elle était, `before` messages avant et `after` après (5 et 3
+ * par défaut, 30 au plus), s'il en reste, et les autres contenus retenus du même endroit.
+ */
+export async function heldContext(heldId: string, win: { before?: number; after?: number } = {}): Promise<ContentContext | null> {
+  const { rows } = await db.query(`SELECT id, kind, author_id, channel_id, thread_id, post_id, created_at FROM octoguard_held WHERE id = $1`, [heldId])
   const h = rows[0]; if (!h) return null
+  const nb = clampWin(win.before, HELD_WINDOW.before), na = clampWin(win.after, HELD_WINDOW.after)
   const author = await authorBrief(h.author_id)
-  if (h.kind === 'chat' && h.channel_id) {
-    return { place: 'chat', around: await chatAround(h.channel_id, h.created_at, null), current: null, edits: [], author }
+  // Les autres retenus visibles dans la fenêtre : bornée par ses messages extrêmes, ouverte s'il n'y a rien au-delà
+  const withNearby = async (w: Window, place: 'chat' | 'forum'): Promise<ContentContext> => {
+    const from = w.more_before && w.items.length ? w.items[0].created_at : null
+    const to = w.more_after && w.items.length ? w.items[w.items.length - 1].created_at : null
+    return { place, around: w.items, current: null, edits: [], author, more_before: w.more_before, more_after: w.more_after, held_nearby: await heldNearby(h, from, to) }
   }
+  if (h.kind === 'chat' && h.channel_id) return withNearby(await chatWindow(h.channel_id, h.created_at, null, nb, na), 'chat')
   if (h.kind === 'post_edit' && h.post_id) {
     const { rows: p } = await db.query(`SELECT thread_id, created_at, content FROM posts WHERE id = $1`, [h.post_id])
-    if (!p[0]) return { place: 'forum', around: [], current: null, edits: [], author }
-    const [around, edits] = await Promise.all([forumAround(p[0].thread_id, p[0].created_at, h.post_id), editsOf('post', h.post_id, h.author_id)])
-    return { place: 'forum', around, current: cut(p[0].content, EDIT_MAX_CHARS), edits, author }
+    if (!p[0]) return { place: 'forum', around: [], current: null, edits: [], author, more_before: false, more_after: false, held_nearby: [] }
+    const [w, edits] = await Promise.all([forumWindow(p[0].thread_id, p[0].created_at, h.post_id, nb, na), editsOf('post', h.post_id, h.author_id)])
+    return { place: 'forum', around: w.items, current: cut(p[0].content, EDIT_MAX_CHARS), edits, author, more_before: w.more_before, more_after: w.more_after, held_nearby: [] }
   }
-  if (h.kind === 'post' && h.thread_id) {
-    return { place: 'forum', around: await forumAround(h.thread_id, h.created_at, null), current: null, edits: [], author }
-  }
-  return { place: 'forum', around: [], current: null, edits: [], author }
+  if (h.kind === 'post' && h.thread_id) return withNearby(await forumWindow(h.thread_id, h.created_at, null, nb, na), 'forum')
+  return { place: 'forum', around: [], current: null, edits: [], author, more_before: false, more_after: false, held_nearby: [] }
 }
 
 /** Efface l'ancien texte des modifications de plus de 90 jours. */

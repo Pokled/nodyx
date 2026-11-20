@@ -130,13 +130,30 @@ export function holdRefusal(code: 'HELD_LIMIT' | 'HOLD_FAILED') {
     : { error: 'Could not hold the message for review', code: 'OCTOGUARD_BLOCKED', i18n_key: 'octoguard.blocked' }
 }
 
-export async function listPending(limit = 100): Promise<Array<HeldRow & { author_username: string; author_created_at: string; channel_name: string | null; thread_title: string | null }>> {
+export type PendingHeld = HeldRow & {
+  author_username: string; author_created_at: string; channel_name: string | null; thread_title: string | null
+  /** Catégorie du forum (celle du sujet, ou celle du nouveau sujet) : le chemin « Où » du dossier. */
+  place_category_id: string | null; category_name: string | null
+  /** Les autres règles réelles qui correspondaient aussi (D-E5b), lues dans le journal de la retenue. */
+  also_matched: string[] | null
+}
+
+export async function listPending(limit = 100): Promise<PendingHeld[]> {
   const { rows } = await db.query(
-    `SELECT h.*, u.username AS author_username, u.created_at AS author_created_at, ch.name AS channel_name, t.title AS thread_title
+    `SELECT h.*, u.username AS author_username, u.created_at AS author_created_at, ch.name AS channel_name, t.title AS thread_title,
+            cat.id AS place_category_id, cat.name AS category_name,
+            -- Le journal de la retenue est écrit dans la même requête : on borne la recherche
+            -- dans le temps (index sur created_at) au lieu de parcourir tout le journal.
+            (SELECT al.metadata->'also_matched' FROM admin_audit_log al
+              WHERE al.action = 'octoguard.message_held'
+                AND al.created_at BETWEEN h.created_at - interval '1 minute' AND h.created_at + interval '1 minute'
+                AND al.metadata->>'held_id' = h.id::text
+              LIMIT 1) AS also_matched
        FROM octoguard_held h
        JOIN users u ON u.id = h.author_id
        LEFT JOIN channels ch ON ch.id = h.channel_id
        LEFT JOIN threads  t  ON t.id  = h.thread_id
+       LEFT JOIN categories cat ON cat.id = COALESCE(h.category_id, t.category_id)
       WHERE h.status = 'pending'
       ORDER BY h.created_at ASC
       LIMIT $1`,

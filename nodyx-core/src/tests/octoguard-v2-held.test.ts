@@ -237,6 +237,29 @@ describe('les routes', () => {
       expect(res.statusCode).toBe(403)
       expect(addMessageMock).not.toHaveBeenCalled()
     })
+    // Le fil dans le dossier (20/11) : la fenêtre se règle par l'adresse, jamais au-delà de 30
+    it('le fil d’un dossier : un simple membre est refusé, même avec ?before=30', async () => {
+      const res = await app.inject({ method: 'GET', url: `/api/v1/admin/octoguard/held/${HELD}/context?before=30`, headers: { authorization: token(AUTHOR) } })
+      expect(res.statusCode).toBe(403)
+    })
+    it('le fil d’un dossier : une fenêtre absurde n’arrive jamais telle quelle à la base', async () => {
+      const base = vi.mocked(db.query).getMockImplementation()!
+      vi.mocked(db.query).mockImplementation((async (sql: string, params: unknown[] = []) => {
+        if (String(sql).replace(/\s+/g, ' ').trim().startsWith('SELECT id, kind, author_id')) {
+          return { rows: [{ id: HELD, kind: 'chat', author_id: AUTHOR, channel_id: CHAN, thread_id: null, post_id: null, created_at: '2026-11-04T10:00:00Z' }], rowCount: 1 }
+        }
+        return base(sql, params)
+      }) as never)
+      const lim = async (q: string) => {
+        calls.length = 0
+        const res = await app.inject({ method: 'GET', url: `/api/v1/admin/octoguard/held/${HELD}/context?${q}`, headers: { authorization: token(MOD) } })
+        expect(res.statusCode).toBe(200)
+        return [calls.find(c => c.sql.includes('created_at < $2'))?.params[3], calls.find(c => c.sql.includes('created_at > $2'))?.params[3]]
+      }
+      expect(await lim('before=abc&after=-5')).toEqual([6, 4])     // illisible : la fenêtre par défaut (5 / 3)
+      expect(await lim('before=999&after=9999')).toEqual([31, 4])  // 30 au plus ; 4 chiffres : refusé, défaut
+      expect(await lim('before=0&after=0')).toEqual([1, 1])        // zéro de chaque côté : permis
+    })
   })
 })
 
