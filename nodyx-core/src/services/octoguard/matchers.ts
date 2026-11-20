@@ -229,9 +229,47 @@ export const matchCaps: Matcher = (ctx, params) => {
 // Hôte ET chemin : une entrée « discord.com/invite » ne vaut que pour les
 // invitations. Avant, seul l'hôte était lu : une entrée avec chemin ne
 // correspondait à RIEN (les invitations discord.com/invite passaient).
-const URL_RE = /https?:\/\/([^\s<>"'`]+)/gi
-
 type LinkTarget = { host: string; path: string }
+
+// Les liens d'un message, en UN passage (le texte brut d'un membre peut faire 20 000
+// caractères : aucune regex à retour arrière dessus, cf. gotcha_regex_texte_brut_dos).
+// Avant le 20/11/2026, seuls les liens écrits avec « http(s):// » étaient vus :
+// « discord.gg/abc », la forme qu'utilisent les spammeurs, passait à travers les
+// invitations ET les liens des comptes tout neufs (trouvé en testant la prod).
+// Un domaine écrit sans « http » compte s'il a un chemin (discord.gg/abc, t.me/x), s'il
+// commence par « www. », ou si son extension est une extension de site courante : sans
+// ça, « fin.de », « node.js », « index.html » ou « 1.5 » seraient pris pour des liens. Un nom
+// de produit écrit avec son extension en majuscules (« Socket.IO ») n'est pas un lien non plus.
+const SITE_TLDS = new Set([
+  'com', 'net', 'org', 'io', 'gg', 'me', 'ly', 'co', 'app', 'dev', 'xyz', 'tv', 'info', 'biz',
+  'link', 'site', 'online', 'club', 'top', 'shop', 'store', 'live', 'fun', 'win', 'click', 'ru',
+  'fr', 'uk', 'us', 'ca', 'eu', 'be', 'ch', 'tk', 'ml', 'ga', 'cf', 'gq',
+])
+const HOST_RE = /^(?:[a-z0-9-]+\.)+[a-z]{2,24}$/
+const MAX_TOKEN = 2048
+
+export function findLinks(content: string, limit = 50): LinkTarget[] {
+  const found: LinkTarget[] = []
+  for (const raw of content.split(/[\s<>"'`]+/)) {
+    if (found.length > limit) break
+    if (!raw || raw.length > MAX_TOKEN || !raw.includes('.')) continue
+    // ponctuation collée au lien : « (voir site.com). »
+    const tok = raw.replace(/^[(\[{*_~]+/, '').replace(/[)\]}.,;:!?*_~]+$/, '')
+    const scheme = /^https?:\/\//i.exec(tok)
+    if (scheme) { found.push(splitUrl(tok.slice(scheme[0].length))); continue }
+    if (tok.includes('@')) continue                      // une adresse e-mail, une mention
+    const link = splitUrl(tok)
+    const labels = link.host.split('.')
+    if (!HOST_RE.test(link.host) || labels.some(l => !l || l.startsWith('-') || l.endsWith('-'))) continue
+    const hasPath = /[/?#]/.test(tok)
+    if (hasPath || labels[0] === 'www') { found.push(link); continue }
+    // Un domaine nu : une extension de site, écrite en minuscules. « Socket.IO », « Node.JS »
+    // sont des noms de produits (26 « Socket.IO » dans les messages de nodyx.org le 20/11)
+    const tldAsWritten = tok.slice(tok.lastIndexOf('.') + 1)
+    if (SITE_TLDS.has(labels[labels.length - 1]) && tldAsWritten === tldAsWritten.toLowerCase()) found.push(link)
+  }
+  return found
+}
 
 function splitUrl(rest: string): LinkTarget {
   // 'Sub.Example.com:8080/Path?x' → { host: 'sub.example.com', path: '/path?x' }
@@ -263,13 +301,7 @@ export const matchLinkDomain: Matcher = (ctx, params) => {
     const domains = Array.isArray(params.domains) ? params.domains : []
     if (domains.length === 0) return null
 
-    const found: LinkTarget[] = []
-    let m: RegExpExecArray | null
-    URL_RE.lastIndex = 0
-    while ((m = URL_RE.exec(ctx.content))) {
-      found.push(splitUrl(m[1]))
-      if (found.length > 50) break  // garde-fou anti-DoS sur message géant
-    }
+    const found = findLinks(ctx.content)   // avec ou sans « http », 50 au plus
     if (found.length === 0) return null
 
     if (mode === 'blacklist') {
@@ -322,7 +354,7 @@ export const matchMentionSpam: Matcher = (ctx, params) => {
 export const matchLinkSpam: Matcher = (ctx, params) => {
   try {
     const max = typeof params.max_links === 'number' ? params.max_links : 2
-    const urls = ctx.content.match(/https?:\/\//gi) ?? []
+    const urls = findLinks(ctx.content)   // avec ou sans « http »
     if (urls.length <= max) return null
     return { excerpt: `links=${urls.length}` }
   } catch {
