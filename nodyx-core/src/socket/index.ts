@@ -1,4 +1,4 @@
-import { charterGate } from '../services/charter'
+import { charterGate, teamCharterBlocks } from '../services/charter'
 import { registerVoiceHandlers, sendVoiceSnapshot } from './voice'
 import { registerVoiceSfuHandlers } from './voiceSfu'
 import { registerWhisperHandlers } from './whisper'
@@ -823,6 +823,8 @@ export function registerSocketIO(server: Server): void {
               || outranks(actor, (await getAccess(msgRows[0].community_id, msgRows[0].author_id)).role)
           }
         }
+        // Supprimer le message d'un autre est un outil de l'équipe (lot 7e)
+        if (byModerator && await teamCharterBlocks(userId)) { socket.emit('charter:team_required'); return }
         const { ok, channelId } = await ChannelModel.deleteMessage(messageId, userId, byModerator)
         if (!ok || !channelId) return
 
@@ -860,6 +862,7 @@ export function registerSocketIO(server: Server): void {
           console.warn(`[chat:pin] Denied for userId=${userId}`)
           return
         }
+        if (await teamCharterBlocks(userId)) { socket.emit('charter:team_required'); return }
 
         // Le message épinglé doit appartenir à CE canal : sans ce contrôle, un
         // admin pouvait épingler dans un canal le contenu d'un message venu

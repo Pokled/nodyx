@@ -7,6 +7,7 @@ import { adminOnly } from '../middleware/adminOnly'
 import * as CommunityModel from '../models/community'
 import * as GradeModel from '../models/grade'
 import { db } from '../config/database'
+import { teamCharterBlocks, TEAM_UNSIGNED } from '../services/charter'
 import {
   GRADE_PERMISSIONS, getAccess, invalidatePermissions, rankOf,
   type Permission, type MemberAccess,
@@ -200,6 +201,7 @@ export default async function communityRoutes(app: FastifyInstance) {
     if (!actor.permissions.includes('manage_grades')) {
       return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
     }
+    if (await teamCharterBlocks(request.user!.userId)) return reply.code(403).send(TEAM_UNSIGNED)
     if (exceeds(actor, data.permissions).length > 0) {
       return reply.code(403).send({ error: 'Cannot grant a permission you do not have', code: 'GRADE_ESCALATION' })
     }
@@ -224,6 +226,7 @@ export default async function communityRoutes(app: FastifyInstance) {
     if (!actor.permissions.includes('manage_grades')) {
       return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
     }
+    if (await teamCharterBlocks(request.user!.userId)) return reply.code(403).send(TEAM_UNSIGNED)
     const current = await GradeModel.findById(id)
     if (!current || current.community_id !== community.id) {
       return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
@@ -257,6 +260,7 @@ export default async function communityRoutes(app: FastifyInstance) {
     if (!actor.permissions.includes('manage_grades')) {
       return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
     }
+    if (await teamCharterBlocks(request.user!.userId)) return reply.code(403).send(TEAM_UNSIGNED)
     const current = await GradeModel.findById(id)
     if (!current || current.community_id !== community.id) {
       return reply.code(404).send({ error: 'Grade not found', code: 'NOT_FOUND' })
@@ -290,6 +294,7 @@ export default async function communityRoutes(app: FastifyInstance) {
     if (!actor.permissions.includes('manage_grades')) {
       return reply.code(403).send({ error: 'Missing permission: manage_grades', code: 'FORBIDDEN' })
     }
+    if (await teamCharterBlocks(request.user!.userId)) return reply.code(403).send(TEAM_UNSIGNED)
 
     // La cible : son rang, et le grade qu'elle porte déjà
     const { rows: targetRows } = await db.query<{ role: string; permissions: Record<string, unknown> | null }>(

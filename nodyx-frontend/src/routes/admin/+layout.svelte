@@ -148,6 +148,10 @@
 	})
 </script>
 
+{#if (data as { teamCharter?: boolean }).teamCharter}
+	<!-- La charte de l'équipe (lot 7e) : ni menu ni outils tant qu'elle n'est pas signée -->
+	<div class="flex flex-1 min-h-0 flex-col">{@render children()}</div>
+{:else}
 <div class="adm-shell flex flex-1 min-h-0 {themed ? '' : 'nx-on-dark'}">
 
 	<!-- Voile, sous `lg` uniquement : le tiroir se ferme au clic a cote. -->
@@ -300,6 +304,7 @@
 		</main>
 	</div>
 </div>
+{/if}
 
 <style>
 	.adm-shell { color: var(--nx-text); }

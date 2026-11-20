@@ -26,6 +26,7 @@
 		username = '',
 		token = null,
 		preview = null,
+		closable = false,
 		onsigned = () => {},
 		onclose = () => {},
 	}: {
@@ -33,6 +34,8 @@
 		username?: string
 		token?: string | null
 		preview?: { html: string; tone: Tone; own: string; drawEnabled: boolean; community: string } | null
+		/** La porte de l'équipe (lot 7e) se referme : seuls les outils de l'équipe attendent. */
+		closable?: boolean
 		onsigned?: () => void
 		onclose?: () => void
 	} = $props()
@@ -195,7 +198,7 @@
 	let toast = $state(false)
 	let toastT: ReturnType<typeof setTimeout> | null = null
 	function nudge() {
-		if (preview) { onclose(); return }
+		if (preview || closable) { onclose(); return }
 		shake = false; void tick().then(() => (shake = true))
 		toast = true
 		if (toastT) clearTimeout(toastT)
@@ -266,7 +269,7 @@
 				<span id="door-title">{audience === 'members' ? tFn('charter.door_title_members', { community: charter?.community ?? '' }) : tFn('charter.door_title_team')}</span>
 				{#if preview}<span class="door-badge">{tFn('charter.preview_badge')}</span>{/if}
 				<span class="door-time">{tFn('charter.door_time', { n: String(minutes) })}</span>
-				{#if preview}<button type="button" class="door-close" onclick={onclose}>{tFn('charter.preview_close')}</button>{/if}
+				{#if preview || (closable && !done)}<button type="button" class="door-close" onclick={onclose}>{preview ? tFn('charter.preview_close') : tFn('charter.later')}</button>{/if}
 			</div>
 			<ol class="door-steps" aria-label={tFn('charter.steps_aria')}>
 				<li class:on={!read && !done} class:done={read || done}><span>1</span>{tFn('charter.step_read')}</li>
