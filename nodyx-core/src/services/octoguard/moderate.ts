@@ -23,7 +23,7 @@ import { shieldGate, hasLink, shieldHoldRule } from './shield'
 import type { PipelineUserCtx, Surface } from './types'
 
 export type ModerationVerdict =
-  | { blocked: false; report?: { rule_name: string; excerpt: string }; hold?: { rule_id: string | null; rule_name: string; excerpt: string } }
+  | { blocked: false; report?: { rule_name: string; excerpt: string }; hold?: { rule_id: string | null; rule_name: string; excerpt: string; also_matched?: string[] } }
   | { blocked: true; reason: string; i18n_key: string }
 
 /** Rôle et grade du membre dans la communauté de l'instance (immunités). */

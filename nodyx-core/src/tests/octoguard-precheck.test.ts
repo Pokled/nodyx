@@ -123,11 +123,17 @@ describe('AUCUN effet de bord', () => {
 })
 
 describe('le même jugement que le vrai moteur', () => {
-  it('la PREMIÈRE règle qui correspond décide, même en observation (le message passerait)', async () => {
+  it('une règle en observation ne masque plus la vraie règle derrière elle (D-E5a, 20/11)', async () => {
     _setRulesForBench([rule('delete', { dry_run: true }), rule('delete')])
-    expect(await precheck(USER, 'chat', 't’es trop nul')).toBeNull()
+    expect(await precheck(USER, 'chat', 't’es trop nul')).toEqual({ outcome: 'refuse', kind: 'words' })
     const res = await runPipeline({ content: 't’es trop nul', userCtx: { userId: USER, role: 'member', gradeIds: [] }, surface: 'chat' })
-    expect(res.blocked).toBe(false)
+    expect(res.blocked).toBe(true)
+  })
+  it('la plus sévère décide, quel que soit l’ordre de création (comme le moteur)', async () => {
+    _setRulesForBench([rule('report_only'), rule('hold')])
+    expect(await precheck(USER, 'chat', 't’es trop nul')).toEqual({ outcome: 'hold', kind: 'words' })
+    const res = await runPipeline({ content: 't’es trop nul', userCtx: { userId: USER, role: 'member', gradeIds: [] }, surface: 'chat' })
+    expect(res.hold).toBeDefined()
   })
   it('l’équipe est immunisée : rien', async () => {
     profile = { ...profile, role: 'moderator' }

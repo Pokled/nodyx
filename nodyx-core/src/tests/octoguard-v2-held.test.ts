@@ -136,6 +136,17 @@ describe('la mise de côté et les décisions', () => {
     expect(calls.some(c => c.sql.includes('channel_messages'))).toBe(false)
     expect(addMessageMock).not.toHaveBeenCalled()
   })
+  it('D-E5b : le journal de la retenue nomme les autres règles qui correspondaient aussi', async () => {
+    const heldLog = async (rule: Parameters<typeof holdContent>[0]['rule']) => {
+      calls.length = 0
+      await holdContent({ kind: 'chat', authorId: AUTHOR, channelId: CHAN, payload: { content: 'x' }, rule })
+      await flush()
+      const c = calls.find(c => c.sql.includes('INSERT INTO admin_audit_log') && c.params[1] === 'octoguard.message_held')
+      return JSON.parse(String(c?.params[5] ?? '{}'))
+    }
+    expect((await heldLog({ rule_id: 'r1', rule_name: 'Mots interdits', excerpt: 'x', also_matched: ['Majuscules'] })).also_matched).toEqual(['Majuscules'])
+    expect('also_matched' in (await heldLog({ rule_id: 'r1', rule_name: 'Mots interdits', excerpt: 'x' }))).toBe(false)
+  })
   it('ce que voit l’auteur ne contient jamais le nom de la règle (D20)', () => {
     const v = forAuthor(heldRow() as never)
     expect(JSON.stringify(v)).not.toContain('Liens')

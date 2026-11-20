@@ -10,8 +10,9 @@
  *   barème, aucune mémoire d'inondation (les règles d'inondation se jugent sur
  *   une suite de messages ; sans identifiant elles ne se déclenchent jamais).
  * - Le même jugement que le vrai envoi : mêmes règles (cache des règles
- *   allumées), même ordre (la première qui correspond décide, comme le moteur,
- *   y compris une règle en observation, qui laisse passer), même profil du
+ *   allumées), même choix (parmi les règles réelles qui correspondent, la plus
+ *   sévère décide, comme le moteur ; une règle en observation ne décide
+ *   jamais, D-E5a du 20/11/2026), même profil du
  *   membre (rôle, grade, âge du compte), même texte (assainissement du chat,
  *   extraction du forum).
  * - D20 : la réponse ne nomme JAMAIS la règle. Elle dit ce qui arriverait
@@ -27,7 +28,7 @@ import { checkContent } from '../contentFilter'
 import { isOctoGuardEnabled } from './index'
 import { getRules } from './cache'
 import { matchRule } from './matchers'
-import { conditionsMet, isImmunized } from './pipeline'
+import { conditionsMet, isImmunized, severity } from './pipeline'
 import { buildUserCtx, textForModeration } from './moderate'
 import { sanitizeChat } from '../../utils/chatSanitize'
 import { mentionWeight } from './mentionWeight'
@@ -71,18 +72,20 @@ export function outcomeFor(rule: Pick<AutomodRuleRow, 'action' | 'dry_run'>): Nu
 export function judge(content: string, rules: AutomodRuleRow[], user: PipelineUserCtx, surface: 'chat' | 'forum', extra: { mentionCount?: number } = {}): Nudge | null {
   // Le filtre du serveur (symboles haineux, motifs de l'admin) refuse avant tout
   if (!checkContent(content.replace(/<[^>]+>/g, ' '), { silent: true }).ok) return { outcome: 'refuse', kind: 'other' }
+  let best: AutomodRuleRow | null = null
   for (const rule of rules) {
+    if (rule.dry_run) continue                      // observer : ne décide jamais
     if (!(rule.scopes?.length ? rule.scopes : ['chat']).includes(surface)) continue
     if (isImmunized(rule, user)) continue
     if (!conditionsMet(rule, user)) continue
     if (rule.type === 'flood') continue             // se juge sur une suite de messages
     const m = matchRule(content, rule, { mentionCount: extra.mentionCount })  // sans userId : aucune mémoire touchée
     if (!m) continue
-    // La première règle qui correspond décide, comme le moteur
-    const outcome = outcomeFor(rule)
-    return outcome ? { outcome, kind: KIND[rule.type] ?? 'other' } : null
+    // La plus sévère décide, comme le moteur ; à égalité, la première créée
+    if (!best || severity(rule.action) > severity(best.action)) best = rule
   }
-  return null
+  const outcome = best ? outcomeFor(best) : null
+  return best && outcome ? { outcome, kind: KIND[best.type] ?? 'other' } : null
 }
 
 /** Le texte que le moteur jugera au vrai envoi. */
