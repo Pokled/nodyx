@@ -33,6 +33,7 @@
 
 import ipaddr from 'ipaddr.js'
 import type { FastifyRequest } from 'fastify'
+import { isTrustedInternalCall } from './internalCall'
 
 /** Plages Cloudflare — même source que `config/trustedProxies.ts`. */
 const CLOUDFLARE_CIDRS = [
@@ -104,6 +105,19 @@ export function pairDeConfiance(pair: string | undefined): boolean {
  */
 export function getClientIp(request: FastifyRequest): string {
   const pair = request.socket?.remoteAddress ?? ''
+
+  // 0. Le site (rendu serveur) appelle le cœur pour le compte d'un visiteur, en
+  //    passant par Caddy (127.0.0.1:3099) qui ne fait confiance à aucun proxy et
+  //    remplace X-Forwarded-For par 127.0.0.1. Le site met donc l'adresse du
+  //    visiteur dans un en-tête à lui, que Caddy laisse passer, et que l'on ne croit
+  //    QU'AVEC le secret partagé : sans lui, l'en-tête est ignoré (pas d'usurpation).
+  //    Avant le 20/11/2026, aucune connexion ne laissait d'adresse publique :
+  //    0 compte sur 168 bannissables par IP sur nodyx.org.
+  if (isTrustedInternalCall(request)) {
+    const v = request.headers['x-nodyx-client-ip']
+    const ip = (Array.isArray(v) ? v[0] : v)?.trim()
+    if (ip && estPubliquementRoutable(ip)) return ip
+  }
 
   if (pairDeConfiance(pair)) {
     const entete = (n: string): string | undefined => {
