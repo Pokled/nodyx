@@ -1140,6 +1140,11 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
     const { rows } = await db.query(
       `SELECT r.*, u.username AS reporter_username,
               a.username AS target_author_username,
+              -- Déjà banni ? (20/11 : la file ne le disait pas, l'équipe croyait devoir re-sanctionner)
+              (SELECT json_build_object('reason', cb.reason, 'banned_at', cb.banned_at, 'expires_at', cb.expires_at, 'by', bu.username)
+                 FROM community_bans cb LEFT JOIN users bu ON bu.id = cb.banned_by
+                WHERE cb.user_id = r.target_author_id AND (cb.expires_at IS NULL OR cb.expires_at > NOW())
+                ORDER BY cb.banned_at DESC LIMIT 1) AS target_author_ban,
               cm.role    AS target_author_role,
               c.username AS claimed_by_username,
               v.username AS reviewed_by_username

@@ -7599,5 +7599,10 @@
   "chtpl.full_team_li1": "Un cas difficile ? On en parle à l'équipe avant d'agir.",
   "chtpl.full_team_li2": "Une erreur ? On la reconnaît et on la répare, sans honte.",
   "chtpl.full_team_li3": "Envie d'une pause ou de quitter l'équipe ? Dis-le simplement : tes droits seront retirés proprement.",
-  "chtpl.full_team_end": "Merci de veiller sur {{community}}. On compte sur toi."
+  "chtpl.full_team_end": "Merci de veiller sur {{community}}. On compte sur toi.",
+  "og2.rp_already_banned": "Déjà banni",
+  "og2.rp_banned_by": "Banni le {{date}} par {{by}}.",
+  "og2.rp_banned_on": "Banni le {{date}}.",
+  "og2.rp_banned_reason": "Motif : {{reason}}",
+  "og2.rp_banned_hint": "Ce compte est déjà banni : inutile de le sanctionner à nouveau. Classe le signalement, ou retire le contenu s'il est encore en ligne."
 }

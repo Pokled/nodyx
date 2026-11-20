@@ -7599,5 +7599,10 @@
   "chtpl.full_team_li1": "A tricky case? We talk to the team before acting.",
   "chtpl.full_team_li2": "A mistake? We own it and fix it, no shame.",
   "chtpl.full_team_li3": "Need a break or want to leave the team? Just say so: your rights will be removed cleanly.",
-  "chtpl.full_team_end": "Thank you for looking after {{community}}. We count on you."
+  "chtpl.full_team_end": "Thank you for looking after {{community}}. We count on you.",
+  "og2.rp_already_banned": "Already banned",
+  "og2.rp_banned_by": "Banned on {{date}} by {{by}}.",
+  "og2.rp_banned_on": "Banned on {{date}}.",
+  "og2.rp_banned_reason": "Reason: {{reason}}",
+  "og2.rp_banned_hint": "This account is already banned: no need to sanction it again. Close the report, or remove the content if it is still online."
 }
