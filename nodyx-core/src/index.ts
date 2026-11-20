@@ -3,9 +3,9 @@ import { buildLoggerOptions, journaliserAcces } from './config/logger'
 import { getClientIp } from './utils/clientIp'
 import { Server } from 'socket.io'
 import fastifyStatic from '@fastify/static'
+import { uploadsStaticOptions } from './config/uploadsStatic'
 import fastifyMultipart from '@fastify/multipart'
 import fastifyCors, { type FastifyCorsOptions } from '@fastify/cors'
-import path from 'path'
 import { getRandomFortune } from './fortunes'
 import { db, redis } from './config/database'
 import { getTrustProxy } from './config/trustedProxies'
@@ -149,11 +149,7 @@ server.register(fastifyCors, () => (req: FastifyRequest, cb: (err: Error | null,
 })
 
 // ── Static files (uploads) ───────────────────────────────────
-server.register(fastifyStatic, {
-  root:       path.join(process.cwd(), 'uploads'),
-  prefix:     '/uploads/',
-  decorateReply: false,
-})
+server.register(fastifyStatic, uploadsStaticOptions())
 
 // Vignettes : /uploads/_w/<largeur>/… (plus précis que /uploads/*, il passe avant)
 server.register(thumbnailRoutes)

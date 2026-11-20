@@ -32,6 +32,8 @@ export function parseThumb(widthPart: string, rel: string): ThumbRequest | null 
   if (!(THUMB_WIDTHS as readonly number[]).includes(width)) return null
   if (!IMAGE_EXT.test(rel) || rel.startsWith('_thumbs/')) return null
   if (!isContainedUploadPath('/uploads/' + rel) || rel.includes('?') || rel.includes('#')) return null
+  // Comme /uploads/ (dotfiles: 'ignore') : rien de caché, ni fichier ni dossier.
+  if (rel.split('/').some(seg => seg.startsWith('.'))) return null
   return { width, still: m[2] === 's', rel }
 }
 
