@@ -206,6 +206,12 @@
 		}).catch(() => {})
 	}
 
+	// L'équipe retire la publication d'un autre : on demande d'abord (rien ne se défait ici)
+	async function moderatePost(post: any) {
+		if (!window.confirm(tFn('feed.delete_team_confirm', { user: post.username }))) return
+		await deletePost(post.id)
+	}
+
 	async function deletePost(id: string) {
 		const res = await apiFetch(fetch, `/social/status/${id}`, {
 			method: 'DELETE',
@@ -550,8 +556,8 @@
 										<span class="post-dot">·</span>
 										<time class="post-time" datetime={post.created_at}>{timeAgo(post.created_at)}</time>
 
-										{#if me?.id === post.author_id || me?.username === post.username}
-											<button onclick={() => deletePost(post.id)} class="post-delete-btn" title={tFn('feed.delete')}>
+										{#if me?.id === post.author_id || me?.username === post.username || data.canModerate}
+											<button onclick={() => (me?.id === post.author_id || me?.username === post.username ? deletePost(post.id) : moderatePost(post))} class="post-delete-btn" title={me?.id === post.author_id || me?.username === post.username ? tFn('feed.delete') : tFn('feed.delete_team')}>
 												<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 													<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 												</svg>
@@ -683,8 +689,8 @@
 													<span class="post-dot">·</span>
 													<span class="reply-to-tag">↳ @{reply.reply_to_username}</span>
 												{/if}
-												{#if me?.id === reply.author_id || me?.username === reply.username}
-													<button onclick={() => deletePost(reply.id)} class="post-delete-btn" title={tFn('feed.delete')}>
+												{#if me?.id === reply.author_id || me?.username === reply.username || data.canModerate}
+													<button onclick={() => (me?.id === reply.author_id || me?.username === reply.username ? deletePost(reply.id) : moderatePost(reply))} class="post-delete-btn" title={me?.id === reply.author_id || me?.username === reply.username ? tFn('feed.delete') : tFn('feed.delete_team')}>
 														<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 															<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
 														</svg>
