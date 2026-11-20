@@ -138,6 +138,7 @@ async function applyAction(
   eventId:  string,
   dryRun:   boolean,
   found?:   MatchResult['found'],
+  alsoMatched: string[] = [],
 ): Promise<ActionOutcome> {
   const action: AutomodAction = rule.action
   const meta = {
@@ -148,6 +149,8 @@ async function applyAction(
     would_be:   dryRun,
     // Mots interdits : le mot trouvé et le motif (D25, « Faux positif »)
     ...(found ? { found } : {}),
+    // Les autres règles RÉELLES qui correspondaient aussi (D-E5b : une seule sanction)
+    ...(alsoMatched.length ? { also_matched: alsoMatched } : {}),
   }
 
   // Cran « observer » (dry_run) : on note ce qui AURAIT été fait, rien ne se passe
@@ -332,6 +335,12 @@ function liveMentionCache(): Map<string, number> {
 }
 export function _resetMentionCacheForTests(): void { mentionCache = new Map(); mentionCacheAt = 0 }
 
+/** Sévérité d'une action pour le membre (D-E5a, validé le 20/11/2026). Inconnue : 0. */
+const SEVERITY: Partial<Record<AutomodAction, number>> = {
+  ban_temp: 7, mute: 6, warn: 5, delete: 4, hold: 3, notify_only: 2, report_only: 1,
+}
+export const severity = (a: AutomodAction): number => SEVERITY[a] ?? 0
+
 async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
   const rules = getRules()
   if (rules.length === 0) return { blocked: false }
@@ -343,6 +352,7 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
   let mentionCount: number | undefined
   let mentionCounted = false
 
+  const real: Array<{ rule: AutomodRuleRow; match: NonNullable<ReturnType<typeof matchRule>> }> = []
   for (const rule of rules) {
     // Une règle d'avant OctoGuard 2 (sans scopes) ne surveillait que le chat
     if (!(rule.scopes?.length ? rule.scopes : ['chat']).includes(surface)) continue
@@ -356,27 +366,35 @@ async function runPipelineInner(input: PipelineInput): Promise<PipelineResult> {
     const match = matchRule(input.content, rule, { userId: floodKey, mentionCount })
     if (!match) continue
 
-    const eventId = randomUUID()
-    const outcome = await applyAction(
-      rule,
-      input.userCtx,
-      match.excerpt,
-      eventId,
-      rule.dry_run,
-      match.found,
-    )
-
-    return {
-      blocked:  outcome.blocked,
-      reason:   outcome.reason,
-      i18n_key: outcome.i18nKey,
-      event_id: eventId,
-      ...(outcome.report ? { report: { rule_id: rule.id, rule_name: rule.name, excerpt: match.excerpt } } : {}),
-      ...(outcome.hold ? { hold: { rule_id: rule.id, rule_name: rule.name, excerpt: match.excerpt } } : {}),
+    // Une règle en essai ne s'arrête jamais : on note ce qu'elle AURAIT fait, et on continue
+    if (rule.dry_run) {
+      await applyAction(rule, input.userCtx, match.excerpt, randomUUID(), true, match.found)
+      continue
     }
+    real.push({ rule, match })
   }
 
-  return { blocked: false }
+  // Parmi les règles RÉELLES qui correspondent, la plus sévère pour le membre l'emporte
+  // (D-E5a) ; à sévérité égale, la première créée. Une seule sanction par message
+  // (D-E5b) : les autres sont notées dans le journal de l'action retenue.
+  // Avant le 20/11/2026, la PREMIÈRE règle qui correspondait (même en essai) arrêtait tout.
+  if (real.length === 0) return { blocked: false }
+  let best = real[0]
+  for (const c of real) if (severity(c.rule.action) > severity(best.rule.action)) best = c
+  const alsoMatched = real.filter(c => c !== best).map(c => c.rule.name)
+  const { rule, match } = best
+
+  const eventId = randomUUID()
+  const outcome = await applyAction(rule, input.userCtx, match.excerpt, eventId, false, match.found, alsoMatched)
+
+  return {
+    blocked:  outcome.blocked,
+    reason:   outcome.reason,
+    i18n_key: outcome.i18nKey,
+    event_id: eventId,
+    ...(outcome.report ? { report: { rule_id: rule.id, rule_name: rule.name, excerpt: match.excerpt } } : {}),
+    ...(outcome.hold ? { hold: { rule_id: rule.id, rule_name: rule.name, excerpt: match.excerpt, ...(alsoMatched.length ? { also_matched: alsoMatched } : {}) } } : {}),
+  }
 }
 
 /**
