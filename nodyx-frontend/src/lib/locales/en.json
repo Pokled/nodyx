@@ -7609,5 +7609,7 @@
   "profile.banned_since": "Banned since {{date}}.",
   "profile.banned_until": "Banned from {{date}} to {{until}}.",
   "profile.banned_reason": "Reason: {{reason}}",
-  "profile.banned_hint": "Only the team can see this profile: for members and visitors it no longer exists, and neither do its feed posts."
+  "profile.banned_hint": "Only the team can see this profile: for members and visitors it no longer exists, and neither do its feed posts.",
+  "feed.delete_team": "Remove (team)",
+  "feed.delete_team_confirm": "Remove @{{user}}'s post? It disappears for everyone, and it is written to the team log."
 }

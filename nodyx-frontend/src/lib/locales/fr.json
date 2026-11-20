@@ -7609,5 +7609,7 @@
   "profile.banned_since": "Banni depuis le {{date}}.",
   "profile.banned_until": "Banni du {{date}} au {{until}}.",
   "profile.banned_reason": "Motif : {{reason}}",
-  "profile.banned_hint": "Seule l'équipe voit ce profil : pour les membres et les visiteurs, il n'existe plus, ses publications du fil non plus."
+  "profile.banned_hint": "Seule l'équipe voit ce profil : pour les membres et les visiteurs, il n'existe plus, ses publications du fil non plus.",
+  "feed.delete_team": "Retirer (équipe)",
+  "feed.delete_team_confirm": "Retirer la publication de @{{user}} ? Elle disparaît pour tout le monde, et c'est inscrit au journal de l'équipe."
 }

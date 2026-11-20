@@ -17,6 +17,9 @@ import { scanBuffer } from '../services/fileScanner'
 // Premier lien http(s) dans le contenu HTML (pour l'aperçu de lien).
 import { firstExternalLink } from '../utils/firstExternalLink'
 import { db } from '../config/database'
+import { getInstanceAccess, getAccess, outranks, rankOf } from '../services/permissions'
+import { charterGate, charterRefusal, teamCharterBlocks, TEAM_UNSIGNED } from '../services/charter'
+import { instanceCommunityId } from '../services/mentionPeople'
 import { io } from '../socket/io'
 
 const UPLOADS_DIR  = path.join(process.cwd(), 'uploads')
@@ -176,6 +179,9 @@ export default async function socialRoutes(app: FastifyInstance) {
   app.post('/status', { preHandler: [rateLimit, requireAuth, validate({ body: statusSchema })] }, async (request, reply) => {
     const { userId } = request.user!
     const { content, reply_to_id, media_url } = request.body as z.infer<typeof statusSchema>
+    // La charte des membres (lot 7) : qui ne l'a pas signée n'écrit pas non plus dans le fil
+    // (le fil la contournait : chat, messages privés et forum la demandaient déjà)
+    if (!(await charterGate(userId)).allow) return reply.code(403).send(charterRefusal)
 
     // SÉCURITÉ : le contenu est rendu en {@html} (feed + profil). On le passe par
     // le sanitizer partagé (même allowlist que le forum) pour bloquer tout XSS
@@ -259,12 +265,41 @@ export default async function socialRoutes(app: FastifyInstance) {
     const { userId } = request.user!
     const { id } = request.params as { id: string }
 
-    const del = await db.query(`
-      DELETE FROM status_posts WHERE id = $1 AND author_id = $2
-      RETURNING id, reply_to_id
-    `, [id, userId])
+    // L'auteur retire la sienne ; l'équipe (moderate_content) retire celle d'un autre,
+    // jamais celle de quelqu'un de rang égal ou supérieur sauf un admin (comme au forum),
+    // et seulement charte de l'équipe signée (lot 7e). Avant le 20/11/2026, seul l'auteur
+    // pouvait : les 13 spams de rajasthanroutecabs restaient en ligne.
+    const { rows: target } = await db.query<{ author_id: string; username: string; content: string }>(
+      `SELECT sp.author_id, u.username, sp.content FROM status_posts sp JOIN users u ON u.id = sp.author_id WHERE sp.id = $1`, [id])
+    if (!target[0]) return reply.code(404).send({ error: 'Post introuvable ou non autorisé', code: 'NOT_FOUND' })
+    const byTeam = target[0].author_id !== userId
+    if (byTeam) {
+      const communityId = await instanceCommunityId()
+      const actor = await getInstanceAccess(userId)
+      if (!communityId || !actor.permissions.includes('moderate_content')) {
+        return reply.code(404).send({ error: 'Post introuvable ou non autorisé', code: 'NOT_FOUND' })
+      }
+      if (actor.rank < rankOf('admin') && !outranks(actor, (await getAccess(communityId, target[0].author_id)).role)) {
+        return reply.code(403).send({ error: 'Cannot moderate a member of equal or higher rank', code: 'FORBIDDEN' })
+      }
+      if (await teamCharterBlocks(userId)) return reply.code(403).send(TEAM_UNSIGNED)
+    }
 
-    if (!del.rows[0]) return reply.code(404).send({ error: 'Post introuvable ou non autorisé' })
+    const del = await db.query(`
+      DELETE FROM status_posts WHERE id = $1
+      RETURNING id, reply_to_id
+    `, [id])
+
+    if (!del.rows[0]) return reply.code(404).send({ error: 'Post introuvable ou non autorisé', code: 'NOT_FOUND' })
+
+    if (byTeam) {
+      try {
+        await db.query(
+          `INSERT INTO admin_audit_log (actor_id, actor_username, action, target_type, target_id, target_label, metadata)
+           SELECT $1, u.username, 'status_post_deleted', 'user', $2, $3, $4 FROM users u WHERE u.id = $1`,
+          [userId, target[0].author_id, target[0].username, JSON.stringify({ post_id: id, excerpt: target[0].content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) })])
+      } catch { /* le journal ne bloque jamais la modération */ }
+    }
 
     if (del.rows[0].reply_to_id) {
       await db.query(
@@ -273,8 +308,8 @@ export default async function socialRoutes(app: FastifyInstance) {
       )
     }
 
-    // Réputation : suppression d'un statut = -2 (anti-farming)
-    await awardPoints(userId, -REPUTATION.SOCIAL_POST)
+    // Réputation : suppression d'un statut = -2 (anti-farming), pour son AUTEUR
+    await awardPoints(target[0].author_id, -REPUTATION.SOCIAL_POST)
 
     // Temps réel : retrait du post chez tous + MAJ compteur (total descendants) de la racine
     io?.to('presence').emit('feed:delete', { id: del.rows[0].id })
