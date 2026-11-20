@@ -319,23 +319,33 @@ export default async function adminRoutes(app: FastifyInstance) {
   }, async (_req, reply) => {
     const communityId = await getCommunityId()
 
+    // Les compteurs se calculent en UN passage par table, regroupé par auteur, au lieu de
+    // deux sous-requêtes PAR MEMBRE (20/11 : 40 ms -> 2,5 ms sur nodyx.org, 153 membres,
+    // résultats identiques vérifiés sur les 4 instances ; l'écart grandit avec le forum).
     const { rows } = await db.query(
-      `SELECT
+      `WITH tc AS (
+         SELECT t.author_id, COUNT(*)::int AS n FROM threads t
+           JOIN categories c ON c.id = t.category_id
+          WHERE c.community_id = $1 GROUP BY t.author_id
+       ), pc AS (
+         SELECT p.author_id, COUNT(*)::int AS n FROM posts p
+           JOIN threads t ON t.id = p.thread_id
+           JOIN categories c ON c.id = t.category_id
+          WHERE c.community_id = $1 GROUP BY p.author_id
+       )
+       SELECT
          cm.user_id, cm.role, cm.joined_at,
          u.username, u.email, u.avatar, u.created_at AS registered_at,
          cg.id   AS grade_id,
          cg.name AS grade_name,
          cg.color AS grade_color,
-         (SELECT COUNT(*)::int FROM threads t
-          JOIN categories c ON c.id = t.category_id
-          WHERE t.author_id = u.id AND c.community_id = $1) AS thread_count,
-         (SELECT COUNT(*)::int FROM posts p
-          JOIN threads t ON t.id = p.thread_id
-          JOIN categories c ON c.id = t.category_id
-          WHERE p.author_id = u.id AND c.community_id = $1) AS post_count
+         COALESCE(tc.n, 0) AS thread_count,
+         COALESCE(pc.n, 0) AS post_count
        FROM community_members cm
        JOIN users u ON u.id = cm.user_id
        LEFT JOIN community_grades cg ON cg.id = cm.grade_id
+       LEFT JOIN tc ON tc.author_id = cm.user_id
+       LEFT JOIN pc ON pc.author_id = cm.user_id
        WHERE cm.community_id = $1
          AND u.is_system = false
          AND NOT EXISTS (
