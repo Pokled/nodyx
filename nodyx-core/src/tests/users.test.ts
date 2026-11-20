@@ -256,7 +256,9 @@ describe('GET /api/v1/users/:username/profile', () => {
       links:        [],
       metadata:     { theme: { accent: '#7c3aed' } },
     }
-    vi.mocked(db.query).mockResolvedValue({ rows: [profileRow], rowCount: 1 } as any)
+    // Aucun bannissement actif (« bannir cache tout », 20/11) : la table des bannissements répond vide
+    vi.mocked(db.query).mockImplementation(async (sql: unknown) =>
+      (/community_bans/.test(String(sql)) ? { rows: [], rowCount: 0 } : { rows: [profileRow], rowCount: 1 }) as any)
 
     const res = await app.inject({
       method: 'GET',

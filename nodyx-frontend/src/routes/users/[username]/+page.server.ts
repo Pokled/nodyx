@@ -10,8 +10,9 @@ export const load: PageServerLoad = async ({ params, fetch, parent }) => {
 
 	// Profile + initial posts in parallel
 	const [profileRes, postsRes] = await Promise.all([
-		apiFetch(fetch, `/users/${username}/profile`),
-		apiFetch(fetch, `/social/${username}/posts?limit=10`),
+		// Le jeton : l'équipe voit le profil d'un banni (avec la mention), les autres non
+		apiFetch(fetch, `/users/${username}/profile`, { headers }),
+		apiFetch(fetch, `/social/${username}/posts?limit=10`, { headers }),
 	])
 
 	if (profileRes.status === 404) error(404, 'Utilisateur introuvable')

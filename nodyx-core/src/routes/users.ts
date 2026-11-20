@@ -5,7 +5,8 @@ import { mkdirSync } from 'fs'
 import path from 'path'
 import sharp from 'sharp'
 import { rateLimit } from '../middleware/rateLimit'
-import { requireAuth } from '../middleware/auth'
+import { requireAuth, optionalAuth } from '../middleware/auth'
+import { activeBanOf, viewerIsTeam, ACTIVE_BAN } from '../services/bannedUsers'
 import { validate } from '../middleware/validate'
 import * as UserModel from '../models/user'
 import { toPublicUser, toSelfUser } from '../utils/publicUser'
@@ -139,6 +140,7 @@ export default async function userRoutes(app: FastifyInstance) {
       WHERE  u.username ILIKE $1
       AND    u.id != $2
       AND    u.is_system = false
+      AND    NOT ${ACTIVE_BAN('u.id')}
       ORDER  BY u.username ASC
       LIMIT  10
     `, [`%${q.trim()}%`, userId])
@@ -332,7 +334,7 @@ export default async function userRoutes(app: FastifyInstance) {
 
   // GET /api/v1/users/:username/profile
   app.get('/:username/profile', {
-    preHandler: [rateLimit],
+    preHandler: [rateLimit, optionalAuth],
   }, async (request, reply) => {
     const { username } = request.params as { username: string }
 
@@ -371,6 +373,16 @@ export default async function userRoutes(app: FastifyInstance) {
 
     if (!rows[0]) {
       return reply.code(404).send({ error: 'User not found', code: 'NOT_FOUND' })
+    }
+
+    // Banni : plus de vitrine (profil, bio, liens), sauf pour l'équipe, qui le voit
+    // avec la mention du bannissement
+    const ban = await activeBanOf(rows[0].id)
+    if (ban) {
+      if (!(await viewerIsTeam(request.user?.userId))) {
+        return reply.code(404).send({ error: 'User not found', code: 'NOT_FOUND' })
+      }
+      return reply.send({ ...rows[0], banned: ban })
     }
 
     return reply.send(rows[0])
@@ -469,7 +481,7 @@ export default async function userRoutes(app: FastifyInstance) {
 
   // GET /api/v1/users/:username/activity — heatmap data (last 365 days)
   app.get('/:username/activity', {
-    preHandler: [rateLimit],
+    preHandler: [rateLimit, optionalAuth],
   }, async (request, reply) => {
     const { username } = request.params as { username: string }
 
@@ -482,6 +494,9 @@ export default async function userRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'User not found', code: 'NOT_FOUND' })
     }
     const userId = userRows[0].id
+    if (await activeBanOf(userId) && !(await viewerIsTeam(request.user?.userId))) {
+      return reply.code(404).send({ error: 'User not found', code: 'NOT_FOUND' })
+    }
 
     // One query — union posts + threads, group by date
     // Returns: date (YYYY-MM-DD), count
