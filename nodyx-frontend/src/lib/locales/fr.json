@@ -6231,6 +6231,7 @@
   "og2.rv_more_before": "Afficher les messages plus anciens",
   "og2.rv_more_after": "Afficher les messages plus récents",
   "og2.rv_start": "Début de la conversation",
+  "og2.rv_stale": "Ce dossier a déjà été traité par l'équipe, ou il a expiré. Voici ce qui attend encore.",
   "og2.rv_tag_this": "Retenu, seul l'auteur le voit",
   "og2.rv_tag_edit": "Modification retenue, l'ancien texte reste en ligne",
   "og2.rv_tag_also": "Retenu aussi",

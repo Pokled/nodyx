@@ -18,6 +18,7 @@
 	import { og, OgError } from '$lib/octoguard/api'
 	import { page } from '$app/state'
 	import { goto } from '$app/navigation'
+	import { tick } from 'svelte'
 	import { htmlToText } from '$lib/octoguard/text'
 
 	type Around = { id: string; author_id: string | null; author_username: string | null; content: string | null; created_at: string; is_target: boolean }
@@ -49,14 +50,25 @@
 		return () => { removeEventListener('hashchange', syncHash); removeEventListener('popstate', syncHash) }
 	})
 	const sel = $derived.by(() => { const id = hash.slice(1); return order.some((x) => x.id === id) ? id : null })
+	// Un lien vers un dossier déjà décidé (ou expiré) : on le dit, au lieu d'une file muette
+	const stale = $derived(/^#[0-9a-f-]{36}$/i.test(hash) && !sel)
 	const h = $derived(order.find((x) => x.id === sel) ?? null)
 	let lastOpened = $state<string | null>(null)
 	const queueUrl = () => page.url.pathname + page.url.search
 	function open(id: string) {
 		win = { before: 5, after: 3 }; error = null; lastOpened = id
 		// La marque « ouvert depuis la file » vit dans l'historique : le navigateur la restaure lui-même
-		goto(`#${id}`, { reset: false, state: { rvQueue: true } }).then(() => { syncHash(); window.scrollTo(0, 0) })
+		goto(`#${id}`, { reset: false, state: { rvQueue: true } }).then(async () => {
+			syncHash(); window.scrollTo(0, 0)
+			await tick(); document.querySelector<HTMLElement>('.rv-back')?.focus({ preventScroll: true })
+		})
 	}
+	// Au retour dans la file, le focus revient sur la ligne qu'on venait d'ouvrir (clavier, lecteur d'écran)
+	$effect(() => {
+		if (sel || !lastOpened) return
+		const id = lastOpened
+		tick().then(() => document.querySelector<HTMLElement>(`[data-row="${id}"]`)?.focus({ preventScroll: true }))
+	})
 	function backToQueue() {
 		// Ouvert depuis la file : on y revient d'un pas en arrière. Ouvert par un lien : on remplace l'adresse.
 		if (page.state.rvQueue) history.back()
@@ -213,6 +225,7 @@
 				<span class="rv-count">{tFn(held.length > 1 ? 'og2.rv_count_n' : 'og2.rv_count_1', { n: held.length })}, {tFn(authorCount > 1 ? 'og2.rv_authors_n' : 'og2.rv_authors_1', { n: authorCount })}</span>
 			</div>
 			<p><span class="rv-pc">{tFn('og2.rv_hint_click')}</span><span class="rv-touch">{tFn('og2.rv_hint_touch')}</span></p>
+			{#if stale}<p class="rv-stale" role="status">{tFn('og2.rv_stale')}</p>{/if}
 		</div>
 		<div class="rv-cards" role="listbox" aria-labelledby="rv-file-title">
 			{#each groups as l (l[0].author_id)}
@@ -224,7 +237,7 @@
 						<span class="rv-summary">{summary(l)}</span>
 					</div>
 					{#each l as x (x.id)}
-						<button type="button" class="rv-row" role="option" aria-selected={x.id === lastOpened} onclick={() => open(x.id)}>
+						<button type="button" class="rv-row" role="option" data-row={x.id} aria-selected={x.id === lastOpened} onclick={() => open(x.id)}>
 							<span class="rv-time">{time(x.created_at)}</span>
 							<span class="rv-body"><span class="rv-place">{placeShort(x)}</span><span class="rv-excerpt">{x.payload.title ? `${x.payload.title} : ` : ''}{htmlToText(x.payload.content)}</span></span>
 							<svg class="rv-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
@@ -359,6 +372,7 @@
 	.rv-count { margin-left: auto; font-size: 13px; color: var(--rv-muted); white-space: nowrap; }
 	.rv-file-head p { margin: 2px 0 0; font-size: 13px; color: var(--rv-faint); }
 	.rv-touch { display: none; }
+	.rv-file-head .rv-stale { margin-top: 8px; padding: 8px 10px; border-radius: var(--pl-r-control); background: var(--pl-changed-soft); color: var(--pl-changed); font-weight: 700; }
 	.rv-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 12px; align-items: start; }
 	.rv-card { background: var(--rv-surface); border: 1px solid var(--rv-line); border-radius: var(--pl-r-panel); overflow: hidden; }
 	.rv-card-head { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--rv-line);
@@ -472,6 +486,8 @@
 		.rv-anchor { position: static; margin: 8px 0 0 auto; display: flex; width: max-content; box-shadow: none; }
 		.rv-decide .rv-btn { flex: 1; justify-content: center; }
 		.rv-tip-txt { left: auto; right: -40px; transform: none; width: 240px; }
+		/* au-dessus de la barre du bas de l'application (Actu, Forum, Chat…) */
+		.rv-toast { bottom: calc(76px + env(safe-area-inset-bottom)); }
 	}
 	@media (prefers-reduced-motion: reduce) { .rv-row, .rv-chev { transition: none; } }
 </style>
