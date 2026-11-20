@@ -66,9 +66,11 @@
 	let slides      = $state<Slide[]>([])
 	let loading     = $state(true)
 	let slideIndex  = $state(0)
-	let progressPct = $state(0)
+	// La barre de progression est une animation CSS ; sa fin fait avancer la diapositive.
+	// `cycle` la relance (nouvel élément) à chaque changement. Minuterie seulement pour
+	// qui demande « moins d'animations » (la barre n'y joue pas).
+	let cycle       = $state(0)
 	let slideTimer: ReturnType<typeof setInterval> | null = null
-	let progressTimer: ReturnType<typeof setInterval> | null = null
 
 	// ── YouTube helpers ──────────────────────────────────────────────────────
 	function extractYoutubeId(url: string): string | null {
@@ -132,7 +134,6 @@
 
 		slides      = all
 		slideIndex  = 0
-		progressPct = 0
 		loading     = false
 		startTimers()
 	}
@@ -140,27 +141,31 @@
 	// ── Slideshow logic ──────────────────────────────────────────────────────
 	function slideTo(i: number) {
 		slideIndex  = ((i % slides.length) + slides.length) % slides.length
-		progressPct = 0
+		cycle++
 	}
 	function slideNext() { slideTo(slideIndex + 1) }
 	function slidePrev() { slideTo(slideIndex - 1) }
 
 	function startTimers() {
 		if (slides.length < 2) return
-		if (slideTimer)    clearInterval(slideTimer)
-		if (progressTimer) clearInterval(progressTimer)
-		progressPct    = 0
-		slideTimer     = setInterval(slideNext, slideMs)
-		progressTimer  = setInterval(() => {
-			progressPct = Math.min(progressPct + 100 / (slideMs / 100), 100)
-		}, 100)
+		if (slideTimer) clearInterval(slideTimer)
+		slideTimer = null
+		cycle++
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) slideTimer = setInterval(slideNext, slideMs)
 	}
+	// Filet : si la barre ne joue jamais (masquée par un CSS d'instance), on avance quand même.
+	// Quand elle joue, sa fin arrive avant et ce délai est annulé au changement de `cycle`.
+	$effect(() => {
+		cycle
+		if (slides.length < 2 || slideTimer) return
+		const t = setTimeout(slideNext, slideMs * 2)
+		return () => clearTimeout(t)
+	})
 
 	// ── Lifecycle ────────────────────────────────────────────────────────────
 	onMount(fetchSlides)
 	onDestroy(() => {
-		if (slideTimer)    clearInterval(slideTimer)
-		if (progressTimer) clearInterval(progressTimer)
+		if (slideTimer) clearInterval(slideTimer)
 	})
 
 	// ── Time helper ──────────────────────────────────────────────────────────
@@ -284,7 +289,9 @@
 								aria-label={tFn('home.slide_aria', { n: i+1 })}
 							>
 								{#if i === slideIndex}
-									<span class="as-progress" style="width:{progressPct}%"></span>
+									{#key cycle}
+										<span class="as-progress" style="animation-duration:{slideMs}ms" onanimationend={slideNext}></span>
+									{/key}
 								{/if}
 							</button>
 						{/each}
@@ -564,10 +571,16 @@
 		position: absolute;
 		top: -1px;
 		left: 0;
+		width: 100%;
 		height: 4px;
 		background: linear-gradient(to right, var(--np), var(--na));
-		transition: none;
+		transform-origin: left;
+		/* 60 crans (10 par seconde), pas une animation continue : sans carte graphique,
+		   le continu recompose la page 60 fois par seconde (mesuré : 2 fois le coût de
+		   l'ancienne minuterie, et 4 fois celui des crans). */
+		animation: as-progress 6s steps(60, end) both;
 	}
+	@keyframes as-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 	.as-arrows {
 		margin-left: auto;
 		display: flex;

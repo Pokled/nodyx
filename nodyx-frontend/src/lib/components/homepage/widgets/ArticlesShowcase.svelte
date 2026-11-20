@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { useFollowAmbiance } from '../followAmbiance'
+	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
 	import { onMount, onDestroy } from 'svelte'
 	import { browser } from '$app/env'
 	import { t, locale } from '$lib/i18n'
@@ -314,7 +315,7 @@
 
 	{:else if layout === 'ticker'}
 		<!-- ─────────── TICKER : défilement vertical lent ─────────── -->
-		<div class="as-ticker">
+		<div class="as-ticker" use:pauseOffscreen>
 			<div class="as-ticker-track">
 				{#each [...articles, ...articles] as a}
 					<a class="as-ticker-item" href={articleUrl(a)}>
