@@ -2,6 +2,7 @@
 	// Signalements, dans OctoGuard (maquette validée, CDC E4h) : à gauche la
 	// file, au centre le contenu, à droite la décision. Une seule file pour les
 	// signalements des membres, ceux d'OctoGuard et les contenus retenus.
+	import { reportKey, reportKeyLabel } from '$lib/octoguard/reportLabel'
 	import { page } from '$app/state'
 	import { invalidateAll } from '$app/navigation'
 	import { t, locale } from '$lib/i18n'
@@ -59,7 +60,7 @@
 			if (!c) { c = { key, first: r, reports: [], categories: {}, octoguard: false }; map.set(key, c) }
 			c.reports.push(r)
 			if (r.source === 'octoguard') c.octoguard = true
-			const cat = r.category ?? 'other'
+			const cat = reportKey(r)
 			c.categories[cat] = (c.categories[cat] ?? 0) + 1
 			if (r.created_at < c.first.created_at) c.first = { ...r, snapshot: c.first.snapshot ?? r.snapshot }
 		}
@@ -325,7 +326,7 @@
 							<b>{r.target_author_username ?? tFn('areports.deleted_account')}, {r.target_label ?? tFn(`areports.type_${r.target_type}`)}</b>
 							<span class="og-q-time">{ago(r.created_at)}</span>
 							<span class="og-q-sub">
-								{reporters(c)} · {Object.keys(c.categories).map((k) => tFn(`report.cat_${k}`).toLowerCase()).join(', ')}
+								{reporters(c)} · {Object.keys(c.categories).map((k) => (k.startsWith('og:') ? reportKeyLabel(k, tFn) : reportKeyLabel(k, tFn).toLowerCase())).join(', ')}
 							</span>
 						</button>
 					{/each}
@@ -390,7 +391,7 @@
 						</div>
 						<div class="og-rp-pills">
 							{#each Object.entries(selCase.categories) as [cat, n] (cat)}
-								<span class="adm-pill og-tone {cat === 'illegal' || cat === 'hate' || cat === 'harassment' ? 'og-k-delete' : 'og-k-warn'}">{tFn(`report.cat_${cat}`)}{n > 1 ? ` ×${n}` : ''}</span>
+								<span class="adm-pill og-tone {cat === 'illegal' || cat === 'hate' || cat === 'harassment' ? 'og-k-delete' : 'og-k-warn'}">{reportKeyLabel(cat, tFn)}{n > 1 ? ` ×${n}` : ''}</span>
 							{/each}
 						</div>
 					</div>
@@ -413,7 +414,7 @@
 							{#each selCase.reports as rep (rep.id)}
 								<li>
 									<b>{rep.source === 'octoguard' ? tFn('areports.by_octoguard') : (rep.reporter_username ?? tFn('areports.deleted_account'))}</b>
-									<span class="og-meta">{tFn(`report.cat_${rep.category ?? 'other'}`)} · {ago(rep.created_at)}</span>
+									<span class="og-meta">{reportKeyLabel(reportKey(rep), tFn)} · {ago(rep.created_at)}</span>
 									{#if rep.reason}<span class="og-rp-reason">« {rep.reason} »</span>{/if}
 								</li>
 							{/each}
