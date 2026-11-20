@@ -90,13 +90,16 @@ build_app() {
 # l'ancienne version intacte jusqu'à son redémarrage. Les 3 versions les plus récentes
 # restent (retour arrière : un ln -sfn).
 PENDING=()
+# as_user <utilisateur|root> <commande> : exécute en root, ou sous l'utilisateur de l'instance.
+as_user() { if [[ "$1" == "root" ]]; then bash -c "$2"; else sudo -u "$1" bash -c "$2"; fi; }
 build_frontend() {
   local label="$1" dir="$2" as="${3:-root}"
   local rel=".builds/$(date +%Y%m%d-%H%M%S)-$(git -C "$dir" rev-parse --short HEAD 2>/dev/null || echo local)"
   local cmd="cd '$dir' && { $(deps_cmd); } && NODYX_BUILD_OUT='$rel' npm run build && test -f '$rel/index.js'"
   local rc=0
-  mkdir -p "$dir/.builds"
-  if [[ "$as" != "root" ]]; then chown "$as:$as" "$dir/.builds"; fi
+  # Dans le dossier d'une instance (à nodyx), on n'agit JAMAIS en root : un .builds remplacé
+  # par un lien ferait suivre à root un chown ou un rm -rf hors du dossier (revue du 20/11).
+  as_user "$as" "mkdir -p '$dir/.builds'"
   if [[ "$as" == "root" ]]; then
     bash -c "$cmd" >/dev/null 2>&1 || rc=$?
   else
@@ -107,7 +110,7 @@ build_frontend() {
     ok "$label construite à côté ($rel), bascule au redémarrage"
     return 0
   fi
-  rm -rf "${dir:?}/$rel"
+  as_user "$as" "rm -rf '${dir:?}/$rel'"
   fail "$label : BUILD EN ÉCHEC (la version en service n'a pas été touchée)"
   return 1
 }
@@ -131,7 +134,7 @@ swap_pending() {
 # drop_pending : un build du groupe a échoué, les frontends neufs ne serviront jamais.
 drop_pending() {
   local item dir rel as
-  for item in "${PENDING[@]}"; do IFS='|' read -r dir rel as <<<"$item"; rm -rf "${dir:?}/$rel"; done
+  for item in "${PENDING[@]}"; do IFS='|' read -r dir rel as <<<"$item"; as_user "$as" "rm -rf '${dir:?}/$rel'"; done
   PENDING=()
 }
 
