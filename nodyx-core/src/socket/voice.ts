@@ -1,3 +1,4 @@
+import { teamCharterBlocks } from '../services/charter'
 import { Server, Socket } from 'socket.io'
 import * as crypto from 'crypto'
 import { getAccess, outranks, rankOf } from '../services/permissions'
@@ -285,6 +286,8 @@ export function registerVoiceHandlers(socket: Socket, server: Server): void {
     // autre modérateur) ; un admin peut exclure un admin, comme avant.
     if (targetRole === 'owner') return
     if (actor.rank < rankOf('admin') && !outranks(actor, targetRole)) return
+    // Expulser du vocal est un outil de l'équipe (lot 7e)
+    if (await teamCharterBlocks(userId)) { socket.emit('charter:team_required'); return }
 
     target.emit('voice:kicked', { channelId, by: username })
     freeSeat(channelId, target.id)

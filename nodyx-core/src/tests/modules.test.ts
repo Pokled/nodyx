@@ -163,6 +163,7 @@ describe('GET /api/v1/admin/modules', () => {
   it('returns full module list for admin', async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({ rows: [{ role: 'admin', community_id: 'c1', community_name: 'Nodyx' }] } as any) // adminOnly
+      .mockResolvedValueOnce({ rows: [] } as any) // charte de l'équipe (lot 7e) : aucune, rien à signer
       .mockResolvedValueOnce({ rows: FAKE_MODULES } as any) // SELECT modules
 
     const app = await buildApp(app => adminRoutes(app))

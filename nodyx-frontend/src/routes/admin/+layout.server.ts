@@ -2,6 +2,7 @@ import { redirect, error } from '@sveltejs/kit'
 import type { LayoutServerLoad } from './$types'
 import { apiFetch } from '$lib/api'
 import { mayOpenAdmin, type AdminAccess } from '$lib/adminAccess'
+import { safeAdminNext } from '$lib/charter/teamDoor'
 
 const UNAVAILABLE = 'Service temporairement indisponible'
 
@@ -19,6 +20,20 @@ export const load: LayoutServerLoad = async ({ fetch, cookies, url }) => {
 	if (meRes.status === 403) redirect(302, '/')
 	if (!meRes.ok) error(503, UNAVAILABLE)
 	const access = (await meRes.json()) as AdminAccess
+
+	// La charte de l'équipe (lot 7e) : tant qu'elle n'est pas signée, les outils refusent.
+	// On passe par /admin/team-charter, qui ne charge rien et montre la porte, puis on
+	// revient où l'on allait. En panne de lecture : on laisse passer (le cœur tranche).
+	const status = await apiFetch(fetch, '/charter/status', auth).then(r => (r.ok ? r.json() : null)).catch(() => null)
+	const teamCharter = status?.team === true
+	const here = url.pathname.replace(/\/+$/, '')
+	if (teamCharter && here !== '/admin/team-charter') {
+		redirect(302, `/admin/team-charter?next=${encodeURIComponent(url.pathname + url.search)}`)
+	}
+	if (here === '/admin/team-charter') {
+		if (!teamCharter) redirect(302, safeAdminNext(url.searchParams.get('next')))
+		return { token, stats: null, updateCheck: null, access, teamCharter: true }
+	}
 
 	// Une page hors de ses droits : retour au tableau de bord plutôt qu'un refus sec
 	if (!mayOpenAdmin(url.pathname, access)) redirect(302, '/admin')

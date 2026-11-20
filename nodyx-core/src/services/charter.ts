@@ -188,6 +188,15 @@ export async function mustSign(aud: Audience, userId: string): Promise<boolean> 
   }
 }
 
+// ── La porte de l'équipe (lot 7e, CDC §E4j) ──────────────────────────────────
+// Tant que la charte de l'équipe (allumée) n'est pas signée, les OUTILS de l'équipe
+// refusent, partout où un droit d'équipe est utilisé : gardes de permission, admin,
+// modération du forum, grades, événements des autres, sockets de modération. Le
+// propriétaire n'est jamais concerné (il l'écrit), et une panne n'enferme personne
+// (mustSign est tolérant). L'interface ouvre la porte de l'équipe sur ce code.
+export const TEAM_UNSIGNED = { error: 'Sign the team charter to use the team tools', code: 'CHARTER_TEAM_UNSIGNED' } as const
+export const teamCharterBlocks = (userId: string): Promise<boolean> => mustSign('team', userId)
+
 export type CharterGate = { allow: true } | { allow: false; code: 'CHARTER_UNSIGNED'; i18n_key: 'charter.unsigned' }
 
 /**

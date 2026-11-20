@@ -75,6 +75,9 @@ export async function adminOnly(request: FastifyRequest, reply: FastifyReply): P
   if (!rows[0] || !['owner', 'admin'].includes(rows[0].role)) {
     return reply.code(403).send({ error: 'Admin access required', code: 'FORBIDDEN' })
   }
+  // La charte de l'équipe (lot 7e) : un admin qui ne l'a pas signée attend (pas le propriétaire)
+  const { teamCharterBlocks, TEAM_UNSIGNED } = await import('../services/charter')
+  if (await teamCharterBlocks(payload.userId)) return reply.code(403).send(TEAM_UNSIGNED)
 
   request.user = payload
   redis.setex(`heartbeat:${payload.userId}`, 900, '1').catch(() => {})

@@ -1,3 +1,4 @@
+import { TEAM_CHARTER_EVENT } from '$lib/charter/teamDoor'
 import { browser } from '$app/env'
 import { writable, type Writable } from 'svelte/store'
 import type { Socket } from 'socket.io-client'
@@ -71,6 +72,9 @@ export async function initSocket(token: string, initialCount: number): Promise<v
   })
 
   // ── Chat mention badge (separate from general notification bell) ────────────
+  // La charte de l'équipe n'est pas signée (lot 7e) : le layout ouvre la porte de l'équipe
+  _socket.on('charter:team_required', () => { window.dispatchEvent(new CustomEvent(TEAM_CHARTER_EVENT)) })
+
   _socket.on('chat:mention', () => {
     chatMentionStore.update(n => n + 1)
   })

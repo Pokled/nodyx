@@ -134,8 +134,9 @@ export function kindOfNode(name: string): BlockKind {
 
 // ── Les modèles (« Partir d'un modèle ») ────────────────────────────────────
 
-export type TemplateId = 'example' | 'youth' | 'gaming' | 'help'
-export const TEMPLATES: readonly TemplateId[] = ['example', 'youth', 'gaming', 'help']
+export type TemplateId = 'complete' | 'example' | 'youth' | 'gaming' | 'help'
+// « complete » d'abord : la charte générique, prête à publier (membres comme équipe)
+export const TEMPLATES: readonly TemplateId[] = ['complete', 'example', 'youth', 'gaming', 'help']
 
 type Piece =
 	| ['banner', string, string, string]      // photo, alt, légende
@@ -171,6 +172,35 @@ export function templateHtml(id: TemplateId, audience: 'members' | 'team', tFn: 
 	const tk = tokens(tFn)
 	const v = { community: tk.community, user: tk.user }
 	const k = (key: string) => tFn(key, v)
+	// La charte générique, complète et prête à publier (lot 7e, demandée par Jonathan le 20/11)
+	if (id === 'complete' && audience === 'team') return build([
+		['banner', '/biomes/de-1.webp', k('chtpl.team_banner_alt'), k('chtpl.full_team_banner')],
+		['lead', k('chtpl.full_team_lead')],
+		['h2', 'green', k('chtpl.full_team_h1')], ['p', k('chtpl.full_team_p1')],
+		['h2', 'blue', k('chtpl.full_team_h2')], ['p', k('chtpl.full_team_p2')],
+		['h2', 'orange', k('chtpl.full_team_h3')], ['callout', 'orange', k('chtpl.full_team_callout_strong'), k('chtpl.full_team_callout')],
+		['h2', 'violet', k('chtpl.full_team_h4')], ['p', k('chtpl.full_team_p4')],
+		['h2', 'red', k('chtpl.full_team_h5')], ['p', k('chtpl.full_team_p5')],
+		['h2', 'blue', k('chtpl.full_team_h6')], ['p', k('chtpl.full_team_p6')],
+		['h2', 'green', k('chtpl.full_team_h7')],
+		['ul', [k('chtpl.full_team_li1'), k('chtpl.full_team_li2'), k('chtpl.full_team_li3')]],
+		['hr'], ['end', k('chtpl.full_team_end')],
+	])
+	if (id === 'complete') return build([
+		['banner', '/biomes/fr-1.webp', k('chtpl.ex_banner_alt'), k('chtpl.ex_banner')],
+		['lead', k('chtpl.full_lead')],
+		['h2', 'green', k('chtpl.full_h1')], ['p', k('chtpl.full_p1')],
+		['h2', 'red', k('chtpl.full_h2')], ['p', k('chtpl.full_p2')],
+		['h2', 'orange', k('chtpl.full_h3')],
+		['callout', 'orange', k('chtpl.full_callout_strong'), k('chtpl.full_callout')], ['p', k('chtpl.full_p3')],
+		['h2', 'blue', k('chtpl.full_h4')], ['p', k('chtpl.full_p4')],
+		['h2', 'violet', k('chtpl.full_h5')], ['p', k('chtpl.full_p5')],
+		['h2', 'green', k('chtpl.full_h6')], ['p', k('chtpl.full_p6')],
+		['h2', 'blue', k('chtpl.full_h7')],
+		['ul', [k('chtpl.full_li1'), k('chtpl.full_li2'), k('chtpl.full_li3')]],
+		['h2', 'red', k('chtpl.full_h8')], ['p', k('chtpl.full_p8')],
+		['hr'], ['end', k('chtpl.full_end')],
+	])
 	if (id === 'example' && audience === 'team') return build([
 		['banner', '/biomes/de-1.webp', k('chtpl.team_banner_alt'), k('chtpl.team_banner')],
 		['lead', k('chtpl.team_lead')],

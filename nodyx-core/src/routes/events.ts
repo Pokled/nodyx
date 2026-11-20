@@ -19,6 +19,7 @@ import { canReadEvent } from '../services/eventAccess'
 import { ownOrigins } from '../utils/instanceOrigins'
 import { getAccess, rankOf, outranks } from '../services/permissions'
 import { isTimeZone } from '../utils/timezone'
+import { teamCharterBlocks, TEAM_UNSIGNED } from '../services/charter'
 
 // La description d'un événement vient de NodyxEditor, comme un message du forum :
 // même nettoyeur (utils/sanitize) et même recopie des images externes. Avant, une
@@ -139,7 +140,7 @@ function withoutCommunity<T extends Record<string, unknown>>(row: T): Omit<T, 'c
 // rôle seul (un grade « Modérer » ne servait à rien ici), et un auteur parti ou
 // banni gardait la main sur ses événements. Garde-fou de rang comme au forum :
 // un modérateur ne touche pas l'événement de quelqu'un de rang égal ou supérieur.
-async function canManageEvent(userId: string, eventId: string): Promise<boolean> {
+async function canManageEvent(userId: string, eventId: string): Promise<false | 'author' | 'mod'> {
   const { rows } = await db.query<{ author_id: string | null; community_id: string }>(
     `SELECT e.author_id, e.community_id FROM events e WHERE e.id = $1 LIMIT 1`,
     [eventId]
@@ -147,11 +148,11 @@ async function canManageEvent(userId: string, eventId: string): Promise<boolean>
   if (!rows[0]) return false
   const actor = await getAccess(rows[0].community_id, userId)
   if (actor.role === null) return false                       // plus membre : plus rien
-  if (rows[0].author_id === userId) return true
+  if (rows[0].author_id === userId) return 'author'
   if (!actor.permissions.includes('moderate_content')) return false
-  if (actor.rank >= rankOf('admin') || !rows[0].author_id) return true
+  if (actor.rank >= rankOf('admin') || !rows[0].author_id) return 'mod'
   const author = await getAccess(rows[0].community_id, rows[0].author_id)
-  return outranks(actor, author.role)
+  return outranks(actor, author.role) ? 'mod' : false
 }
 
 // -- Routes -------------------------------------------------------------------
@@ -259,7 +260,7 @@ export default async function eventsRoutes(app: FastifyInstance) {
       attendees = rsvps
     }
 
-    const canManage = userId ? await canManageEvent(userId, req.params.id) : false
+    const canManage = userId ? !!(await canManageEvent(userId, req.params.id)) : false
     return reply.send({ event: { ...event, can_manage: canManage }, attendees })
   })
 
@@ -323,9 +324,12 @@ export default async function eventsRoutes(app: FastifyInstance) {
     { preHandler: [rateLimit, requireAuth, validate({ body: UpdateEventSchema })] },
     async (req, reply) => {
       const userId = (req as any).user.userId
-      if (!(await canManageEvent(userId, req.params.id))) {
+      const how = await canManageEvent(userId, req.params.id)
+      if (!how) {
         return reply.status(403).send({ error: 'Non autorise', code: 'EVENT_FORBIDDEN' })
       }
+      // Toucher l'événement d'un autre est un outil de l'équipe (lot 7e)
+      if (how === 'mod' && await teamCharterBlocks(userId)) return reply.status(403).send(TEAM_UNSIGNED)
 
       const body = req.body
       // Couverture vérifiée AVANT tout travail (recopie des images de la description).
@@ -406,9 +410,12 @@ export default async function eventsRoutes(app: FastifyInstance) {
     { preHandler: [rateLimit, requireAuth] },
     async (req, reply) => {
       const userId = (req as any).user.userId
-      if (!(await canManageEvent(userId, req.params.id))) {
+      const how = await canManageEvent(userId, req.params.id)
+      if (!how) {
         return reply.status(403).send({ error: 'Non autorise', code: 'EVENT_FORBIDDEN' })
       }
+      // Toucher l'événement d'un autre est un outil de l'équipe (lot 7e)
+      if (how === 'mod' && await teamCharterBlocks(userId)) return reply.status(403).send(TEAM_UNSIGNED)
 
       const { rows: gone } = await db.query<{ is_public: boolean }>(
         `DELETE FROM events WHERE id = $1 RETURNING is_public`, [req.params.id])

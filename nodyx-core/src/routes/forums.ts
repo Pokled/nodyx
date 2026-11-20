@@ -21,7 +21,7 @@ import { checkHtmlContent } from '../services/contentFilter'
 import { io } from '../socket/io'
 import { can, getAccess, communityOfThread, outranks, rankOf } from '../services/permissions'
 import { isUserMuted } from '../services/octoguard'
-import { charterGate, charterRefusal } from '../services/charter'
+import { charterGate, charterRefusal, teamCharterBlocks, TEAM_UNSIGNED } from '../services/charter'
 import { moderateText, textForModeration, blockedBody, heldBody } from '../services/octoguard/moderate'
 import { holdContent, holdRefusal } from '../services/octoguard/held'
 import { fileAutoReport } from '../services/octoguard/autoReport'
@@ -516,6 +516,7 @@ app.get('/threads', {
     if (!isAuthor && !modAccess) {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
+    if (!isAuthor && modAccess && await teamCharterBlocks(userId)) return reply.code(403).send(TEAM_UNSIGNED)
 
     // Rehost les <img> externes avant sanitize (cf POST /threads).
     const rehostEdit = await rehostExternalImages(content)
@@ -562,6 +563,7 @@ app.get('/threads', {
     if (!isAuthor && !modAccess) {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
+    if (!isAuthor && modAccess && await teamCharterBlocks(userId)) return reply.code(403).send(TEAM_UNSIGNED)
 
     // Fantôme (D53) : l'auteur efface lui-même, dans les 10 minutes, une réponse qui
     // mentionnait quelqu'un. AVANT l'effacement : ses notifications partiraient avec elle.
@@ -609,6 +611,7 @@ app.get('/threads', {
     if (!isAuthor && !modAccess) {
       return reply.code(403).send({ error: 'Forbidden', code: 'FORBIDDEN' })
     }
+    if (!isAuthor && modAccess && await teamCharterBlocks(userId)) return reply.code(403).send(TEAM_UNSIGNED)
 
     // Authors without mod rights can only edit the title
     if (isAuthor && !modAccess) {

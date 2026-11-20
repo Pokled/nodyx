@@ -53,6 +53,7 @@
 	import ReportDialog from '$lib/components/ReportDialog.svelte';
 	import CharterDoor from '$lib/components/charter/CharterDoor.svelte';
 	import { charterReadable } from '$lib/charter/readable';
+	import { TEAM_CHARTER_EVENT, isTeamCharterRefusal } from '$lib/charter/teamDoor';
 	import HelpOverlay from '$lib/components/HelpOverlay.svelte';
 	const tFn = $derived($t)
 
@@ -263,6 +264,27 @@
 	// charte) ni sur les pages de connexion. Le serveur refuse de toute façon toute
 	// écriture tant qu'elle n'est pas signée.
 	let charterDoor = $state(false)
+	// La porte de l'équipe (lot 7e) : un outil de l'équipe a répondu « signe d'abord la
+	// charte de l'équipe » (requête ou socket). Elle se ferme (« Plus tard ») : seuls les
+	// outils attendent. Dans l'admin, c'est /admin/team-charter qui s'en charge.
+	let teamDoor = $state(false)
+	onMount(() => {
+		const open = () => { if (!page.url.pathname.startsWith('/admin')) teamDoor = true }
+		window.addEventListener(TEAM_CHARTER_EVENT, open)
+		// Observer (sans rien changer) les réponses de l'API : 89 appels passent par fetch
+		// directement, un seul point d'écoute vaut mieux que 89 retouches.
+		const nativeFetch = window.fetch
+		const watched: typeof window.fetch = async (...args) => {
+			const res = await nativeFetch(...args)
+			if (res.status === 403) void isTeamCharterRefusal(res).then(yes => { if (yes) open() })
+			return res
+		}
+		window.fetch = watched
+		return () => {
+			window.removeEventListener(TEAM_CHARTER_EVENT, open)
+			if (window.fetch === watched) window.fetch = nativeFetch
+		}
+	})
 	const charterHere = $derived(!/^\/(admin|login|register|auth|reset-password|banned)(\/|$)/.test(page.url.pathname))
 	async function checkCharter(token: string) {
 		try {
@@ -1400,6 +1422,10 @@
 <!-- La charte des membres (lot 7d) : une vraie porte, sur toute page, tant qu'elle n'est pas signée -->
 {#if charterDoor && charterHere && user}
 	<CharterDoor audience="members" username={user.username} token={data.token} onclose={() => (charterDoor = false)} />
+{/if}
+<!-- La charte de l'équipe (lot 7e) : ouverte par un outil de l'équipe qui a refusé -->
+{#if teamDoor && user && !charterDoor && !page.url.pathname.startsWith('/admin')}
+	<CharterDoor audience="team" closable username={user.username} token={data.token} onclose={() => (teamDoor = false)} />
 {/if}
 
 <!-- Fenêtre « Signaler », une pour tout le site (lib/report.ts) -->
