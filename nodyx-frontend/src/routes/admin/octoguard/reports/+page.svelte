@@ -11,6 +11,7 @@
 	import { LEVEL_ICON } from '$lib/octoguard/rules'
 	import { htmlToText } from '$lib/octoguard/text'
 	import ContextView from '$lib/components/octoguard/ContextView.svelte'
+	import HeldReview, { type HeldItem } from '$lib/components/octoguard/HeldReview.svelte'
 	import LadderGauge from '$lib/components/octoguard/LadderGauge.svelte'
 	import LadderAction from '$lib/components/octoguard/LadderAction.svelte'
 	import { loadMemberLadder, type MemberLadder } from '$lib/octoguard/ladder'
@@ -36,11 +37,7 @@
 		snapshot: string | null; target_label: string | null; target_link: string | null
 		claimed_by_username: string | null; reviewed_by_username: string | null; reviewed_at: string | null; resolution: string | null
 	}
-	type Held = {
-		id: string; kind: 'chat' | 'post' | 'thread' | 'post_edit'; author_id: string; author_username: string; author_created_at: string
-		channel_name: string | null; thread_title: string | null; payload: { content: string; title?: string }
-		rule_name: string; created_at: string
-	}
+	type Held = HeldItem
 	// Lot 8 : une contestation, et la décision qu'elle vise
 	type Appeal = {
 		id: string; user_id: string; username: string | null; decision_type: 'warn' | 'mute'; decision_id: string
@@ -76,7 +73,6 @@
 	let current = $state<string | null>(null)
 	const items = $derived(data.tab === 'held' ? held.map((h) => h.id) : data.tab === 'appeals' ? appeals.map((a) => a.id) : cases.map((c) => c.key))
 	const sel = $derived(current && items.includes(current) ? current : (items[0] ?? null))
-	const selHeld = $derived(data.tab === 'held' ? (held.find((h) => h.id === sel) ?? null) : null)
 	const selCase = $derived(data.tab === 'open' || data.tab === 'done' ? (cases.find((c) => c.key === sel) ?? null) : null)
 	const selAppeal = $derived(data.tab === 'appeals' ? (appeals.find((a) => a.id === sel) ?? null) : null)
 
@@ -84,7 +80,7 @@
 	type Brief = { id: string; username: string; created_at: string; warns_active: number; muted: boolean; muted_until: string | null }
 	type Ctx = { place: string; around: any[]; current: string | null; edits: any[]; author: Brief | null }
 	let ctxCache = $state<Record<string, Ctx | 'gone' | 'error'>>({})
-	const ctxPath = $derived(selHeld ? `/held/${selHeld.id}/context` : selCase ? `/reports/${selCase.first.id}/context` : null)
+	const ctxPath = $derived(selCase ? `/reports/${selCase.first.id}/context` : null)
 	const ctx = $derived(ctxPath ? ctxCache[ctxPath] : undefined)
 	$effect(() => {
 		const path = ctxPath
@@ -133,12 +129,6 @@
 	function clock(iso: string) {
 		return new Date(iso).toLocaleString($locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 	}
-	/** D17 : le temps qu'il reste avant le refus automatique. */
-	function expiresIn(iso: string) {
-		const left = new Date(iso).getTime() + data.expiryHours * 3_600_000 - Date.now()
-		const h = Math.max(0, Math.floor(left / 3_600_000))
-		return h >= 24 ? tFn('og2.rp_left_d', { d: Math.floor(h / 24), h: h % 24 }) : tFn('og2.rp_left_h', { h: Math.max(1, h) })
-	}
 	/** L'âge du compte, l'indice qui compte le plus pour un message retenu (maquette : « compte de 3 heures »). */
 	function accountAge(iso: string) {
 		const h = Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000)
@@ -156,11 +146,6 @@
 	const caseTitle = (r: Report) => r.target_type === 'user'
 		? tFn('og2.rp_case_title_user', { name: r.target_author_username ?? tFn('areports.deleted_account') })
 		: tFn(`og2.rp_case_title_${r.target_type === 'message' ? 'message' : 'forum'}`, { name: r.target_author_username ?? tFn('areports.deleted_account'), place: r.target_label ?? '' })
-	function heldPlace(h: Held) {
-		if (h.kind === 'chat') return h.channel_name ? `#${h.channel_name}` : tFn('og2.rp_place_chat')
-		if (h.kind === 'thread') return tFn('og2.rp_place_new_thread')
-		return h.thread_title ?? tFn('og2.rp_place_forum')
-	}
 
 	let busy = $state(false)
 	let error = $state<string | null>(null)
@@ -184,8 +169,6 @@
 			if (e instanceof OgError && e.code === 'ALREADY_DECIDED') await invalidateAll()
 		} finally { busy = false }
 	}
-	const decideHeld = (h: Held, d: 'approve' | 'refuse') =>
-		run(() => og(token, `/held/${h.id}/${d}`, 'POST'), d === 'approve' ? 'og2.rp_ok_approved' : 'og2.rp_ok_refused')
 	const patchReport = (r: Report, body: Record<string, unknown>, okKey: string) =>
 		run(() => og(token, `/reports/${r.id}`, 'PATCH', body), okKey)
 
@@ -297,20 +280,14 @@
 				{/if}
 			</div>
 		</div>
+	{:else if data.tab === 'held'}
+		<!-- « À relire » : maquette validée le 20/11/2026 (le fil dans le dossier) -->
+		<HeldReview {held} {token} expiryHours={data.expiryHours} onDecided={invalidateAll} />
 	{:else}
 		<div class="og-split-wrap"><div class="og-split">
 			<!-- La file -->
 			<div class="adm-card og-queue" role="listbox" tabindex="-1" aria-label={tFn('og2.rp_queue')} onkeydown={onQueueKey}>
-				{#if data.tab === 'held'}
-					{#each held as h (h.id)}
-						<button type="button" class="og-q" id="q-{h.id}" role="option" aria-selected={sel === h.id} onclick={() => { current = h.id; done = null; error = null }}>
-							<span class="og-ic og-k-hold"><Icon d={LEVEL_ICON.hold} /></span>
-							<b>{h.author_username}, {heldPlace(h)}</b>
-							<span class="og-q-time">{ago(h.created_at)}</span>
-							<span class="og-q-sub">{tFn('og2.rp_q_held', { age: accountAge(h.author_created_at), rule: ruleLabel(h.rule_name) })}</span>
-						</button>
-					{/each}
-				{:else if data.tab === 'appeals'}
+				{#if data.tab === 'appeals'}
 					{#each appeals as a (a.id)}
 						<button type="button" class="og-q" id="q-{a.id}" role="option" aria-selected={sel === a.id} onclick={() => { current = a.id; done = null; error = null; reply = '' }}>
 							<span class="og-ic {a.status === 'overturned' ? 'og-k-ok' : 'og-k-warn'}"><Icon d={SCALE} /></span>
@@ -336,24 +313,7 @@
 
 			<!-- Le contenu -->
 			<section class="adm-card og-rp-main" aria-live="polite">
-				{#if selHeld}
-					{@const h = selHeld}
-					<div class="og-rp-top">
-						<div>
-							<div class="og-rp-title">{tFn(`og2.rp_held_title_${h.kind}`, { name: h.author_username, place: heldPlace(h) })}</div>
-							<div class="og-meta">{tFn('og2.rp_held_by', { rule: ruleLabel(h.rule_name), at: clock(h.created_at) })}</div>
-						</div>
-						<span class="adm-pill og-tone og-k-hold"><Icon d={LEVEL_ICON.hold} />{tFn('og2.rp_pending')}</span>
-					</div>
-					<div class="og-field">
-						<span class="og-lbl">{tFn(h.kind === 'post_edit' ? 'og2.rp_new_text' : 'og2.rp_held_text')}</span>
-						{#if h.payload.title}<p class="og-rp-subject">{h.payload.title}</p>{/if}
-						<blockquote class="og-quote og-rp-text">{htmlToText(h.payload.content)}</blockquote>
-						<p class="og-help">{tFn('og2.rp_only_author')}</p>
-					</div>
-					{#if ctxOk}<ContextView around={ctxOk.around} current={ctxOk.current} edits={ctxOk.edits} heldAt={h.kind === 'chat' || h.kind === 'post' ? h.created_at : null} />{:else if ctx === undefined}<p class="og-help">{tFn('og2.cx_loading')}</p>{/if}
-					<p class="og-meta"><Icon d="M12 3a9 9 0 100 18 9 9 0 000-18z M12 7v5l3 2" />{tFn('og2.rp_expires', { left: expiresIn(h.created_at) })}</p>
-				{:else if selAppeal}
+				{#if selAppeal}
 					{@const a = selAppeal}
 					{@const st = decisionState(a)}
 					<div class="og-rp-top">
@@ -429,24 +389,7 @@
 
 			<!-- La décision -->
 			<aside class="og-rp-side">
-				{#if selHeld}
-					{@const h = selHeld}
-					<div class="adm-card og-rp-card">
-						<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: h.author_username })}</h2>
-						{@render facts(ctxOk?.author ?? { id: h.author_id, username: h.author_username, created_at: h.author_created_at, warns_active: 0, muted: false, muted_until: null })}
-						<a class="adm-btn adm-btn--sm" href="/admin/members/{h.author_id}"><Icon d={KIND_ICON.user} />{tFn('amem.open_file')}</a>
-					</div>
-					<div class="adm-card og-rp-card">
-						<h2 class="og-rp-h">{tFn('og2.rp_decide')}</h2>
-						<button type="button" class="adm-btn adm-btn--primary" disabled={busy} onclick={() => decideHeld(h, 'approve')}>
-							<Icon d="M20 6L9 17l-5-5" />{tFn(h.kind === 'post_edit' ? 'og2.rp_approve_edit' : 'og2.rp_approve')}
-						</button>
-						<button type="button" class="adm-btn adm-btn--danger" disabled={busy} onclick={() => decideHeld(h, 'refuse')}>
-							<Icon d="M18 6L6 18 M6 6l12 12" />{tFn('og2.rp_refuse')}
-						</button>
-						<p class="og-help">{tFn('og2.rp_decide_help')}</p>
-					</div>
-				{:else if selAppeal}
+				{#if selAppeal}
 					{@const a = selAppeal}
 					<div class="adm-card og-rp-card">
 						<h2 class="og-rp-h">{tFn('og2.rp_brief', { name: a.username ?? '' })}</h2>

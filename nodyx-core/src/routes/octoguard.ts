@@ -1075,7 +1075,10 @@ export async function octoguardAdminPlugin(app: FastifyInstance) {
   app.get('/held/:id/context', { preHandler: [rateLimit] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     if (!/^[0-9a-f-]{36}$/i.test(id)) return reply.code(400).send({ error: 'Invalid id', code: 'INVALID_REQUEST' })
-    const ctx = await heldContext(id)
+    // Fenêtre du fil : « Afficher plus anciens / plus récents » (bornée à 30 de chaque côté par heldContext)
+    const q = request.query as { before?: string; after?: string }
+    const num = (v?: string) => (v !== undefined && /^\d{1,3}$/.test(v) ? Number(v) : undefined)
+    const ctx = await heldContext(id, { before: num(q.before), after: num(q.after) })
     if (!ctx) return reply.code(404).send({ error: 'Not found', code: 'NOT_FOUND' })
     return reply.send({ context: ctx })
   })
