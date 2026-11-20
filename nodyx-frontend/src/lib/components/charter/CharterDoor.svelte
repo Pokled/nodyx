@@ -15,6 +15,10 @@
 	import { portal } from '$lib/actions/portal'
 	import '$lib/charter/charter.css'
 	import { fillVars, readingMinutes, strokeStats, samePhrase, refusalKey, type Point } from '$lib/charter/door'
+	import { signaturePath } from '$lib/charter/signature'
+	import { thumb } from '$lib/thumb'
+	import { locale } from '$lib/i18n'
+	import '$lib/charter/pilot.css'
 
 	type Tone = 'sober' | 'fun' | 'kids' | 'own'
 	let {
@@ -36,14 +40,15 @@
 	const tFn = $derived($t)
 
 	// ── La charte à lire ──────────────────────────────────────────────────────
-	type Loaded = { version: number; body_html: string; tone: Tone; own: string; drawEnabled: boolean; community: string; hello: { id: string; name: string } | null }
+	type Crowd = { count: number; faces: Array<{ username: string; avatar: string | null }> }
+	type Loaded = { version: number; body_html: string; tone: Tone; own: string; drawEnabled: boolean; community: string; hello: { id: string; name: string } | null; crowd: Crowd | null; welcome: boolean }
 	let charter = $state<Loaded | null>(null)
 	let loadFailed = $state(false)
 
 	async function load() {
 		loadFailed = false
 		if (preview) {
-			charter = { version: 0, body_html: preview.html, tone: preview.tone, own: preview.own, drawEnabled: preview.drawEnabled, community: preview.community, hello: null }
+			charter = { version: 0, body_html: preview.html, tone: preview.tone, own: preview.own, drawEnabled: preview.drawEnabled, community: preview.community, hello: null, crowd: null, welcome: false }
 			return
 		}
 		try {
@@ -51,7 +56,7 @@
 			if (!res.ok) throw new Error()
 			const j = await res.json()
 			if (!j.version || !j.must_sign) { onclose(); return }   // plus rien à signer (éteinte ou signée entre-temps)
-			charter = { version: j.version, body_html: j.body_html ?? '', tone: j.pledge?.tone ?? 'sober', own: j.pledge?.own ?? '', drawEnabled: j.draw_enabled !== false, community: j.community ?? '', hello: j.hello_channel ?? null }
+			charter = { version: j.version, body_html: j.body_html ?? '', tone: j.pledge?.tone ?? 'sober', own: j.pledge?.own ?? '', drawEnabled: j.draw_enabled !== false, community: j.community ?? '', hello: j.hello_channel ?? null, crowd: j.crowd ?? null, welcome: j.welcome === true }
 		} catch { loadFailed = true }
 	}
 
@@ -166,7 +171,7 @@
 		e.preventDefault()
 		if (!canGo || !charter) return
 		err = ''
-		if (preview) { done = true; return }
+		if (preview) { done = true; welcomeStart(); return }
 		sending = true
 		try {
 			const res = await apiFetch(fetch, `/charter/${audience}/sign`, {
@@ -174,7 +179,7 @@
 				body: JSON.stringify({ version: charter.version, way: usePhrase ? 'phrase' : 'hand', pledge, human_check: decoy, typed }),
 			})
 			const j = await res.json().catch(() => ({}))
-			if (res.ok && j.ok) { done = true; onsigned(); return }
+			if (res.ok && j.ok) { done = true; onsigned(); welcomeStart(); return }
 			if (j.code === 'CHARTER_VERSION_CHANGED') { await restart(); err = tFn('charter.err_version'); return }
 			err = tFn(refusalKey(j.code))
 		} catch { err = tFn('charter.err_refused') }
@@ -201,7 +206,29 @@
 	}
 	// Naviguer D'ABORD, fermer ensuite : fermer démonte la porte, et une navigation lancée
 	// depuis un composant démonté se perdait (on restait sur la page, porte fermée)
-	async function goHello() { const id = charter?.hello?.id; if (id && !preview) await goto(`/chat?channel=${id}`); onclose() }
+	async function goHello() { stopLeaving(); const id = charter?.hello?.id; if (id && !preview) await goto(`/chat?channel=${id}`); onclose() }
+
+	// ── L'écran Bienvenue (lot 7d-3, maquette v4 validée le 20/11) ────────────
+	// Sa propre signature se réécrit (le tracé ne quitte jamais le navigateur, D15), en
+	// dessous les membres qu'on rejoint. Si un message de bienvenue l'attend vraiment
+	// (OctoGuard + accueil actifs), on l'y emmène au bout de 3 s ; « Rester ici » arrête.
+	const LEAVE_MS = 3000
+	let sigPath = $state('')
+	let signedPhrase = $state('')
+	let signedOn = $state('')
+	let leaving = $state(false)
+	let leaveT: ReturnType<typeof setTimeout> | null = null
+	const helloName = $derived(charter?.hello?.name ?? tFn('charter.hello_sample'))
+	function welcomeStart() {
+		sigPath = usePhrase ? '' : signaturePath(strokes)
+		signedPhrase = usePhrase ? phrase : ''
+		try { signedOn = new Intl.DateTimeFormat($locale, { day: 'numeric', month: 'long' }).format(new Date()) } catch { signedOn = '' }
+		// Le départ n'existe que si quelqu'un attend vraiment dans le salon (l'aperçu le montre)
+		if (audience !== 'members' || !(preview || (charter?.welcome && charter?.hello))) return
+		leaving = true
+		leaveT = setTimeout(() => { leaveT = null; if (preview) { leaving = false; return } void goHello() }, LEAVE_MS)
+	}
+	function stopLeaving() { if (leaveT) clearTimeout(leaveT); leaveT = null; leaving = false }
 	async function goForum() { if (!preview) await goto('/forum'); onclose() }
 
 	let cardEl = $state<HTMLElement | undefined>(undefined)
@@ -224,11 +251,9 @@
 	onDestroy(() => {
 		if (typeof document !== 'undefined') document.body.style.overflow = prevOverflow
 		if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey, true)
-		ro?.disconnect(); if (toastT) clearTimeout(toastT)
+		ro?.disconnect(); if (toastT) clearTimeout(toastT); if (leaveT) clearTimeout(leaveT)
 	})
 
-	const CONFETTI = ['#ffb020', '#22c55e', '#3b82f6', '#8b5cf6', '#e5484d']
-	const pieces = Array.from({ length: 40 }, (_, i) => ({ left: Math.random() * 100, delay: Math.random() * 0.6, c: CONFETTI[i % 5] }))
 </script>
 
 <div class="door" use:portal role="presentation">
@@ -287,17 +312,45 @@
 					{#if err}<p class="small door-err" role="alert">{err}</p>{/if}
 				</form>
 			{:else}
-				<div class="door-welcome">
-					<div class="confetti" aria-hidden="true">{#each pieces as c, i (i)}<i style="left:{c.left}%;background:{c.c};animation-delay:{c.delay}s"></i>{/each}</div>
-					<svg class="door-wave" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52"/><path d="M38 62l15 15 30-32"/></svg>
+				<div class="door-welcome nx-pilot">
+					<div class="door-signed">
+						{#if sigPath}
+							<svg viewBox="0 0 280 92" role="img" aria-label={tFn('charter.signature_aria', { user: username })}><path d={sigPath} pathLength="1" /></svg>
+						{:else if signedPhrase}
+							<p class="door-signed-phrase">« {signedPhrase} »</p>
+						{/if}
+						<span class="door-signed-line" aria-hidden="true"></span>
+						<span class="door-signed-by">{tFn('charter.signed_by', { user: username, date: signedOn })}</span>
+					</div>
+					{#if audience === 'members' && charter.crowd && charter.crowd.count > 0}
+						<div class="door-crowd">
+							<span class="door-faces" aria-hidden="true">
+								{#each charter.crowd.faces as f (f.username)}
+									{#if f.avatar}<img src={thumb(f.avatar, 48)} alt="" width="24" height="24" />{:else}<span>{f.username.charAt(0).toUpperCase()}</span>{/if}
+								{/each}
+								<span class="door-me">{username.charAt(0).toUpperCase()}</span>
+							</span>
+							<span>{tFn(charter.crowd.count === 1 ? 'charter.crowd_one' : 'charter.crowd_other', { count: String(charter.crowd.count), community: charter.community })}</span>
+						</div>
+					{/if}
 					<h2>{audience === 'members' ? tFn('charter.welcome_members', { user: username }) : tFn('charter.welcome_team', { user: username })}</h2>
 					<p>{audience === 'members' ? tFn('charter.welcome_text', { community: charter.community }) : tFn('charter.welcome_team_text')}</p>
+					{#if leaving}
+						<div class="door-leaving">
+							<p>{tFn('charter.leaving', { channel: helloName })}</p>
+							<span class="door-countdown" role="progressbar" aria-label={tFn('charter.leaving_aria')}><i style="animation-duration:{LEAVE_MS}ms"></i></span>
+						</div>
+					{/if}
 					<div class="door-actions door-actions--center">
 						{#if audience === 'members'}
-							{#if charter.hello || preview}<button type="button" class="door-btn door-btn--primary" onclick={goHello}>{tFn('charter.hello', { channel: charter.hello?.name ?? tFn('charter.hello_sample') })}</button>{/if}
-							<button type="button" class="door-btn" onclick={goForum}>{tFn('charter.explore')}</button>
+							{#if charter.hello || preview}<button type="button" class="pl-btn pl-btn--primary" onclick={goHello}>{tFn('charter.hello', { channel: helloName })}</button>{/if}
+							{#if leaving}
+								<button type="button" class="pl-btn pl-btn--quiet" onclick={stopLeaving}>{tFn('charter.stay')}</button>
+							{:else}
+								<button type="button" class="pl-btn pl-btn--secondary" onclick={goForum}>{tFn('charter.explore')}</button>
+							{/if}
 						{:else}
-							<button type="button" class="door-btn door-btn--primary" onclick={onclose}>{tFn('charter.team_go')}</button>
+							<button type="button" class="pl-btn pl-btn--primary" onclick={onclose}>{tFn('charter.team_go')}</button>
 						{/if}
 					</div>
 				</div>
@@ -360,18 +413,32 @@
 	.door-welcome { position: relative; text-align: center; padding: 34px 26px 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; overflow: hidden; }
 	.door-welcome h2 { margin: 6px 0 0; font-size: 24px; }
 	.door-welcome p { margin: 0 0 8px; color: var(--nx-text-muted); max-width: 46ch; line-height: 1.55; }
-	.door-wave { width: 84px; height: 84px; }
-	.door-wave circle { fill: color-mix(in srgb, var(--nx-ok) 14%, var(--nx-surface)); stroke: var(--nx-ok); stroke-width: 3; }
-	.door-wave path { fill: none; stroke: var(--nx-ok); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 80; stroke-dashoffset: 80; animation: door-draw .6s .2s ease-out forwards; }
-	@keyframes door-draw { to { stroke-dashoffset: 0; } }
-	.confetti { position: absolute; inset: 0; pointer-events: none; }
-	.confetti i { position: absolute; top: -10px; width: 7px; height: 12px; border-radius: 2px; opacity: .9; animation: door-fall 1.8s ease-in forwards; }
-	@keyframes door-fall { to { transform: translateY(380px) rotate(540deg); opacity: 0; } }
+	/* La signature qui se réécrit, puis les membres qu'on rejoint (une seule fête) */
+	.door-signed { width: 280px; max-width: 100%; display: flex; flex-direction: column; align-items: center; margin-bottom: 4px; }
+	.door-signed svg { display: block; width: 100%; height: 92px; }
+	.door-signed path { fill: none; stroke: var(--nx-text); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: door-write 1.6s cubic-bezier(.5, 0, .3, 1) .15s forwards; }
+	@keyframes door-write { to { stroke-dashoffset: 0; } }
+	.door-signed-phrase { font-size: 19px; font-weight: 700; color: var(--nx-text) !important; margin: 18px 0 10px !important; animation: door-rise .6s ease-out both; }
+	@keyframes door-rise { from { opacity: 0; transform: translateY(6px); } }
+	.door-signed-line { align-self: stretch; height: 1px; background: var(--nx-border); margin: 0 10px; }
+	.door-signed-by { margin-top: 6px; font-size: 13px; color: var(--nx-text-muted); }
+	.door-crowd { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 13px; color: var(--nx-text-muted); margin-bottom: 8px; }
+	.door-faces { display: inline-flex; }
+	.door-faces > * { width: 24px; height: 24px; margin-left: -6px; border-radius: 50%; border: 2px solid var(--nx-surface); object-fit: cover; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; background: #5b7c99; }
+	.door-faces > :first-child { margin-left: 0; }
+	.door-faces > .door-me { background: var(--pl-accent); color: var(--pl-on-accent); animation: door-arrive .6s cubic-bezier(.2, 1.3, .4, 1) 1.5s both; }
+	@keyframes door-arrive { from { transform: translateX(18px); opacity: 0; } }
+	.door-leaving { width: min(360px, 100%); text-align: left; font-size: 14px; }
+	.door-leaving p { color: var(--nx-text) !important; margin: 0 0 6px !important; }
+	.door-countdown { display: block; height: 4px; border-radius: 99px; background: color-mix(in srgb, var(--nx-text) 6%, transparent); border: 1px solid var(--nx-border); overflow: hidden; }
+	.door-countdown i { display: block; height: 100%; background: var(--pl-accent); transform-origin: left; animation: door-empty linear forwards; }
+	@keyframes door-empty { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 	.door-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 2001; margin: 0; padding: 9px 16px; border-radius: 99px; background: #1b1813; color: #fff; font-size: 13px; font-weight: 600; box-shadow: 0 10px 30px -10px rgb(0 0 0 / .5); }
 	.small { font-size: 12px; } .muted { color: var(--nx-text-muted); }
 	@media (prefers-reduced-motion: reduce) {
-		.confetti { display: none; }
-		.door-wave path { animation: none; stroke-dashoffset: 0; }
+		.door-signed path { animation: none; stroke-dashoffset: 0; }
+		.door-signed-phrase, .door-faces > .door-me { animation: none; }
+		.door-countdown i { animation: none; transform: scaleX(.5); }
 		.door-card.shake { animation: none; outline: 2px solid var(--nx-header-accent); }
 	}
 	@media (max-width: 560px) { .door-wrap { padding: 12px 8px 32px; } .door-sign { padding: 14px 16px 18px; } }

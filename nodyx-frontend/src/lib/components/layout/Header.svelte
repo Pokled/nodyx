@@ -9,6 +9,7 @@
 	import { scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import ChannelIcon from '$lib/components/ChannelIcon.svelte';
+	import { charterReadable } from '$lib/charter/readable';
 
 	const tFn = $derived($t);
 	const isActive = (href: string) =>
@@ -65,6 +66,12 @@
 	} = $props();
 
 	let dropdownOpen = $state(false);
+	// « Nouveau » sur l'entrée « La charte » jusqu'à la première visite de la page (rempli par /charter)
+	let charterSeen = $state(true);
+	$effect(() => {
+		if (!dropdownOpen) return;
+		try { charterSeen = localStorage.getItem('nx-charter-seen') === '1'; } catch { charterSeen = true; }
+	});
 
 	// Meme calcul que le composant d'origine, recopie ici plutot que passe en
 	// prop : depend uniquement de `user`, deja disponible, pas la peine de le
@@ -354,6 +361,9 @@
 							<div class="py-1.5">
 								<a href="/settings" onclick={() => dropdownOpen = false} class="nx-dropdown-item flex items-center gap-3 px-4 py-2 text-sm transition-colors"><span class="text-base">⚙️</span><span>{tFn('nav.settings')}</span></a>
 								<a href="/settings/sanctions" onclick={() => dropdownOpen = false} class="nx-dropdown-item flex items-center gap-3 px-4 py-2 text-sm transition-colors"><span class="text-base">⚖️</span><span>{tFn('nav.my_sanctions')}</span></a>
+								{#if $charterReadable.members || $charterReadable.team}
+									<a href="/charter" onclick={() => dropdownOpen = false} class="nx-dropdown-item flex items-center gap-3 px-4 py-2 text-sm transition-colors"><span class="text-base">📜</span><span class="flex-1">{tFn('charter.menu')}</span>{#if !charterSeen}<span class="nx-charter-new">{tFn('charter.menu_new')}</span>{/if}</a>
+								{/if}
 								<a href="https://nodyx.dev" target="_blank" rel="noopener" onclick={() => dropdownOpen = false} class="nx-dropdown-item flex items-center gap-3 px-4 py-2 text-sm transition-colors"><span class="text-base">📖</span><span>{tFn('nav.documentation')}</span></a>
 							</div>
 							<div class="mx-3" style="border-top: 1px solid var(--nx-border)"></div>
@@ -555,4 +565,6 @@
 		outline: none;
 		box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-header-accent) 45%, transparent);
 	}
+	.nx-charter-new { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--nx-header-accent); }
+	.nx-charter-new::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 </style>

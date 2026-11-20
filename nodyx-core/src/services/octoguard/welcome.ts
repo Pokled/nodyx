@@ -119,6 +119,19 @@ export function substituteVariables(template: string, ctx: SubstitutionCtx): str
 // ─── runWelcomeFor : exécuté après chaque inscription ────────────────────────
 
 /**
+ * {rulesUrl} : l'adresse de la page « La charte » (lot 7d-3), si une charte des membres
+ * est publiée et que l'instance connaît son adresse publique (FRONTEND_URL). Sinon vide.
+ */
+export async function charterRulesUrl(): Promise<string | null> {
+  const site = (process.env.FRONTEND_URL ?? '').trim().replace(/\/+$/, '')
+  if (!/^https?:\/\//.test(site)) return null
+  try {
+    const { charterPublished } = await import('../charter')
+    return (await charterPublished('members')) ? `${site}/charter` : null
+  } catch { return null }
+}
+
+/**
  * Lit la config welcome (singleton) et applique les actions configurées
  * pour le nouvel utilisateur. Fire-and-forget, jamais throw.
  */
@@ -147,7 +160,7 @@ export async function runWelcomeFor(newUserId: string, newUsername: string): Pro
       username:      newUsername,
       userId:        newUserId,
       communityName: community.name,
-      rulesUrl:      null,  // à exposer plus tard via une URL communautaire
+      rulesUrl:      await charterRulesUrl(),
     }
 
     const eventId = randomUUID()
