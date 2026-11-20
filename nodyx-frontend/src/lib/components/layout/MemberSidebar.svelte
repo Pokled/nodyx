@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
 	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { goto } from '$app/navigation';
@@ -136,7 +137,7 @@
        class:dragging={isDraggingRight}>
 	<div class="nx-zone-img" aria-hidden="true"></div>
 	{#if sidebarBgVisible && sidebarBg?.background_image_url}
-		<img class="members-bg" src={sidebarBg.background_image_url} alt=""
+		<img class="members-bg" src={thumb(sidebarBg.background_image_url, 768)} alt="" decoding="async"
 			style="object-position:{sidebarBg.background_offset_x ?? 50}% {sidebarBg.background_offset_y ?? 50}%; transform-origin:{sidebarBg.background_offset_x ?? 50}% {sidebarBg.background_offset_y ?? 50}%; transform: scale({Math.min(2.5, Math.max(0.4, sidebarBg.background_scale ?? 1))})" />
 		<div class="members-bg-overlay" style="opacity:{sidebarBg.overlay_opacity ?? 0.6}"></div>
 	{/if}
@@ -189,7 +190,7 @@
 						<span class="hover-bar"></span>
 						<div class="avatar-wrap">
 							{#if member.avatar}
-								<img src={member.avatar} alt="" class="avatar object-cover" />
+								<img src={thumb(member.avatar, 28)} srcset={thumbSrcset(member.avatar, 28)} alt="" class="avatar object-cover" loading="lazy" decoding="async" />
 							{:else}
 								<div class="avatar avatar--tint" style="background: linear-gradient(135deg, {avatarColor}, var(--nx-cyan-deep))">{member.username.charAt(0).toUpperCase()}</div>
 							{/if}
@@ -250,7 +251,7 @@
 						<span class="hover-bar"></span>
 						<div class="avatar-wrap">
 							{#if member.avatar}
-								<img src={member.avatar} alt="" class="avatar object-cover" />
+								<img src={thumb(member.avatar, 28)} srcset={thumbSrcset(member.avatar, 28)} alt="" class="avatar object-cover" loading="lazy" decoding="async" />
 							{:else}
 								<div class="avatar avatar--tint" style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">{member.username.charAt(0).toUpperCase()}</div>
 							{/if}
@@ -303,7 +304,7 @@
 					        onclick={() => goto(`/users/${member.username}`)}>
 						<div class="avatar-wrap">
 							{#if member.avatar}
-								<img src={member.avatar} alt="" class="avatar grayscale object-cover" />
+								<img src={thumb(member.avatar, 28)} srcset={thumbSrcset(member.avatar, 28)} alt="" class="avatar grayscale object-cover" loading="lazy" decoding="async" />
 							{:else}
 								<div class="avatar">{member.username.charAt(0).toUpperCase()}</div>
 							{/if}

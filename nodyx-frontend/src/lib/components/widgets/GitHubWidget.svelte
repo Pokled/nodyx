@@ -1,4 +1,9 @@
 <script lang="ts">
+	// GitHub sert l'avatar à la taille demandée (« s ») : 80 px pour un affichage en 40,
+	// au lieu de l'original (313 Ko mesurés sur nodyx.org le 19/11/2026).
+	function ghAvatar(url: string): string {
+		try { const u = new URL(url); if (u.hostname === 'avatars.githubusercontent.com') u.searchParams.set('s', '80'); return u.toString() } catch { return url }
+	}
 
 	import { t } from '$lib/i18n'
 	const tFn = $derived($t)
@@ -103,7 +108,7 @@
 			<!-- User info -->
 			<div class="flex items-start gap-3 px-4 py-3 border-b border-[var(--p-card-border)]">
 				<img
-					src={data.avatar_url}
+					src={ghAvatar(data.avatar_url)}
 					alt={tFn('gh.avatar_alt', { login: data.login })}
 					class="w-10 h-10 rounded-full border border-[var(--p-card-border)] shrink-0"
 				/>

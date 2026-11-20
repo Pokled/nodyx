@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { ajusterTaille } from '$lib/actions/ajusterTaille';
 	import { page } from '$app/state';
 	import { tick } from 'svelte';
@@ -332,7 +333,7 @@
 								<div class="w-[22px] h-[22px] rounded-full overflow-hidden transition-all duration-200"
 								     style="box-shadow:{m.speaking ? '0 0 0 2px rgba(74,222,128,0.55), 0 0 8px rgba(74,222,128,0.25)' : 'none'}">
 									{#if m.avatar}
-										<img src={m.avatar} alt={m.username} class="w-full h-full object-cover"/>
+										<img src={thumb(m.avatar, 22)} srcset={thumbSrcset(m.avatar, 22)} alt={m.username} class="w-full h-full object-cover"/>
 									{:else}
 										<div class="w-full h-full flex items-center justify-center text-[9px] font-black text-white select-none bg-linear-to-br from-[var(--nx-accent-2-strong)] to-[var(--nx-cyan-deep)]">
 											{m.username.charAt(0).toUpperCase()}
@@ -391,7 +392,7 @@
 		<button type="button" class="user-group" onclick={onOpenStatusModal}>
 			<div class="user-avatar">
 				{#if user.avatar}
-					<img src={user.avatar} alt="" class="w-full h-full object-cover" />
+					<img src={thumb(user.avatar, 40)} srcset={thumbSrcset(user.avatar, 40)} alt="" class="w-full h-full object-cover" />
 				{:else}
 					{user.username.charAt(0).toUpperCase()}
 				{/if}

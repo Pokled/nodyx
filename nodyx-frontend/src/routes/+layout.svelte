@@ -17,7 +17,7 @@
 	import { buildNameStyle, buildAnimClass, ensureFontLoaded, GOOGLE_FONTS_URL } from '$lib/nameEffects';
 	import VoicePanel from '$lib/components/VoicePanel.svelte';
 	import WallpaperStill from '$lib/components/layout/WallpaperStill.svelte';
-	import { installThumbFallback } from '$lib/thumb';
+	import { installThumbFallback, thumb, thumbSrcset } from '$lib/thumb';
 	import StageView from '$lib/components/StageView.svelte';
 	import { stageOpenStore } from '$lib/stageStore';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
@@ -1226,7 +1226,7 @@
 		<a href="/users/{user.username}"
 		   class="flex-1 flex flex-col items-center justify-center py-2 min-h-14 gap-0.5 {page.url.pathname.startsWith('/users/') ? 'text-[var(--nx-header-accent)]' : 'text-gray-500'}">
 			{#if user.avatar}
-				<img src={user.avatar} class="w-5 h-5 rounded-full object-cover" alt="" />
+				<img src={thumb(user.avatar, 20)} srcset={thumbSrcset(user.avatar, 20)} class="w-5 h-5 rounded-full object-cover" alt="" />
 			{:else}
 				<div class="w-5 h-5 rounded-full bg-indigo-700 flex items-center justify-center text-[9px] font-bold text-white">
 					{user.username.charAt(0).toUpperCase()}
@@ -1324,7 +1324,7 @@
 				transition:fade={{ duration: 200 }}
 			>
 				{#if evt.avatar}
-					<img src={evt.avatar} alt={evt.username} class="w-6 h-6 rounded-full object-cover shrink-0" />
+					<img src={thumb(evt.avatar, 24)} srcset={thumbSrcset(evt.avatar, 24)} alt={evt.username} class="w-6 h-6 rounded-full object-cover shrink-0" />
 				{:else}
 					<div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
 					     style="background: linear-gradient(135deg, var(--nx-accent-2-strong), var(--nx-cyan-deep))">
