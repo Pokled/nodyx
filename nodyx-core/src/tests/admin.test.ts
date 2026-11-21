@@ -237,6 +237,24 @@ describe('GET /api/v1/admin/members', () => {
     expect(Array.isArray(body.members)).toBe(true)
     expect(body.members[0].username).toBe('testuser')
   })
+
+  // 20/11 : deux sous-requêtes PAR MEMBRE comptaient sujets et réponses (40 ms pour
+  // 153 membres sur nodyx.org, linéaire avec la communauté). Un passage par table, regroupé.
+  it('compte sujets et réponses en un passage par table, jamais une sous-requête par membre', async () => {
+    const seen: string[] = []
+    vi.mocked(db.query).mockImplementation(async (sql: string) => {
+      seen.push(String(sql))
+      if (typeof sql === 'string' && sql.includes('SELECT id FROM communities')) return { rows: [{ id: COMMUNITY_UUID }], rowCount: 1 } as any
+      return { rows: [], rowCount: 0 } as any
+    })
+    const res = await app.inject({ method: 'GET', url: '/api/v1/admin/members', headers: { Authorization: `Bearer ${makeAdminToken()}` } })
+    expect(res.statusCode).toBe(200)
+    const q = seen.find(s => s.includes('FROM community_members cm'))!.replace(/\s+/g, ' ')
+    expect(q).toMatch(/GROUP BY t\.author_id/)
+    expect(q).toMatch(/GROUP BY p\.author_id/)
+    expect(q).not.toMatch(/WHERE t\.author_id = u\.id/)
+    expect(q).not.toMatch(/WHERE p\.author_id = u\.id/)
+  })
 })
 
 // ── Tests — GET /admin/bans ────────────────────────────────────
