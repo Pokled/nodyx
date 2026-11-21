@@ -22,7 +22,9 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
     preprocess: vitePreprocess(),
     alias: { $lib: 'src/lib' },
-    adapter: adapter(),
+    // NODYX_BUILD_OUT : deploy-all construit dans un dossier neuf (.builds/…) puis bascule le
+    // lien « build » d'un coup ; sans lui, on construit dans build/ comme toujours (dev, CI, Docker).
+    adapter: adapter({ out: process.env.NODYX_BUILD_OUT || 'build' }),
 
     serviceWorker: {
         register: true,

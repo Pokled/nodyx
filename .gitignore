@@ -2,6 +2,9 @@ node_modules/
 **/node_modules/
 .svelte-kit/
 build/
+# deploy-all : « build » du frontend devient un LIEN vers la version en service (.builds/…)
+nodyx-frontend/build
+nodyx-frontend/.builds/
 dist/
 .env
 # Toute variante de .env (backups, timestampés, locaux) : secrets, jamais commit.

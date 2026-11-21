@@ -39,11 +39,27 @@ git config --global --add safe.directory /var/www/nexus 2>/dev/null || true
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+# deps_cmd : n'efface et ne réinstalle node_modules (npm ci) QUE si les dépendances ont
+# changé. npm ci vide node_modules pendant que l'application en service s'en sert, et le
+# faisait pour 13 applications à chaque déploiement. L'empreinte couvre package-lock.json
+# ET la version de Node (un module natif comme re2 se recompile quand Node change).
+# Écrite seulement après un npm ci réussi : une installation ratée sera refaite.
+deps_cmd() {
+  cat <<'SH'
+sum="$(cat package-lock.json; node -v)"; sum="$(printf '%s' "$sum" | sha256sum | cut -c1-64)"
+if [ -d node_modules ] && [ "$(cat node_modules/.nodyx-deps 2>/dev/null)" = "$sum" ]; then
+  echo "dépendances inchangées, npm ci évité"
+else
+  npm ci --no-audit --no-fund && printf '%s' "$sum" > node_modules/.nodyx-deps
+fi
+SH
+}
+
 # build_app <libellé> <répertoire> [utilisateur]
-# Installe et build une app. Toute erreur est comptée, jamais avalée.
+# Installe (si besoin) et build une app. Toute erreur est comptée, jamais avalée.
 build_app() {
   local label="$1" dir="$2" as="${3:-root}"
-  local cmd="cd '$dir' && npm ci --no-audit --no-fund && npm run build"
+  local cmd="cd '$dir' && { $(deps_cmd); } && npm run build"
   local rc=0
 
   # rc capturé explicitement : lire $? après un bloc if/fi est ambigu, et un
@@ -63,14 +79,75 @@ build_app() {
   return 1
 }
 
+# build_frontend <libellé> <répertoire> [utilisateur]
+# Le frontend SvelteKit ne se construit plus DANS build/ pendant qu'il le sert (vu le 20/11 :
+# « Cannot find module build/server/nodes/110.js » ; mesuré au banc : 8,4 s pendant
+# lesquelles les fichiers du site en service manquaient). On construit dans un dossier
+# neuf, .builds/<date>-<commit>. La BASCULE (« build » devient un lien vers lui, mv -T :
+# atomique) n'a lieu qu'au redémarrage, et seulement si tout le groupe s'est construit
+# (restart_if_built) : un cœur raté ne laisse jamais un frontend neuf prêt à démarrer
+# seul. Le processus en service a résolu ses fichiers par leur vrai chemin : il garde
+# l'ancienne version intacte jusqu'à son redémarrage. Les 3 versions les plus récentes
+# restent (retour arrière : un ln -sfn).
+PENDING=()
+# as_user <utilisateur|root> <commande> : exécute en root, ou sous l'utilisateur de l'instance.
+as_user() { if [[ "$1" == "root" ]]; then bash -c "$2"; else sudo -u "$1" bash -c "$2"; fi; }
+build_frontend() {
+  local label="$1" dir="$2" as="${3:-root}"
+  local rel=".builds/$(date +%Y%m%d-%H%M%S)-$(git -C "$dir" rev-parse --short HEAD 2>/dev/null || echo local)"
+  local cmd="cd '$dir' && { $(deps_cmd); } && NODYX_BUILD_OUT='$rel' npm run build && test -f '$rel/index.js'"
+  local rc=0
+  # Dans le dossier d'une instance (à nodyx), on n'agit JAMAIS en root : un .builds remplacé
+  # par un lien ferait suivre à root un chown ou un rm -rf hors du dossier (revue du 20/11).
+  as_user "$as" "mkdir -p '$dir/.builds'"
+  if [[ "$as" == "root" ]]; then
+    bash -c "$cmd" >/dev/null 2>&1 || rc=$?
+  else
+    sudo -u "$as" bash -lc "$cmd" >/dev/null 2>&1 || rc=$?
+  fi
+  if [[ $rc -eq 0 ]]; then
+    PENDING+=("$dir|$rel|$as")
+    ok "$label construite à côté ($rel), bascule au redémarrage"
+    return 0
+  fi
+  as_user "$as" "rm -rf '${dir:?}/$rel'"
+  fail "$label : BUILD EN ÉCHEC (la version en service n'a pas été touchée)"
+  return 1
+}
+
+# swap_pending : bascule les frontends construits du groupe, juste avant leur redémarrage.
+swap_pending() {
+  local item dir rel as cmd
+  for item in "${PENDING[@]}"; do
+    IFS='|' read -r dir rel as <<<"$item"
+    cmd="cd '$dir' && {
+      if [ -d build ] && [ ! -L build ]; then mv build \".builds/avant-liens-\$(date +%Y%m%d-%H%M%S)\"; fi
+      ln -sfn '$rel' build.next && mv -T build.next build
+      ls -1dt .builds/*/ | tail -n +4 | xargs -r rm -rf
+    }"
+    if [[ "$as" == "root" ]]; then bash -c "$cmd" || fail "bascule EN ÉCHEC : $dir"
+    else sudo -u "$as" bash -c "$cmd" || fail "bascule EN ÉCHEC : $dir"; fi
+  done
+  PENDING=()
+}
+
+# drop_pending : un build du groupe a échoué, les frontends neufs ne serviront jamais.
+drop_pending() {
+  local item dir rel as
+  for item in "${PENDING[@]}"; do IFS='|' read -r dir rel as <<<"$item"; as_user "$as" "rm -rf '${dir:?}/$rel'"; done
+  PENDING=()
+}
+
 # restart_if_built <ok|ko> <nom pm2...>
 # Ne redémarre QUE si tous les builds du groupe ont réussi : redémarrer sur un
 # build à moitié écrit servirait du code cassé aux visiteurs.
 restart_if_built() {
   local built="$1"; shift
   if [[ "$built" == "ok" ]]; then
+    swap_pending
     restart_app "$@"
   else
+    drop_pending
     warn "redémarrage ignoré ($*) : un build du groupe a échoué, l'ancienne version reste en ligne"
   fi
 }
@@ -107,7 +184,7 @@ fi
 head_ "nodyx.org (build en root)"
 G=ok
 build_app "nodyx-core"     /var/www/nexus/nodyx-core     || G=ko
-build_app "nodyx-frontend" /var/www/nexus/nodyx-frontend || G=ko
+build_frontend "nodyx-frontend" /var/www/nexus/nodyx-frontend || G=ko
 restart_if_built "$G" nodyx-core nodyx-frontend
 
 # ── 3. Applications satellites (même dépôt, même commit) ─────────────────────
@@ -154,7 +231,7 @@ deploy_instance() {
     ok "dépôt ${name} à jour"
     local G=ok
     build_app "${name}-core"     "/opt/${name}/nodyx-core"     nodyx || G=ko
-    build_app "${name}-frontend" "/opt/${name}/nodyx-frontend" nodyx || G=ko
+    build_frontend "${name}-frontend" "/opt/${name}/nodyx-frontend" nodyx || G=ko
     restart_if_built "$G" "${name}-core" "${name}-frontend"
   else
     fail "mise à jour git de ${name} refusée (détail ci-dessus), instance NON déployée"
