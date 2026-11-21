@@ -94,7 +94,10 @@ PENDING=()
 as_user() { if [[ "$1" == "root" ]]; then bash -c "$2"; else sudo -u "$1" bash -c "$2"; fi; }
 build_frontend() {
   local label="$1" dir="$2" as="${3:-root}"
-  local rel=".builds/$(date +%Y%m%d-%H%M%S)-$(git -C "$dir" rev-parse --short HEAD 2>/dev/null || echo local)"
+  # safe.directory, limité à cet appel : en root dans le clone d'une instance (à nodyx), git
+  # refusait (« dubious ownership ») et la version s'appelait « …-local » (vu le 21/11).
+  local repo; repo="$(dirname "$dir")"
+  local rel=".builds/$(date +%Y%m%d-%H%M%S)-$(git -c safe.directory="$repo" -C "$dir" rev-parse --short HEAD 2>/dev/null || echo local)"
   local cmd="cd '$dir' && { $(deps_cmd); } && NODYX_BUILD_OUT='$rel' npm run build && test -f '$rel/index.js'"
   local rc=0
   # Dans le dossier d'une instance (à nodyx), on n'agit JAMAIS en root : un .builds remplacé
