@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { sharedJson } from '$lib/homepage/sharedJson'
 	import { thumb, thumbSrcset } from '$lib/thumb'
 	import { useFollowAmbiance } from '../followAmbiance'
 	import { pauseOffscreen } from '$lib/actions/pauseOffscreen'
@@ -73,11 +74,9 @@
 			if (categoryFilter) params.append('category', categoryFilter)
 			if (pinnedOnly)     params.append('pinned_only', 'true')
 
-			const res = await fetch(`/api/v1/instance/threads/showcase?${params.toString()}`)
-			if (res.ok) {
-				const { threads } = await res.json() as { threads: Article[] }
-				articles = threads
-			}
+			// Deux vitrines aux mêmes réglages sur l'accueil : un seul appel (sharedJson)
+			const body = await sharedJson<{ threads: Article[] }>(`/api/v1/instance/threads/showcase?${params.toString()}`)
+			if (body) articles = body.threads
 		} catch { /* silent */ }
 		loading = false
 	}
