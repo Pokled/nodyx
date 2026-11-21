@@ -35,6 +35,17 @@ vi.mock('../config/database', () => ({
   },
 }))
 vi.mock('../middleware/rateLimit', () => ({ rateLimit: vi.fn(async () => {}) }))
+// Aucun test de ce fichier ne doit toucher le réseau : le DNS répond « introuvable » tout
+// de suite. Avant (20/11), « ne renvoie JAMAIS la valeur d'un secret » résolvait vraiment
+// api.tmdb.example : instable en CI quand le DNS traînait (délai du test dépassé).
+vi.mock('node:dns', async (importOriginal) => {
+  const real = await importOriginal<typeof import('node:dns')>()
+  const lookup = (host: string, opts: unknown, cb?: (e: Error) => void) => {
+    const done = (typeof opts === 'function' ? opts : cb) as (e: Error) => void
+    process.nextTick(() => done(Object.assign(new Error(`getaddrinfo ENOTFOUND ${host}`), { code: 'ENOTFOUND' })))
+  }
+  return { ...real, lookup, default: { ...real, lookup } }
+})
 vi.mock('../middleware/adminOnly', () => ({
   adminOnly: vi.fn(async (req: { headers: Record<string, string> }, reply: { code: (n: number) => { send: (b: unknown) => unknown } }) => {
     if (!req.headers.authorization) return reply.code(401).send({ error: 'Unauthorized' })
@@ -580,5 +591,8 @@ describe('proxy reseau', () => {
     const r = await call(token, { url: 'https://api.tmdb.example/3/movie/1' })
     // L'appel sortant echoue (hote inexistant), mais rien ne doit fuir.
     expect(r.body).not.toContain('SECRET-ULTRA')
+    // Déterministe : le DNS simulé répond « introuvable », jamais le vrai réseau
+    expect(r.statusCode).toBe(502)
+    expect(JSON.parse(r.body).code).toBe('UPSTREAM_ERROR')
   })
 })
