@@ -51,6 +51,7 @@ INSTANCES=(
   "sleemstudio:sleemstudio:/opt/sleemstudio"
   "demo:demo:/opt/demo"
   "vieuxlooters:vieuxlooters:/opt/vieuxlooters"
+  "polygone:polygone:/opt/polygone"
 )
 
 # Bases SQLite des satellites, hors du modèle une-instance-un-PostgreSQL.
