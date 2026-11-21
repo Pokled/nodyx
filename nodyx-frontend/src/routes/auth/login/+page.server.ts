@@ -1,10 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { apiFetch } from '$lib/api';
+import { safeInternalPath } from '$lib/safeRedirect';
 
 export const load: PageServerLoad = async ({ url }) => {
 	return {
-		redirectTo:    url.searchParams.get('redirectTo') ?? '/',
+		// Contrôlée ICI : la page s'en sert aussi côté navigateur (connexion Signet par QR)
+		redirectTo:    safeInternalPath(url.searchParams.get('redirectTo')),
 		passwordReset: url.searchParams.get('reset') === '1',
 		signetError:   url.searchParams.get('signet_error') ?? null,
 		demoMode:      import.meta.env.DEV,
@@ -19,7 +21,7 @@ function setCookieAndRedirect(cookies: any, token: string, redirectTo: string | 
 		secure:   true,
 		maxAge:   60 * 60 * 24 * 7
 	})
-	redirect(303, redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/')
+	redirect(303, safeInternalPath(redirectTo))
 }
 
 export const actions: Actions = {

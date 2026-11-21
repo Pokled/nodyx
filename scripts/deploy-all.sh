@@ -244,6 +244,7 @@ deploy_instance() {
 deploy_instance sleemstudio
 deploy_instance demo
 deploy_instance vieuxlooters
+deploy_instance polygone
 
 # ── 7. Vérification : on ne déclare le succès qu'après l'avoir constaté ──────
 head_ "Vérification des services"
@@ -253,6 +254,7 @@ check_url "nodyx.org/translate"   "https://nodyx.org/translate"
 check_url "sleemstudio.nodyx.org" "https://sleemstudio.nodyx.org/"
 check_url "demo.nodyx.org"        "https://demo.nodyx.org/"
 check_url "vieuxlooters.nodyx.org" "https://vieuxlooters.nodyx.org/"
+check_url "polygone.nodyx.org"    "https://polygone.nodyx.org/"
 check_url "nodyx.dev"             "https://nodyx.dev/"
 check_url "start.nodyx.org"       "https://start.nodyx.org/"
 check_url "extensions.nodyx.org"  "https://extensions.nodyx.org/"
@@ -270,7 +272,7 @@ fi
 # ── 7. Verdict ───────────────────────────────────────────────────────────────
 echo
 if [[ $FAILURES -eq 0 ]]; then
-  echo -e "${GREEN}${BOLD}✓ Déploiement terminé : 9 applications à jour et vérifiées.${RESET}"
+  echo -e "${GREEN}${BOLD}✓ Déploiement terminé : 10 applications à jour et vérifiées.${RESET}"
   exit 0
 else
   echo -e "${RED}${BOLD}✘ Déploiement terminé avec $FAILURES problème(s). Voir ci-dessus.${RESET}"
