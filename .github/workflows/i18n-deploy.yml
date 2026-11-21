@@ -19,6 +19,7 @@ on:
     paths:
       - 'nodyx-frontend/src/lib/locales/**'
       - '.github/workflows/i18n-deploy.yml'
+      - 'scripts/ops/i18n-deploy.sh'
 
 # Ce workflow lit les secrets VPS_HOST / VPS_USER / VPS_SSH_KEY pour pousser
 # le deploiement par SSH. Aucun besoin d'ecrire au repo : permission minimale
@@ -51,17 +52,12 @@ jobs:
             cd /var/www/nexus
 
             echo "── git pull ──"
-            git pull origin main
+            git pull --ff-only origin main
 
-            echo "── npm install ──"
-            cd nodyx-frontend
-            npm ci --prefer-offline
-
-            echo "── build ──"
-            npm run build
-
-            echo "── restart ──"
-            sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 restart nodyx-frontend
+            # Construit À CÔTÉ du dossier servi puis bascule, comme deploy-all (#1066) :
+            # le site garde sa version tant que la nouvelle n'est pas prête, et ne
+            # réinstalle ses dépendances que si elles ont changé.
+            bash scripts/ops/i18n-deploy.sh /var/www/nexus/nodyx-frontend
 
             echo "── done ──"
             sudo -u nodyx PM2_HOME=/home/nodyx/.pm2 pm2 show nodyx-frontend | grep -E "status|restart"
