@@ -22,6 +22,8 @@
 	import { t as i18n } from '$lib/i18n'
 
 	const tFn = $derived($i18n)
+	// Libellés des widgets : un widget récent donne des clés i18n (« hpw. »), les anciens du texte.
+	const tr = (s: string | undefined) => (s && s.startsWith('hpw.') ? tFn(s) : s)
 
 	let { data }: { data: PageData } = $props()
 
@@ -156,7 +158,7 @@
 	const pickerPlugins = $derived(
 		catalog.filter(e => {
 			const q = searchWidget.toLowerCase()
-			const matchSearch = !q || e.label.toLowerCase().includes(q) || e.id.toLowerCase().includes(q)
+			const matchSearch = !q || (tr(e.label) ?? '').toLowerCase().includes(q) || e.id.toLowerCase().includes(q)
 			const matchFamily = !pickerFamily || e.family === pickerFamily
 			return matchSearch && matchFamily
 		})
@@ -881,7 +883,7 @@
 			<div class="panel-body">
 				<button class="panel-back" onclick={() => { activePanel = 'rows'; selectedCol = null }}>{tFn('hpb.back_rows')}</button>
 				<div class="panel-section-title">
-					{selPlugin ? `${selPlugin.icon} ${selPlugin.label}` : selCol.widget ?? 'Widget'}
+					{selPlugin ? `${selPlugin.icon} ${tr(selPlugin.label)}` : selCol.widget ?? 'Widget'}
 				</div>
 
 				{#if selNativePlugin?.customPanel && selNativePlugin.id === 'social-links-bar'}
@@ -1448,7 +1450,7 @@
 					{#each selPlugin.schema as field}
 						<label class="pfield">
 							<span class="pfield-label-row">
-								<span>{field.label}</span>
+								<span>{tr(field.label)}</span>
 								{#if field.details}
 									<button type="button" class="pfield-info-btn"
 										onclick={(e) => {
@@ -1459,7 +1461,7 @@
 										aria-expanded={openDetails === field.key}>?</button>
 								{/if}
 							</span>
-							{#if field.hint}<span class="pfield-hint">{field.hint}</span>{/if}
+							{#if field.hint}<span class="pfield-hint">{tr(field.hint)}</span>{/if}
 							{#if field.details && openDetails === field.key}
 								<div class="pfield-details">
 									{#each field.details.split('\n\n') as para}
@@ -1480,13 +1482,13 @@
 									onchange={(e) => { configFields = { ...configFields, [field.key]: (e.target as HTMLSelectElement).value } }}
 								>
 									{#each field.options ?? [] as opt}
-										<option value={opt.value}>{opt.label}</option>
+										<option value={opt.value}>{tr(opt.label)}</option>
 									{/each}
 								</select>
 							{:else if field.type === 'textarea'}
 								<textarea rows="4" value={configFields[field.key] as string ?? ''}
 									oninput={(e) => { configFields = { ...configFields, [field.key]: (e.target as HTMLTextAreaElement).value } }}
-									placeholder={field.placeholder}
+									placeholder={tr(field.placeholder)}
 								></textarea>
 							{:else if field.type === 'number'}
 								<input type="number"
@@ -1506,7 +1508,7 @@
 							{:else}
 								<input type={field.type === 'url' ? 'url' : field.type === 'image' ? 'url' : 'text'}
 									value={configFields[field.key] as string ?? ''}
-									placeholder={field.placeholder}
+									placeholder={tr(field.placeholder)}
 									oninput={(e) => { configFields = { ...configFields, [field.key]: (e.target as HTMLInputElement).value } }}
 								/>
 							{/if}
@@ -1816,8 +1818,8 @@
 								onclick={() => placeWidget(plugin)}
 							>
 								<span class="picker-icon">{plugin.icon}</span>
-								<span class="picker-label">{plugin.label}</span>
-								<span class="picker-desc">{plugin.desc}</span>
+								<span class="picker-label">{tr(plugin.label)}</span>
+								<span class="picker-desc">{tr(plugin.desc)}</span>
 								<span class="picker-family" style="color: var(--fc)">{plugin.family}</span>
 							</button>
 						{/each}
