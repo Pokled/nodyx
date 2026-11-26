@@ -79,7 +79,7 @@
 			{tFn('common.members')}
 			{#if showOnlineCount}
 				<span class="mx-1" style="color:var(--ntm)">·</span>
-				<span style="color:#4ade80; font-weight:700">{onlineCount}</span>
+				<span class="jc-online" style="color:#4ade80; font-weight:700">{onlineCount}</span>
 				{tFn('common.online')}
 			{/if}
 		</div>
@@ -89,7 +89,7 @@
 	     primary/accent, pas de couleur de lien --nl ici : un bouton plein, pas
 	     un lien texte). -->
 	<a href="/auth/register"
-	   class="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
+	   class="jc-cta w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all"
 	   style="font-family:var(--nfont); background:linear-gradient(135deg,var(--np),var(--na)); border:1px solid rgb(var(--np-rgb) / .4)">
 		{ctaText || tFn('common.join')}
 		<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -97,3 +97,12 @@
 		</svg>
 	</a>
 </div>
+
+<style>
+	/* Base de design v2 : un bouton plein de la couleur d'action, en casse normale, avec le
+	   texte prévu pour elle (lisible en clair comme en sombre) ; le vert d'état de la base. */
+	:global(.gr-design) .jc-cta { background: var(--np) !important; color: var(--nx-on-accent) !important;
+		text-transform: none; letter-spacing: 0; border: 0 !important; clip-path: polygon(0 0, calc(100% - var(--nx-coupe, 0px)) 0, 100% var(--nx-coupe, 0px), 100% 100%, 0 100%); }
+	:global(.gr-design) .jc-cta:hover { background: var(--nx-header-accent-strong) !important; }
+	:global(.gr-design) .jc-online { color: var(--nx-ok) !important; }
+</style>

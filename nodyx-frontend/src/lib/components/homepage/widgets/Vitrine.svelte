@@ -123,4 +123,6 @@
 		.vt-tile img { transition: none; }
 		a.vt-tile:hover img { transform: none; }
 	}
+	/* Grille de la base de design : c'est la ligne qui porte la marge latérale */
+	:global(.gr-design) .vt { padding-left: 0; padding-right: 0; }
 </style>

@@ -133,7 +133,7 @@
 </script>
 
 <!-- Injecter les CSS vars thème sur le conteneur racine -->
-<div class="gr-root" style="{cssVars}; background: var(--nb); font-family: var(--nfont); font-size: var(--nfs); color: var(--nt)">
+<div class="gr-root" class:gr-design={design && !editMode} style="{cssVars}; background: var(--nb); font-family: var(--nfont); font-size: var(--nfs); color: var(--nt)">
 	{#each layout.rows as row (row.id)}
 		<!-- ── ROW ─────────────────────────────────────────────────────────── -->
 		<div
@@ -487,4 +487,8 @@
 		padding-left:  max(0px, env(safe-area-inset-left));
 		padding-right: max(0px, env(safe-area-inset-right));
 	}
+	/* Base de design v2 : une même marge latérale pour toutes les lignes (les blocs
+	   s'alignent sur un seul bord), 32 px au bureau, 16 px au téléphone. */
+	.gr-design .gr-row { padding-left: 32px; padding-right: 32px; }
+	@media (max-width: 860px) { .gr-design .gr-row { padding-left: 16px; padding-right: 16px; } }
 </style>
