@@ -96,7 +96,9 @@
 	<!-- Les 10 polices proposées par le thème du Homepage Builder (--nfont) : sans
 	     ce lien, choisir une police dans le panneau n'a aucun effet visuel, le
 	     navigateur retombe sur une police système générique. -->
-	<link href={GRID_GOOGLE_FONTS_URL} rel="stylesheet" />
+	<!-- Base de design v2 : la grille prend la police servie par l'instance (static/fonts/),
+	     aucune requête vers Google, donc aucune adresse de visiteur qui part chez un tiers. -->
+	{#if !designGrid}<link href={GRID_GOOGLE_FONTS_URL} rel="stylesheet" />{/if}
 </svelte:head>
 
 <style>
