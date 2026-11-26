@@ -21,6 +21,10 @@
  * chaîne fournie par l'admin : aucune injection CSS possible.
  */
 
+import { palette, etat } from './design/palette'
+import { styleVars, STYLES, type Reglages } from './design/style'
+import { policeDe, type FontId } from './design/fonts'
+
 export interface ShellTheme {
 	accent: string
 	backdrop: 'banner' | 'custom' | 'none'
@@ -33,6 +37,19 @@ export interface ShellTheme {
 	neutrals?: 'graphite' | 'tinted' | 'black'
 	/** Style propre à chaque zone (CDC partie 3) ; absent = la zone suit l'ambiance. */
 	zones?: Partial<Record<ShellZone, ZoneStyle>>
+	/** Base de design (SPECS/NODYX_DESIGN_BASE_CDC.md) : `2` = la nouvelle base, calculée par
+	 *  lib/design (couleurs, police, forme). Absent = le rendu d'avant, inchangé. */
+	version?: 2
+	font?: FontId
+	shape?: ShellShape
+}
+
+/** La forme choisie dans « Personnaliser » (listes fermées, validées par le core). */
+export interface ShellShape {
+	radius: 'square' | 'slight' | 'medium' | 'round'
+	border: 'none' | 'thin' | 'strong'
+	shadow: 'none' | 'floating' | 'all'
+	corners: 'none' | 'one' | 'four'
 }
 
 export const SHELL_ZONES = ['rail', 'sidebar', 'header', 'members', 'sheet'] as const
@@ -253,6 +270,7 @@ function neutrals(h: number, dark: boolean): ShellVars {
 
 /** Variables d'un mode (clair ou sombre) pour une ambiance donnée. */
 export function deriveShellVars(theme: ShellTheme, dark: boolean): ShellVars {
+	if (theme.version === 2) return deriveDesignVars(theme, dark)
 	const base = rgbToOklch(hexToRgb(theme.accent))
 	const vars = theme.neutrals === 'graphite' ? graphite(dark) : theme.neutrals === 'black' ? black(dark) : neutrals(base.h, dark)
 	const surface = vars['--nx-surface']
@@ -286,6 +304,88 @@ export function deriveShellVars(theme: ShellTheme, dark: boolean): ShellVars {
 	const [br, bg, bb] = hexToRgb(vars['--nx-bg']).map(v => Math.round(v * 255))
 	vars['--nx-wallpaper-veil'] = `rgb(${br} ${bg} ${bb} / ${round(lerp(dark ? 0.6 : 0.72, dark ? 0.1 : 0.2, t), 2)})`
 	return vars
+}
+
+// ── Base de design, version 2 (SPECS/NODYX_DESIGN_BASE_CDC.md, lot B3) ────
+// Les MÊMES variables --nx-* que le rendu d'avant (l'interface les lit déjà,
+// des milliers de fois), mais calculées par lib/design : les quatre plans,
+// l'accent et ses usages, les états, avec un contraste garanti (tests de
+// lib/design). Panneaux pleins : ni verre ni papier peint flou, comme les
+// planches validées. Le décor et l'intensité de l'ambiance n'y jouent plus.
+
+/** Les ids du core (anglais) vers ceux des planches (lib/design/style.ts). */
+const SHAPE_TO_REGLAGES = {
+	radius: { square: 'carre', slight: 'leger', medium: 'moyen', round: 'rond' },
+	border: { none: 'aucune', thin: 'fin', strong: 'marque' },
+	shadow: { none: 'aucune', floating: 'flotte', all: 'partout' },
+	corners: { none: 'aucun', one: 'un', four: 'quatre' },
+} as const
+
+/** Réglages de forme d'une ambiance v2 ; absents ou inconnus : le style « Arrondi » de Nodyx. */
+export function shapeReglages(shape: ShellShape | undefined): Reglages {
+	const d = STYLES.arrondi
+	const m = <T extends Record<string, string>>(table: T, v: unknown) =>
+		typeof v === 'string' && Object.hasOwn(table, v) ? table[v] : undefined
+	return {
+		arrondi: (m(SHAPE_TO_REGLAGES.radius, shape?.radius) ?? d.arrondi) as Reglages['arrondi'],
+		bord: (m(SHAPE_TO_REGLAGES.border, shape?.border) ?? d.bord) as Reglages['bord'],
+		ombre: (m(SHAPE_TO_REGLAGES.shadow, shape?.shadow) ?? d.ombre) as Reglages['ombre'],
+		coins: (m(SHAPE_TO_REGLAGES.corners, shape?.corners) ?? d.coins) as Reglages['coins'],
+	}
+}
+
+function deriveDesignVars(theme: ShellTheme, dark: boolean): ShellVars {
+	const mode = dark ? 'sombre' : 'clair'
+	const p = palette(theme.accent.toLowerCase(), mode, theme.neutrals === 'tinted')
+	const rgbOf = (hex: string) => hexToRgb(hex).map(v => Math.round(v * 255)).join(' ')
+	const f = shapeReglages(theme.shape)
+	const ombre = f.ombre === 'aucune' ? 'none'
+		: dark ? '0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -8px rgb(0 0 0 / 0.5)'
+		: '0 1px 2px rgb(16 24 40 / 0.06), 0 8px 24px -10px rgb(16 24 40 / 0.14)'
+	return {
+		'--nx-bg':                   p.fond,
+		'--nx-surface':              p.panneau,
+		'--nx-surface-raised':       p.flotte,
+		'--nx-border':               p.trait,
+		'--nx-border-soft':          p.retrait,
+		'--nx-text':                 p.texte,
+		'--nx-text-muted':           p.texte2,
+		'--nx-text-faint':           ensureContrast(p.texte3, p.panneau, 3),
+		'--nx-header-accent':        p.action,
+		'--nx-header-accent-strong': p.survol,
+		'--nx-header-accent-soft':   p.choisi,
+		'--nx-on-accent':            p.surAction,
+		'--nx-ok':                   etat('fait', mode).texte,
+		'--nx-warn':                 etat('attention', mode).texte,
+		'--nx-bad':                  etat('probleme', mode).texte,
+		'--nx-info':                 etat('savoir', mode).texte,
+		'--nx-glass':                p.panneau,
+		'--nx-glass-strong':         p.panneau,
+		'--nx-glass-rim':            'transparent',
+		'--nx-glass-edge':           f.bord === 'aucune' ? 'transparent' : p.trait,
+		'--nx-glass-shadow':         ombre,
+		'--nx-wallpaper-filter':     'none',
+		'--nx-wallpaper-veil':       `rgb(${rgbOf(p.fond)} / 1)`,
+	}
+}
+
+/** Police, arrondis et forme d'une ambiance v2 : valeurs calculées uniquement. */
+export function designShapeVars(theme: ShellTheme): ShellVars {
+	const police = policeDe(theme.font)
+	const v = styleVars(shapeReglages(theme.shape))
+	return {
+		...v,
+		'--nx-font': police.famille,
+		'--font-shell': police.famille,
+		'--font-shell-rounded': police.famille,
+		'--zone-font': police.famille,
+	}
+}
+
+/** La feuille de police à charger pour cette ambiance (null : rien à charger, ou rendu d'avant). */
+export function designFontHref(theme: ShellTheme | null | undefined): string | null {
+	if (!theme || theme.version !== 2) return null
+	return policeDe(theme.font).css
 }
 
 const block = (vars: ShellVars) => Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';')
@@ -420,6 +520,7 @@ export function legacyAccentVars(theme: ShellTheme): ShellVars {
  * Injectée après app.css, elle en remplace les valeurs codées en dur.
  */
 export function shellThemeCss(theme: ShellTheme, opts: { legacy?: boolean } = {}): string {
+	if (theme.version === 2) return designThemeCss(theme, opts)
 	const light = block(deriveShellVars(theme, false))
 	const dark = block(deriveShellVars(theme, true))
 	// `:root:root` : même élément, mais une priorité STRICTEMENT supérieure à
@@ -445,6 +546,30 @@ export function shellThemeCss(theme: ShellTheme, opts: { legacy?: boolean } = {}
 		...zoneRules(theme, true, '@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"])').map(r => r + '}'),
 		...zoneRules(theme, true, ':root:root[data-theme="dark"]'),
 		`@media (prefers-reduced-transparency: reduce){:root:root,:root:root[data-theme]{--nx-glass:var(--nx-surface);--nx-glass-strong:var(--nx-surface)}}`,
+		...(opts.legacy ? [`:root:root{${block(legacyAccentVars(theme))}}`] : []),
+	].join('\n')
+}
+
+/**
+ * Feuille d'une ambiance v2. Même structure que la v1 (clair par défaut, sombre
+ * par préférence ou forcé), mais la feuille centrale prend le fond de la base
+ * (plus de « fond mêlé de noir » : la v2 est faite pour les deux modes), et
+ * la police et la forme s'ajoutent. L'arrondi des plaques (--shell-radius) ne
+ * s'applique qu'au bureau, comme avant : sur mobile, pas de plaques.
+ */
+function designThemeCss(theme: ShellTheme, opts: { legacy?: boolean }): string {
+	const light = block(deriveShellVars(theme, false))
+	const dark = block(deriveShellVars(theme, true))
+	const forme = designShapeVars(theme)
+	const sheet = '--nx-sheet-bg:var(--nx-bg)'
+	return [
+		`:root:root{${light};${sheet};${block(forme)};font-family:var(--nx-font)}`,
+		`@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){${dark};${sheet}}}`,
+		`:root:root[data-theme="dark"]{${dark};${sheet}}`,
+		`@media (min-width: 1024px){:root:root{--shell-radius:${forme['--nx-r-fenetre']}}}`,
+		...zoneRules(theme, false, ':root:root'),
+		...zoneRules(theme, true, '@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"])').map(r => r + '}'),
+		...zoneRules(theme, true, ':root:root[data-theme="dark"]'),
 		...(opts.legacy ? [`:root:root{${block(legacyAccentVars(theme))}}`] : []),
 	].join('\n')
 }

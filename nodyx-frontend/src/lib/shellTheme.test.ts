@@ -251,3 +251,66 @@ describe('styles par zone (partie 3)', () => {
 		expect(css).not.toMatch(/<|<\/style/i)
 	})
 })
+
+// ── Base de design, version 2 (lot B3) ────────────────────────────────────
+
+import { designFontHref, designShapeVars, shapeReglages } from './shellTheme'
+import { palette as designPalette, contrast as designContrast } from './design/palette'
+
+describe('base de design v2', () => {
+	const V1: ShellTheme = { accent: '#1f56c9', backdrop: 'banner', backdrop_url: null, intensity: 45, default_mode: 'light', neutrals: 'graphite' }
+	const V2: ShellTheme = { ...V1, version: 2, font: 'inter', shape: { radius: 'medium', border: 'thin', shadow: 'floating', corners: 'none' } }
+
+	it('sans version 2, police et forme sont ignorées : le rendu d’avant, à l’octet près', () => {
+		const { version: _v, ...sansVersion } = V2
+		expect(shellThemeCss(sansVersion as ShellTheme)).toBe(shellThemeCss(V1))
+		expect(shellThemeCss(sansVersion as ShellTheme, { legacy: true })).toBe(shellThemeCss(V1, { legacy: true }))
+		expect(designFontHref(sansVersion as ShellTheme)).toBeNull()
+		expect(designFontHref(null)).toBeNull()
+	})
+
+	it('en v2, les variables --nx-* viennent de lib/design, en clair et en sombre', () => {
+		for (const dark of [false, true]) {
+			const v = deriveShellVars(V2, dark)
+			const p = designPalette('#1f56c9', dark ? 'sombre' : 'clair')
+			expect(v['--nx-bg']).toBe(p.fond)
+			expect(v['--nx-surface']).toBe(p.panneau)
+			expect(v['--nx-text']).toBe(p.texte)
+			expect(v['--nx-header-accent']).toBe(p.action)
+			expect(v['--nx-on-accent']).toBe(p.surAction)
+			// Lisibilité garantie sur le panneau
+			expect(designContrast(v['--nx-text-muted'], v['--nx-surface'])).toBeGreaterThanOrEqual(4.5)
+			expect(designContrast(v['--nx-text-faint'], v['--nx-surface'])).toBeGreaterThanOrEqual(3)
+			expect(designContrast(v['--nx-header-accent'], v['--nx-surface'])).toBeGreaterThanOrEqual(4.5)
+			for (const k of ['--nx-ok', '--nx-warn', '--nx-bad', '--nx-info']) expect(designContrast(v[k], v['--nx-surface'])).toBeGreaterThanOrEqual(3)
+		}
+	})
+
+	it('en v2, panneaux pleins : ni verre ni papier peint flou', () => {
+		const v = deriveShellVars(V2, true)
+		expect(v['--nx-glass']).toBe(v['--nx-surface'])
+		expect(v['--nx-wallpaper-filter']).toBe('none')
+		expect(v['--nx-wallpaper-veil']).toMatch(/\/ 1\)$/)
+	})
+
+	it('la feuille v2 porte la police, la forme et une feuille centrale au fond de la base', () => {
+		const css = shellThemeCss({ ...V2, font: 'geist', shape: { radius: 'square', border: 'none', shadow: 'none', corners: 'one' } })
+		expect(css).toContain("--nx-font:'Geist Variable'")
+		expect(css).toContain('--nx-r-panneau:0px')
+		expect(css).toContain('--nx-coupe:12px')
+		expect(css).toContain('--nx-sheet-bg:var(--nx-bg)')
+		expect(css).not.toContain('#000)')                       // plus de feuille « mêlée de noir »
+		expect(designFontHref({ ...V2, font: 'geist' })).toBe('/fonts/geist/font.css')
+		expect(designFontHref({ ...V2, font: 'system' })).toBeNull()
+	})
+
+	it('une forme ou une police inconnue retombe sur le style de Nodyx, jamais sur la valeur reçue', () => {
+		const hostile = { ...V2, font: "x';}body{display:none" as never, shape: { radius: '9px;}' as never, border: 'thin', shadow: 'floating', corners: 'none' } } as ShellTheme
+		const css = shellThemeCss(hostile)
+		expect(css).not.toContain('display:none')
+		expect(css).not.toContain('9px;}')
+		expect(shapeReglages(hostile.shape).arrondi).toBe('moyen')
+		expect(designShapeVars(hostile)['--nx-font']).toContain('Inter Variable')
+		expect(shapeReglages({ radius: 'toString', border: 'x', shadow: 'y', corners: 'z' } as never)).toEqual(shapeReglages(undefined))
+	})
+})
