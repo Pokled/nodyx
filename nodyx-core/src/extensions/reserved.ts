@@ -21,6 +21,7 @@ export const RESERVED_EXTENSION_IDS: ReadonlySet<string> = new Set([
   'recent-threads',
   'social-links-bar',
   'twitch-stream',
+  'vitrine',
   // Préfixes de service, réservés pour éviter toute confusion d'origine
   'nodyx',
   'core',
