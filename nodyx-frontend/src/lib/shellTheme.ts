@@ -355,6 +355,7 @@ function deriveDesignVars(theme: ShellTheme, dark: boolean): ShellVars {
 		'--nx-header-accent-strong': p.survol,
 		'--nx-header-accent-soft':   p.choisi,
 		'--nx-on-accent':            p.surAction,
+		'--nx-header-accent-rgb':    rgbOf(p.action),
 		'--nx-ok':                   etat('fait', mode).texte,
 		'--nx-warn':                 etat('attention', mode).texte,
 		'--nx-bad':                  etat('probleme', mode).texte,
@@ -552,20 +553,20 @@ export function shellThemeCss(theme: ShellTheme, opts: { legacy?: boolean } = {}
 
 /**
  * Feuille d'une ambiance v2. Même structure que la v1 (clair par défaut, sombre
- * par préférence ou forcé), mais la feuille centrale prend le fond de la base
- * (plus de « fond mêlé de noir » : la v2 est faite pour les deux modes), et
- * la police et la forme s'ajoutent. L'arrondi des plaques (--shell-radius) ne
+ * par préférence ou forcé), plus la police et la forme. Pas de --nx-sheet-bg :
+ * une page migrée (sheet-themed) prend alors le fond de la base dans les deux
+ * modes, et une page pas encore migrée garde son fond d'avant (--shell-bg),
+ * sur lequel ses couleurs codées en dur restent lisibles. L'arrondi des plaques (--shell-radius) ne
  * s'applique qu'au bureau, comme avant : sur mobile, pas de plaques.
  */
 function designThemeCss(theme: ShellTheme, opts: { legacy?: boolean }): string {
 	const light = block(deriveShellVars(theme, false))
 	const dark = block(deriveShellVars(theme, true))
 	const forme = designShapeVars(theme)
-	const sheet = '--nx-sheet-bg:var(--nx-bg)'
 	return [
-		`:root:root{${light};${sheet};${block(forme)};font-family:var(--nx-font)}`,
-		`@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){${dark};${sheet}}}`,
-		`:root:root[data-theme="dark"]{${dark};${sheet}}`,
+		`:root:root{${light};${block(forme)};font-family:var(--nx-font)}`,
+		`@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){${dark}}}`,
+		`:root:root[data-theme="dark"]{${dark}}`,
 		`@media (min-width: 1024px){:root:root{--shell-radius:${forme['--nx-r-fenetre']}}}`,
 		...zoneRules(theme, false, ':root:root'),
 		...zoneRules(theme, true, '@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"])').map(r => r + '}'),
@@ -583,9 +584,19 @@ function designThemeCss(theme: ShellTheme, opts: { legacy?: boolean }): string {
  * modes : la feuille centrale reste sombre tant que les pages ne sont pas
  * migrées (CDC contenant).
  */
-export interface AmbiancePalette { accent: string; text: string; muted: string; card: string; border: string }
+export interface AmbiancePalette {
+	accent: string; text: string; muted: string; card: string; border: string
+	/** Ambiance v2 : les valeurs sont des RÉFÉRENCES aux --nx-* (var(...)), pas des
+	 *  couleurs figées ; la grille suit alors le mode du visiteur, clair ou sombre,
+	 *  sans calcul de son côté. */
+	design?: true
+}
 
 export function ambiancePalette(theme: ShellTheme | null | undefined): AmbiancePalette {
+	if (theme?.version === 2) return {
+		accent: 'var(--nx-header-accent)', text: 'var(--nx-text)', muted: 'var(--nx-text-muted)',
+		card: 'var(--nx-surface)', border: 'var(--nx-border)', design: true,
+	}
 	const v = deriveShellVars(theme ?? DEFAULT_SHELL_THEME, true)
 	const rgb = (hex: string) => hexToRgb(hex).map(x => Math.round(x * 255)).join(' ')
 	return {

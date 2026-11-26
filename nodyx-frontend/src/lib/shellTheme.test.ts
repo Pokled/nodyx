@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
 	hexToRgb, rgbToHex, rgbToOklch, oklchToHex, contrast, ensureContrast, onColor,
-	deriveShellVars, shellThemeCss, backdropSource, DEFAULT_SHELL_THEME, legacyAccentVars, type ShellTheme,
+	deriveShellVars, shellThemeCss, backdropSource, DEFAULT_SHELL_THEME, legacyAccentVars, ambiancePalette, type ShellTheme,
 } from './shellTheme'
 
 const theme = (over: Partial<ShellTheme> = {}): ShellTheme => ({ ...DEFAULT_SHELL_THEME, ...over })
@@ -293,13 +293,14 @@ describe('base de design v2', () => {
 		expect(v['--nx-wallpaper-veil']).toMatch(/\/ 1\)$/)
 	})
 
-	it('la feuille v2 porte la police, la forme et une feuille centrale au fond de la base', () => {
+	it('la feuille v2 porte la police et la forme, sans imposer de fond aux pages pas encore migrées', () => {
 		const css = shellThemeCss({ ...V2, font: 'geist', shape: { radius: 'square', border: 'none', shadow: 'none', corners: 'one' } })
 		expect(css).toContain("--nx-font:'Geist Variable'")
 		expect(css).toContain('--nx-r-panneau:0px')
 		expect(css).toContain('--nx-coupe:12px')
-		expect(css).toContain('--nx-sheet-bg:var(--nx-bg)')
-		expect(css).not.toContain('#000)')                       // plus de feuille « mêlée de noir »
+		// Pas de fond de feuille imposé : une page migrée prend le fond de la base, une page
+		// pas encore migrée garde le sien (ses couleurs codées en dur restent lisibles).
+		expect(css).not.toContain('--nx-sheet-bg')
 		expect(designFontHref({ ...V2, font: 'geist' })).toBe('/fonts/geist/font.css')
 		expect(designFontHref({ ...V2, font: 'system' })).toBeNull()
 	})
@@ -312,5 +313,23 @@ describe('base de design v2', () => {
 		expect(shapeReglages(hostile.shape).arrondi).toBe('moyen')
 		expect(designShapeVars(hostile)['--nx-font']).toContain('Inter Variable')
 		expect(shapeReglages({ radius: 'toString', border: 'x', shadow: 'y', corners: 'z' } as never)).toEqual(shapeReglages(undefined))
+	})
+})
+
+describe('la grille d’accueil suit une ambiance v2', () => {
+	it('v2 : des références aux --nx-*, qui suivent le mode du visiteur ; v1 : des couleurs, comme avant', () => {
+		const v1: ShellTheme = { accent: '#1f56c9', backdrop: 'banner', backdrop_url: null, intensity: 45, default_mode: 'light' }
+		const p2 = ambiancePalette({ ...v1, version: 2 })
+		expect(p2).toEqual({ accent: 'var(--nx-header-accent)', text: 'var(--nx-text)', muted: 'var(--nx-text-muted)', card: 'var(--nx-surface)', border: 'var(--nx-border)', design: true })
+		const p1 = ambiancePalette(v1)
+		expect(p1.design).toBeUndefined()
+		expect(p1.accent).toMatch(/^#[0-9a-f]{6}$/)
+	})
+
+	it('v2 : le triplet de l’accent existe, pour les transparences des blocs', () => {
+		for (const dark of [false, true]) {
+			const v = deriveShellVars({ accent: '#1f56c9', backdrop: 'none', intensity: 0, default_mode: 'light', version: 2 }, dark)
+			expect(v['--nx-header-accent-rgb']).toMatch(/^\d{1,3} \d{1,3} \d{1,3}$/)
+		}
 	})
 })

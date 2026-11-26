@@ -8,7 +8,7 @@
 	import { replyCount } from '$lib/forumCounts';
 	import WidgetZone from '$lib/components/homepage/WidgetZone.svelte';
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte';
-	import { ambiancePalette } from '$lib/shellTheme';
+	import { ambiancePalette, type ShellTheme } from '$lib/shellTheme';
 	import { shellPreview } from '$lib/shellPreview';
 	import type { PublicExtension } from '$lib/components/homepage/extensionCatalog';
 	import type { HomepagePosition, GridLayout, GridTheme } from '$lib/types/homepage';
@@ -28,6 +28,7 @@
 	const extensions = $derived(((data as { extensions?: PublicExtension[] }).extensions ?? []) satisfies PublicExtension[])
 	const gridLayout       = $derived((data as any).gridLayout as GridLayout | null ?? null);
 	const gridTheme        = $derived((data as any).gridTheme as Partial<GridTheme> ?? {});
+	const designGrid       = $derived(!!gridLayout && !!gridTheme.follow_ambiance && (($shellPreview ?? (data as any).shellTheme) as ShellTheme | null)?.version === 2);
 	const hasGrid          = $derived(gridLayout !== null && (gridLayout as GridLayout)?.rows?.length > 0);
 
 	// Helper: get widgets for a position from homepage builder data
@@ -100,6 +101,7 @@
 
 <style>
 	:global(.hp-root) { font-family: 'Inter', sans-serif; }
+	:global(.hp-root.hp-design) { font-family: var(--nx-font); background: var(--nx-bg); color: var(--nx-text); }
 	.sg  { font-family: 'Space Grotesk', sans-serif; }
 	/* ── Gradient text ── */
 	.gt {
@@ -211,7 +213,9 @@
 <!-- Le fond à points (et ses halos violet-cyan) n'apparaît plus quand la
      grille suit l'ambiance : il se montrait à travers le fond devenu
      transparent de la grille (signalé par Jonathan le 29/09). -->
-<div class="min-h-full hp-root" class:dotbg={!(hasGrid && gridTheme.follow_ambiance)}>
+<!-- Base de design v2 : la grille qui suit l'ambiance pose le fond et le texte de
+     la base (clair ou sombre selon le visiteur), sur toute la feuille. -->
+<div class="min-h-full hp-root" class:dotbg={!(hasGrid && gridTheme.follow_ambiance)} class:hp-design={designGrid}>
 
 <!-- ═══════════════════════════════════════════════════════════════════
      GRID BUILDER v2 — remplace tout le contenu si un layout est publié
