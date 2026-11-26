@@ -71,6 +71,23 @@ export const ZoneStyleSchema = z.object({
 
 export type ZoneStyle = z.infer<typeof ZoneStyleSchema>
 
+// ── Base de design, version 2 (SPECS/NODYX_DESIGN_BASE_CDC.md, lot B1) ─────
+// L'écran « Personnaliser » : une police et une forme, en listes fermées. Le
+// frontend en calcule lui-même les variables (lib/design/style.ts), rien de
+// saisi n'arrive dans une feuille de style. Tout est facultatif : une ambiance
+// publiée avant reste valable telle quelle et garde son rendu, et seule
+// `version: 2` fait passer une instance à la nouvelle base.
+export const DESIGN_FONTS = ['inter', 'geist', 'plex', 'source', 'atkinson', 'system'] as const
+
+export const ShapeSchema = z.object({
+  radius:  z.enum(['square', 'slight', 'medium', 'round']),
+  border:  z.enum(['none', 'thin', 'strong']),
+  shadow:  z.enum(['none', 'floating', 'all']),
+  corners: z.enum(['none', 'one', 'four']),
+}).strict()
+
+export type Shape = z.infer<typeof ShapeSchema>
+
 const ZonesSchema = z.object(Object.fromEntries(SHELL_ZONES.map(k => [k, ZoneStyleSchema.optional()])) as Record<typeof SHELL_ZONES[number], z.ZodOptional<typeof ZoneStyleSchema>>).strict()
 
 export const ShellThemeSchema = z.object({
@@ -84,6 +101,9 @@ export const ShellThemeSchema = z.object({
   // restent valides et gardent leur rendu ('tinted').
   neutrals:     z.enum(['graphite', 'tinted', 'black']).optional(),
   zones:        ZonesSchema.optional(),
+  version:      z.literal(2).optional(),
+  font:         z.enum(DESIGN_FONTS).optional(),
+  shape:        ShapeSchema.optional(),
 }).strict().superRefine((v, ctx) => {
   if (v.backdrop === 'custom' && !v.backdrop_url) {
     ctx.addIssue({ code: 'custom', path: ['backdrop_url'], message: 'backdrop_url requis pour un décor personnalisé' })
@@ -105,6 +125,9 @@ export function normalizeShellTheme(v: ShellTheme): ShellTheme {
     default_mode: v.default_mode,
     neutrals:     v.neutrals ?? 'tinted',
     ...(normalizeZones(v.zones) ? { zones: normalizeZones(v.zones) } : {}),
+    ...(v.version ? { version: v.version } : {}),
+    ...(v.font ? { font: v.font } : {}),
+    ...(v.shape ? { shape: { radius: v.shape.radius, border: v.shape.border, shadow: v.shape.shadow, corners: v.shape.corners } } : {}),
   }
 }
 
