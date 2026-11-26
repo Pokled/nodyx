@@ -69,6 +69,50 @@ describe('ShellThemeSchema', () => {
   })
 })
 
+// ── Base de design, version 2 (lot B1) ────────────────────────
+
+const V2 = { ...VALID, version: 2, font: 'inter', shape: { radius: 'medium', border: 'thin', shadow: 'floating', corners: 'none' } } as const
+
+describe('base de design v2 : police et forme', () => {
+  it('accepte une ambiance v2 complète, et chaque police de la liste', () => {
+    expect(ShellThemeSchema.safeParse(V2).success).toBe(true)
+    for (const font of ['inter', 'geist', 'plex', 'source', 'atkinson', 'system']) {
+      expect(ShellThemeSchema.safeParse({ ...V2, font }).success).toBe(true)
+    }
+  })
+
+  it('une ambiance publiée AVANT la v2 reste relue telle quelle, sans version ni police ni forme', () => {
+    const relue = parseStoredShellTheme(JSON.stringify(VALID))
+    expect(relue).not.toBeNull()
+    expect(relue).not.toHaveProperty('version')
+    expect(relue).not.toHaveProperty('font')
+    expect(relue).not.toHaveProperty('shape')
+  })
+
+  it('la forme canonique GARDE la version, la police et la forme (rien n’est jeté en silence)', () => {
+    const n = normalizeShellTheme(ShellThemeSchema.parse(V2))
+    expect(n.version).toBe(2)
+    expect(n.font).toBe('inter')
+    expect(n.shape).toEqual({ radius: 'medium', border: 'thin', shadow: 'floating', corners: 'none' })
+    expect(parseStoredShellTheme(JSON.stringify(V2))).toEqual(n)
+  })
+
+  it.each([
+    ['version inconnue',              { ...V2, version: 3 }],
+    ['version en texte',              { ...V2, version: '2' }],
+    ['police hors liste',             { ...V2, font: 'Comic Sans MS' }],
+    ['police avec CSS injecté',       { ...V2, font: "inter';}body{display:none" }],
+    ['arrondi en pixels',             { ...V2, shape: { ...V2.shape, radius: '12px' } }],
+    ['bordure inconnue',              { ...V2, shape: { ...V2.shape, border: 'dotted' } }],
+    ['ombre inconnue',                { ...V2, shape: { ...V2.shape, shadow: 'glow' } }],
+    ['coins inconnus',                { ...V2, shape: { ...V2.shape, corners: 'two' } }],
+    ['forme incomplète',              { ...V2, shape: { radius: 'medium' } }],
+    ['forme avec une clé en trop',    { ...V2, shape: { ...V2.shape, css: 'x' } }],
+  ])('refuse : %s', (_label, value) => {
+    expect(ShellThemeSchema.safeParse(value).success).toBe(false)
+  })
+})
+
 describe('isSafeBackdropUrl', () => {
   it.each([
     '/uploads/banners/abc-123.webp',
@@ -207,6 +251,15 @@ describe('/api/v1/admin/appearance', () => {
       draft: null,
       identity: { published: { logo_url: '/uploads/logos/a.png', banner_url: null }, draft: { logo_url: '/uploads/logos/n.png' } },
     })
+  })
+
+  it('PUT /draft enregistre une ambiance v2 entière : version, police et forme arrivent dans le brouillon', async () => {
+    query.mockResolvedValueOnce({ rows: [] })
+    const res = await call('PUT', '/draft', V2)
+    expect(res.statusCode).toBe(200)
+    const [, params] = query.mock.calls[0]
+    expect(params[0]).toBe(SHELL_KEY_DRAFT)
+    expect(JSON.parse(params[1] as string)).toEqual({ ...V2, accent: '#ffb020', backdrop_url: null, neutrals: 'tinted' })
   })
 
   it('PUT /draft refuse une valeur invalide avec un code stable, sans écrire', async () => {
