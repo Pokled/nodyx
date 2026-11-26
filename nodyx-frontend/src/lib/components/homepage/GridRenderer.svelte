@@ -61,6 +61,15 @@
 	const t = $derived.by(() => {
 		const base = { ...DEFAULT_THEME, ...theme } as GridTheme
 		if (!base.follow_ambiance || !ambiance) return base
+		// Ambiance v2 : la base de design donne aussi la police, l'arrondi et la
+		// bordure ; cartes à plat (bordure, pas d'ombre), comme les planches.
+		if (ambiance.design) return {
+			...base,
+			primary: ambiance.accent, accent: ambiance.accent, link_color: ambiance.accent,
+			text_primary: ambiance.text, text_secondary: ambiance.muted,
+			card_bg: ambiance.card, border_color: ambiance.border, bg: 'transparent',
+			font_family: 'var(--nx-font)', border_radius: 'var(--nx-r-panneau)', border_width: 'var(--nx-bord)', shadow: 'none',
+		}
 		return {
 			...base,
 			primary: ambiance.accent, accent: ambiance.accent, link_color: ambiance.accent,
@@ -73,15 +82,16 @@
 	provideFollowAmbiance(() => !!t.follow_ambiance && !!ambiance)
 
 	// ── CSS custom properties thème ──────────────────────────────────────────
+	const design = $derived(!!t.follow_ambiance && !!ambiance?.design)
 	const cssVars = $derived([
 		`--np: ${t.primary}`,
 		`--na: ${t.accent}`,
 		// Triplets RGB pour les widgets natifs qui composent des rgb(var(--x) / alpha)
 		// (glows, dégradés translucides) — même technique que --nx-*-rgb dans app.css.
-		`--np-rgb: ${hexToRgbTriplet(t.primary)}`,
-		`--na-rgb: ${hexToRgbTriplet(t.accent)}`,
+		`--np-rgb: ${design ? 'var(--nx-header-accent-rgb)' : hexToRgbTriplet(t.primary)}`,
+		`--na-rgb: ${design ? 'var(--nx-header-accent-rgb)' : hexToRgbTriplet(t.accent)}`,
 		`--nl: ${t.link_color}`,
-		`--nl-rgb: ${hexToRgbTriplet(t.link_color)}`,
+		`--nl-rgb: ${design ? 'var(--nx-header-accent-rgb)' : hexToRgbTriplet(t.link_color)}`,
 		`--nb: ${t.bg}`,
 		`--nc: ${t.card_bg}`,
 		`--nborder: ${t.border_color}`,
