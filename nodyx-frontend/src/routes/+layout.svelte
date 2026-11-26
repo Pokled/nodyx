@@ -696,8 +696,14 @@
 	const SHEET_THEMED = ['/feed', '/help', '/members', '/forum', '/wiki', '/calendar', '/tasks', '/dm', '/musique', '/garden', '/auth/login', '/auth/register', '/notifications', '/search', '/polls', '/library', '/discover', '/users', '/settings', '/canvas', '/about', '/communities', '/reputation', '/status', '/charter']
 	// Exclusions : sous-routes pas encore migrées d'un préfixe thémé (éditeur de profil).
 	const SHEET_NOT_THEMED: string[] = []
+	// Base de design v2 : l'accueil est thémé quand SA GRILLE publiée suit l'ambiance (ses blocs
+	// lisent alors les --nx-*). L'ancien accueil, sombre codé en dur, ne l'est jamais.
+	const homeDesign = $derived(
+		page.url.pathname === '/' && shellTheme.version === 2 &&
+		!!(page.data as any)?.gridLayout?.rows?.length && !!(page.data as any)?.gridTheme?.follow_ambiance
+	)
 	const sheetThemed = $derived(
-		isAdminThemed(page.url.pathname) || (
+		isAdminThemed(page.url.pathname) || homeDesign || (
 			SHEET_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/')) &&
 			!SHEET_NOT_THEMED.some(p => page.url.pathname === p || page.url.pathname.startsWith(p + '/'))
 		)

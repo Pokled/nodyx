@@ -90,7 +90,7 @@
 		}),
 		posts: () => ({
 			key: 'posts', value: displayed.posts,
-			label: tFn('nav.dm'), color: 'var(--ntm)', pulse: false, glow: false,
+			label: tFn('home.stat_posts'), color: 'var(--ntm)', pulse: false, glow: false,
 		}),
 	};
 
@@ -101,25 +101,25 @@
 	);
 </script>
 
-<div class="flex flex-wrap items-stretch gap-0.5">
+<div class="sb flex flex-wrap items-stretch gap-0.5">
 	{#each visibleStats as stat (stat.key)}
-		<div class="flex flex-col items-center justify-center px-6 py-2 gap-0.5"
+		<div class="sb-cell flex flex-col items-center justify-center px-6 py-2 gap-0.5"
 		     style="background:var(--nc); border:var(--nbw) solid var(--nborder); border-radius:var(--nr, 0px)">
 			<span
-				class="font-black text-xl tabular-nums"
+				class="sb-value font-black text-xl tabular-nums"
 				class:sglow={stat.glow}
 				style="font-family:var(--nfont); color:{stat.color}"
 			>
 				{#if stat.pulse}
 					<span class="flex items-center gap-2">
-						<span class="w-2 h-2 rounded-full opulse" style="background:{stat.color}"></span>
+						<span class="sb-dot w-2 h-2 rounded-full opulse" style="background:{stat.color}"></span>
 						{stat.value.toLocaleString()}
 					</span>
 				{:else}
 					{stat.value.toLocaleString()}
 				{/if}
 			</span>
-			<span class="text-[9px] uppercase tracking-[.18em] font-bold" style="color:var(--ntm)">
+			<span class="sb-label text-[9px] uppercase tracking-[.18em] font-bold" style="color:var(--ntm)">
 				{stat.label}
 			</span>
 		</div>
@@ -138,4 +138,16 @@
 		100% { box-shadow: 0 0 0 7px rgba(74,222,128,0); }
 	}
 	.opulse { animation: opulse 2s ease-out infinite; }
+
+	/* Base de design v2 (maquette « Polygone dans l'application ») : des cases égales sur toute
+	   la largeur, chiffre en texte, libellé en casse normale, ni halo ni pulsation ; le vert
+	   « en ligne » est celui de la base (lisible en clair comme en sombre). */
+	:global(.gr-design) .sb { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0;
+		border: var(--nbw) solid var(--nborder); background: var(--nc); }
+	:global(.gr-design) .sb-cell { align-items: flex-start; padding: 16px 20px; border: 0 !important;
+		border-left: var(--nbw) solid var(--nborder) !important; border-radius: 0 !important; background: transparent !important; }
+	:global(.gr-design) .sb-cell:first-child { border-left: 0 !important; }
+	:global(.gr-design) .sb-value { color: var(--nt) !important; font-size: 1.75rem; font-weight: 700; line-height: 1.15; animation: none; }
+	:global(.gr-design) .sb-dot { background: var(--nx-ok) !important; animation: none; }
+	:global(.gr-design) .sb-label { font-size: .875rem; text-transform: none; letter-spacing: 0; font-weight: 400; }
 </style>
