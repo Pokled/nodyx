@@ -90,7 +90,7 @@ describe('cohabitation avec les widgets natifs', () => {
 	const NATIFS = [
 		'hero-banner', 'header', 'stats-bar', 'join-card', 'announcement-banner',
 		'article-slideshow', 'articles-showcase', 'recent-threads',
-		'social-links-bar', 'twitch-stream', 'video-player',
+		'social-links-bar', 'twitch-stream', 'video-player', 'vitrine',
 	]
 
 	it('aucun identifiant d extension ne peut valoir un identifiant natif', () => {
