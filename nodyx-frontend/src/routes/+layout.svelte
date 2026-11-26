@@ -29,7 +29,7 @@
 	import { overlayScroll } from '$lib/actions/overlayScroll';
 	import { editZone } from '$lib/actions/editZone';
 	import EditOverlay from '$lib/components/appearance/EditOverlay.svelte';
-	import { shellThemeCss, backdropSource, DEFAULT_SHELL_THEME, type ShellTheme } from '$lib/shellTheme';
+	import { shellThemeCss, backdropSource, designFontHref, DEFAULT_SHELL_THEME, type ShellTheme } from '$lib/shellTheme';
 	import { shellPreview, identityPreview } from '$lib/shellPreview';
 	import NodyxVersionBadge from '$lib/components/NodyxVersionBadge.svelte';
 	import FloatingReactions from '$lib/components/FloatingReactions.svelte';
@@ -189,6 +189,8 @@
 	// rien choisi.
 	const shellCss        = $derived(shellThemeCss(shellTheme, { legacy: !!($shellPreview ?? (data as any).shellTheme) }));
 	const shellBackdrop   = $derived(backdropSource(shellTheme, communityBanner));
+	// Base de design v2 : la police choisie, servie par l'instance (static/fonts/).
+	const designFont      = $derived(designFontHref(shellTheme));
 	const rawNetworkInstances = $derived((data as any).networkInstances as Array<{
 		slug: string; name: string; url: string;
 		logo_url: string | null; members: number; online: number; last_seen: string | null;
@@ -884,6 +886,7 @@
 <svelte:window onkeydown={handleGlobalKeydown} />
 
 <svelte:head>
+	{#if designFont}<link rel="stylesheet" href={designFont} />{/if}
 	<!-- The favicon is intentionally not overridden by the community logo
 	     anymore. It stays the Nodyx brand mark declared in app.html (and
 	     a self-hoster can replace static/favicon.ico if they want their
