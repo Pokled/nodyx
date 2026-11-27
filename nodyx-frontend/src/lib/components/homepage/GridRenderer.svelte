@@ -37,6 +37,8 @@
 		/** Nouvel éditeur (lot L1a) : l'habillage d'un bloc (contour, nom, outils), posé par
 		 *  l'éditeur sur chaque colonne. La page s'affiche sinon comme pour les visiteurs. */
 		blockChrome?:      Snippet<[GridColumn]>
+		/** Nouvel éditeur (lot L1b) : posé sous chaque rangée sauf la dernière (« Ajouter un bloc ici »). */
+		betweenRows?:      Snippet<[GridRow]>
 	}
 
 	let {
@@ -57,6 +59,7 @@
 		selectedColKey = null,
 		ambiance = null,
 		blockChrome,
+		betweenRows,
 	}: Props = $props()
 
 	// « Suivre l'ambiance » : TOUTE la palette (accent, textes, cartes,
@@ -139,7 +142,7 @@
 
 <!-- Injecter les CSS vars thème sur le conteneur racine -->
 <div class="gr-root" class:gr-design={design && !editMode} style="{cssVars}; background: var(--nb); font-family: var(--nfont); font-size: var(--nfs); color: var(--nt)">
-	{#each layout.rows as row (row.id)}
+	{#each layout.rows as row, rowIdx (row.id)}
 		<!-- ── ROW ─────────────────────────────────────────────────────────── -->
 		<div
 			class="gr-row"
@@ -253,6 +256,7 @@
 					{/if}
 				</div>
 			{/each}
+			{#if betweenRows && rowIdx < layout.rows.length - 1}{@render betweenRows(row)}{/if}
 		</div>
 	{/each}
 </div>

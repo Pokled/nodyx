@@ -7,9 +7,10 @@
 	import { onMount } from 'svelte'
 	import { t } from '$lib/i18n'
 	import GridRenderer from '$lib/components/homepage/GridRenderer.svelte'
-	import { PLUGIN_REGISTRY, PLUGIN_LIST } from '$lib/components/homepage/plugins'
+	import { PLUGIN_REGISTRY } from '$lib/components/homepage/plugins'
+	import { CATALOG_GROUPS, catalogEntry, catalogGroup, type SketchRect } from '$lib/homepage/catalog'
 	import type { FieldSchema } from '$lib/components/homepage/plugins'
-	import type { GridColumn, GridLayout, GridTheme } from '$lib/types/homepage'
+	import type { GridColumn, GridLayout, GridRow, GridTheme } from '$lib/types/homepage'
 	import {
 		toBlocks, toLayout, moveBlock, removeBlock, duplicateBlock, setSpan, insertRowAfter, insertIntoEmpty,
 		widthOf, WIDTHS, type EditorBlock, type WidthWord,
@@ -18,7 +19,7 @@
 	import { visibleFields, defaultsFor } from '$lib/homepage/fields'
 	import { ambiancePalette, type ShellTheme } from '$lib/shellTheme'
 	import { shellPreview } from '$lib/shellPreview'
-	import { ArrowUp, ArrowDown, Copy, Eye, EyeOff, Trash2, Undo2, Redo2, ChevronLeft, Monitor, Tablet, Smartphone, Plus } from 'lucide-svelte'
+	import { ArrowUp, ArrowDown, Copy, Eye, EyeOff, Trash2, Undo2, Redo2, ChevronLeft, Monitor, Tablet, Smartphone, Plus, Search } from 'lucide-svelte'
 
 	let { data } = $props()
 	const tFn = $derived($t)
@@ -41,7 +42,7 @@
 	const selectedPlugin = $derived(selected?.widget ? PLUGIN_REGISTRY[selected.widget] ?? null : null)
 	let tab = $state<'structure' | 'add'>('structure')
 	/** Où ira le prochain bloc ajouté : une place libre précise, ou après le bloc choisi */
-	let addTarget = $state<{ emptyId: string } | null>(null)
+	let addTarget = $state<{ kind: 'empty'; emptyId: string } | { kind: 'after'; blockId: string } | null>(null)
 	let device = $state<'desktop' | 'tablet' | 'phone'>('desktop')
 
 	// ── Gestes, annuler, rétablir (R3) ────────────────────────────────────────
@@ -88,9 +89,9 @@
 		if (!p) return
 		const nb = { widget, config: defaultsFor(p.schema, p.advanced ?? []) }
 		const before = new Set(blocks.map(b => b.id))
-		const next = addTarget
+		const next = addTarget?.kind === 'empty'
 			? insertIntoEmpty(blocks, addTarget.emptyId, nb)
-			: insertRowAfter(blocks, selectedId ?? blocks[blocks.length - 1]?.id ?? null, nb)
+			: insertRowAfter(blocks, addTarget?.kind === 'after' ? addTarget.blockId : (selectedId ?? blocks[blocks.length - 1]?.id ?? null), nb)
 		commit(next)
 		addTarget = null
 		tab = 'structure'
@@ -156,7 +157,7 @@
 	// ── La page au centre : un clic choisit un bloc, aucun lien ne quitte l'éditeur ──
 	function onCanvasClick(e: MouseEvent) {
 		const el = e.target as HTMLElement
-		if (el.closest('.gr-chrome-tools, .gr-chrome-add')) return
+		if (el.closest('.gr-chrome-tools, .gr-chrome-add, .gr-between')) return
 		if (el.closest('a, button, input, select, textarea')) e.preventDefault()
 		const col = el.closest('[data-block]') as HTMLElement | null
 		const id = col?.dataset.block ?? null
@@ -164,7 +165,11 @@
 		if (b?.widget) { selectedId = b.id; tab = 'structure' }
 		else if (!col) selectedId = null
 	}
-	function startAddHere(emptyId: string) { addTarget = { emptyId }; tab = 'add'; selectedId = null }
+	function startAddHere(emptyId: string) { addTarget = { kind: 'empty', emptyId }; openAdd() }
+	/** « Ajouter un bloc ici » entre deux rangées : le bloc ira sous la rangée du dessus. */
+	function startAddBelow(blockId: string) { addTarget = { kind: 'after', blockId }; openAdd() }
+	let searchEl = $state<HTMLInputElement | null>(null)
+	function openAdd() { tab = 'add'; selectedId = null; addQuery = ''; setTimeout(() => searchEl?.focus(), 0) }
 
 	// ── Thème : la page de l'éditeur ressemble à la page publiée ──────────────
 	const shellTheme = $derived(($shellPreview ?? (page.data as { shellTheme?: ShellTheme | null }).shellTheme ?? null) as ShellTheme | null)
@@ -173,18 +178,43 @@
 	const DEVICE_W = { desktop: '100%', tablet: '820px', phone: '390px' } as const
 
 	// ── Libellés ──────────────────────────────────────────────────────────────
-	const pluginName = (w: string | null) => (w && PLUGIN_REGISTRY[w] ? tr(PLUGIN_REGISTRY[w].label) : (w ?? ''))
+	// Le nom simple du catalogue (« Chiffres »), sinon le libellé du widget (extensions, anciens)
+	const pluginName = (w: string | null) => {
+		if (!w) return ''
+		const e = catalogEntry(w)
+		return e ? tFn(e.nameKey) : PLUGIN_REGISTRY[w] ? tr(PLUGIN_REGISTRY[w].label) : w
+	}
 	const widthName = (span: number) => { const w = widthOf(span); return w === 'custom' ? tFn('hpe.width_custom') : tFn(`hpe.width_${w}`) }
+	// La phrase du catalogue (la même que dans « Ajouter un bloc »), sinon celle du widget
+	const selectedDesc = $derived.by(() => {
+		if (!selected?.widget) return ''
+		const e = catalogEntry(selected.widget)
+		return e ? tFn(e.descKey) : tr(selectedPlugin?.desc)
+	})
 	const structure = $derived(structureBlocks(blocks))
+	/** La 2e ligne d'un bloc dans la Structure : son type s'il a un titre (sinon le titre EST le
+	 *  type, pas de redite), sa largeur si ce n'est pas toute la largeur, « masqué ». */
+	const itemSub = (b: EditorBlock) => {
+		const parts: string[] = []
+		if (blockTitle(b)) parts.push(pluginName(b.widget))
+		if (widthOf(b.span) !== 'full') parts.push(widthName(b.span))
+		if (b.extra.hidden) parts.push(tFn('hpe.hidden'))
+		return parts.map((x, i) => (i ? x.toLowerCase() : x)).join(', ')
+	}
 	const hiddenCount = $derived(structure.filter(b => b.extra.hidden).length)
 	const fields = $derived(selected && selectedPlugin ? visibleFields(selectedPlugin.schema, selected.config) : [] as FieldSchema[])
 	const SIMPLE = new Set(['text', 'textarea', 'url', 'image', 'number', 'boolean', 'select', 'color'])
 
 	let addQuery = $state('')
-	const catalogue = $derived(PLUGIN_LIST.filter(p => {
-		const q = addQuery.trim().toLowerCase()
-		return !q || tr(p.label).toLowerCase().includes(q) || tr(p.desc).toLowerCase().includes(q)
-	}))
+	const groups = $derived(CATALOG_GROUPS.map(g => ({ g, items: catalogGroup(g, addQuery, k => tFn(k)).filter(e => PLUGIN_REGISTRY[e.id]) })).filter(x => x.items.length))
+	const blockName = (id: string) => { const b = blocks.find(x => x.id === id); return b ? (blockTitle(b) || pluginName(b.widget)) : '' }
+	const addWhere = $derived(
+		addTarget?.kind === 'empty' ? tFn('hpe.add_into_space')
+		: addTarget?.kind === 'after' ? tFn('hpe.add_between', { name: blockName(addTarget.blockId) })
+		: selected ? tFn('hpe.add_after', { name: blockTitle(selected) || pluginName(selected.widget) })
+		: tFn('hpe.add_where_bottom'))
+	const TONE: Record<SketchRect['tone'], string> = { ink: 'var(--nx-text)', accent: 'var(--nx-header-accent)', soft: 'var(--nx-border)' }
+	const TONE_OP: Record<SketchRect['tone'], number> = { ink: 0.72, accent: 0.5, soft: 1 }
 
 	onMount(() => {
 		if (data.draft) saveState = 'saved'
@@ -219,6 +249,15 @@
 	{/if}
 {/snippet}
 
+{#snippet between(row: GridRow)}
+	{@const ref = row.columns.find(c => c.widget)?.id ?? row.columns[0]?.id}
+	{#if ref}
+		<div class="gr-between">
+			<button type="button" onclick={() => startAddBelow(ref)}><Plus size={14} />{tFn('hpe.add_here')}</button>
+		</div>
+	{/if}
+{/snippet}
+
 <div class="ed">
 	<!-- ── Barre du haut ── -->
 	<header class="ed-top">
@@ -248,7 +287,7 @@
 		<aside class="ed-left">
 			<div class="ed-tabs" role="tablist">
 				<button type="button" role="tab" aria-selected={tab === 'structure'} class:on={tab === 'structure'} onclick={() => { tab = 'structure'; addTarget = null }}>{tFn('hpe.tab_structure')}</button>
-				<button type="button" role="tab" aria-selected={tab === 'add'} class:on={tab === 'add'} onclick={() => (tab = 'add')}>{tFn('hpe.tab_add')}</button>
+				<button type="button" role="tab" aria-selected={tab === 'add'} class:on={tab === 'add'} onclick={() => { addTarget = null; openAdd() }}>{tFn('hpe.tab_add')}</button>
 			</div>
 
 			{#if tab === 'structure'}
@@ -261,7 +300,7 @@
 							<li class="ed-item" class:on={b.id === selectedId} class:off={b.extra.hidden}>
 								<button type="button" class="ed-item-main" onclick={() => (selectedId = b.id)}>
 									<span class="ed-item-title">{blockTitle(b) || pluginName(b.widget)}</span>
-									<span class="ed-item-sub">{pluginName(b.widget)}{#if widthOf(b.span) !== 'full'}, {widthName(b.span).toLowerCase()}{/if}{#if b.extra.hidden}, {tFn('hpe.hidden').toLowerCase()}{/if}</span>
+									{#if itemSub(b)}<span class="ed-item-sub">{itemSub(b)}</span>{/if}
 								</button>
 								<span class="ed-item-tools">
 									<button type="button" onclick={() => move(b.id, -1)} disabled={i === 0} aria-label={tFn('hpe.up')} title={tFn('hpe.up')}><ArrowUp size={14} /></button>
@@ -274,22 +313,33 @@
 					<p class="ed-hint">{tFn('hpe.structure_hint')}</p>
 				</div>
 				<div class="ed-left-foot">
-					<button type="button" class="ed-btn ed-btn--wide" onclick={() => { addTarget = null; tab = 'add' }}><Plus size={16} />{tFn('hpe.add_block')}</button>
+					<button type="button" class="ed-btn ed-btn--wide" onclick={() => { addTarget = null; openAdd() }}><Plus size={16} />{tFn('hpe.add_block')}</button>
 				</div>
 			{:else}
 				<div class="ed-scroll">
-					<p class="ed-hint ed-hint--top">{addTarget ? tFn('hpe.add_into_space') : selected ? tFn('hpe.add_after', { name: blockTitle(selected) || pluginName(selected.widget) }) : tFn('hpe.add_bottom')}</p>
-					<input class="ed-input" type="search" bind:value={addQuery} placeholder={tFn('hpe.search_block')} aria-label={tFn('hpe.search_block')} />
-					<ul class="ed-cat">
-						{#each catalogue as p (p.id)}
-							<li>
-								<button type="button" class="ed-cat-item" onclick={() => addBlock(p.id)}>
-									<span class="ed-cat-name">{tr(p.label)}</span>
-									<span class="ed-cat-desc">{tr(p.desc)}</span>
-								</button>
-							</li>
-						{/each}
-					</ul>
+					<label class="ed-search">
+						<Search size={16} />
+						<input bind:this={searchEl} type="search" bind:value={addQuery} placeholder={tFn('hpe.search_block')} aria-label={tFn('hpe.search_block')} />
+					</label>
+					<p class="ed-where">{addWhere}</p>
+					{#each groups as { g, items } (g)}
+						<h3 class="ed-group">{tFn(`hpe.group_${g}`)}</h3>
+						<ul class="ed-cards">
+							{#each items as e (e.id)}
+								<li>
+									<button type="button" class="ed-card" onclick={() => addBlock(e.id)}>
+										<svg class="ed-sketch" viewBox="0 0 100 56" aria-hidden="true">
+											{#each e.sketch as r, i (i)}<rect x={r.x} y={r.y} width={r.w} height={r.h} rx="1.5" fill={TONE[r.tone]} fill-opacity={TONE_OP[r.tone]} />{/each}
+										</svg>
+										<span class="ed-card-name">{tFn(e.nameKey)}</span>
+										<span class="ed-card-desc">{tFn(e.descKey)}</span>
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="ed-empty">{tFn('hpe.no_block_found')}</p>
+					{/each}
 				</div>
 			{/if}
 		</aside>
@@ -309,6 +359,7 @@
 						installedWidgets={data.installedWidgets}
 						extensions={data.extensions}
 						blockChrome={chrome}
+						betweenRows={between}
 					/>
 				{:else}
 					<div class="ed-blank">
@@ -326,7 +377,7 @@
 				{#if selected && selected.widget}
 					<p class="ed-kicker">{tFn('hpe.block')}</p>
 					<h2 class="ed-h">{pluginName(selected.widget)}</h2>
-					{#if selectedPlugin?.desc}<p class="ed-p">{tr(selectedPlugin.desc)}</p>{/if}
+					{#if selectedDesc}<p class="ed-p">{selectedDesc}</p>{/if}
 
 					<section class="ed-sec">
 						<h3>{tFn('hpe.layout')}</h3>
@@ -460,18 +511,24 @@
 	.ed-item-tools button:disabled { opacity: .3; }
 	.ed-empty, .ed-hint { color: var(--nx-text-muted); font-size: 13px; line-height: 1.5; }
 	.ed-hint { margin-top: 16px; }
-	.ed-hint--top { margin: 0 0 10px; }
 
-	.ed-input, .ed-field input[type=text], .ed-field input[type=number], .ed-field textarea, .ed-field select {
+	.ed-field input[type=text], .ed-field input[type=number], .ed-field textarea, .ed-field select {
 		width: 100%; padding: 8px 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px);
 		background: var(--nx-surface); color: var(--nx-text); font: inherit;
 	}
-	.ed-input:focus, .ed-field :is(input, textarea, select):focus { outline: 2px solid var(--nx-header-accent); outline-offset: 1px; }
-	.ed-cat { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-	.ed-cat-item { width: 100%; text-align: left; padding: 10px 12px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-panneau, 10px); background: var(--nx-surface); display: flex; flex-direction: column; gap: 2px; }
-	.ed-cat-item:hover { border-color: var(--nx-header-accent); }
-	.ed-cat-name { font-weight: 600; }
-	.ed-cat-desc { font-size: 12px; color: var(--nx-text-muted); line-height: 1.4; }
+	.ed-field :is(input, textarea, select):focus { outline: 2px solid var(--nx-header-accent); outline-offset: 1px; }
+	/* Ajouter un bloc (maquette) : recherche, où ira le bloc, familles, cartes à croquis */
+	.ed-search { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-surface); color: var(--nx-text-muted); }
+	.ed-search:focus-within { outline: 2px solid var(--nx-header-accent); outline-offset: 1px; }
+	.ed-search input { flex: 1; min-width: 0; height: 36px; border: 0; background: none; color: var(--nx-text); font: inherit; outline: none; }
+	.ed-where { margin: 10px 0 4px; padding: 8px 10px; font-size: 13px; line-height: 1.45; border-radius: var(--nx-r-controle, 6px); background: var(--nx-header-accent-soft); color: var(--nx-text); }
+	.ed-group { margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--nx-text-muted); }
+	.ed-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+	.ed-card { width: 100%; height: 100%; text-align: left; padding: 8px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-panneau, 10px); background: var(--nx-surface); display: flex; flex-direction: column; gap: 4px; }
+	.ed-card:hover { border-color: var(--nx-header-accent); }
+	.ed-sketch { width: 100%; height: auto; aspect-ratio: 100 / 56; padding: 6px; margin-bottom: 4px; border-radius: var(--nx-r-controle, 6px); background: var(--nx-bg); box-sizing: border-box; }
+	.ed-card-name { font-weight: 600; font-size: 13px; line-height: 1.3; }
+	.ed-card-desc { font-size: 12px; color: var(--nx-text-muted); line-height: 1.4; }
 
 	/* ── La page ── */
 	.ed-canvas { min-width: 0; overflow-y: auto; padding: 24px; background: var(--nx-border-soft); }
@@ -487,11 +544,17 @@
 	.ed-page--phone :global(.gr-col) { grid-column: span var(--col-span-sm) !important; }
 	.ed-page--phone :global(.gr-design .gr-row) { padding-left: 16px; padding-right: 16px; }
 
+	/* « Ajouter un bloc ici » entre deux rangées : une bande au survol, à cheval sur la limite */
+	.ed-page :global(.gr-between) { position: absolute; left: 0; right: 0; bottom: -14px; height: 28px; z-index: 6; display: flex; align-items: center; justify-content: center; }
+	.ed-page :global(.gr-between::before) { content: ''; position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: var(--nx-header-accent); opacity: 0; transition: opacity .15s; }
+	.ed-page :global(.gr-between button) { position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; background: var(--nx-header-accent); color: var(--nx-on-accent); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .15s; }
+	.ed-page :global(.gr-between:hover::before), .ed-page :global(.gr-between:focus-within::before), .ed-page :global(.gr-between:hover button), .ed-page :global(.gr-between button:focus-visible) { opacity: 1; }
+
 	/* L'habillage des blocs (rendu dans GridRenderer, d'où :global) */
 	.ed-page :global(.gr-chrome) { position: absolute; inset: 0; pointer-events: none; outline: 1px solid transparent; outline-offset: -1px; z-index: 5; }
 	.ed-page :global(.gr-col--chrome:hover > .gr-chrome) { outline-color: var(--nx-header-accent); }
 	.ed-page :global(.gr-chrome.on) { outline: 2px solid var(--nx-header-accent); outline-offset: -2px; }
-	.ed-page :global(.gr-chrome-tag) { position: absolute; top: 6px; left: 6px; display: none; align-items: center; gap: 6px; padding: 3px 4px 3px 8px; background: var(--nx-header-accent); color: var(--nx-on-accent); font-size: 12px; font-weight: 600; border-radius: var(--nx-r-etiquette, 4px); pointer-events: auto; }
+	.ed-page :global(.gr-chrome-tag) { position: absolute; top: 6px; left: 6px; display: none; align-items: center; gap: 6px; white-space: nowrap; padding: 3px 4px 3px 8px; background: var(--nx-header-accent); color: var(--nx-on-accent); font-size: 12px; font-weight: 600; border-radius: var(--nx-r-etiquette, 4px); pointer-events: auto; }
 	.ed-page :global(.gr-col--chrome:hover > .gr-chrome .gr-chrome-tag), .ed-page :global(.gr-chrome.on .gr-chrome-tag) { display: inline-flex; }
 	.ed-page :global(.gr-chrome-tools) { display: inline-flex; gap: 2px; }
 	.ed-page :global(.gr-chrome-tools button) { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: 3px; color: inherit; }
@@ -515,6 +578,7 @@
 	.ed-widths button.on { border-color: var(--nx-header-accent); background: var(--nx-header-accent-soft); font-weight: 600; }
 	.ed-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
 	.ed-label { font-weight: 600; }
+	.ed-field input[type=checkbox] { align-self: flex-start; width: 18px; height: 18px; accent-color: var(--nx-header-accent); }
 	.ed-help { font-size: 12px; color: var(--nx-text-muted); line-height: 1.4; }
 	.ed-note { font-size: 13px; color: var(--nx-text-muted); line-height: 1.5; padding: 10px; background: var(--nx-bg); border-radius: var(--nx-r-controle, 6px); }
 	.ed-note a, .ed-right a { color: var(--nx-header-accent); }
