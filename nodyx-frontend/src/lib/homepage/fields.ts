@@ -70,3 +70,56 @@ export function checkLink(raw: unknown): LinkCheck {
 	if (/^\d+(\.\d+){3}$/.test(h) || h.startsWith('[')) return { ok: false }
 	return { ok: true, kind: 'external' }
 }
+
+// ── Choisir un lien (R9) : les pages qui existent, puis « une adresse à moi » ──
+
+/** Les pages de Nodyx qu'un bloc peut viser. Chaque chemin existe dans toute instance. */
+export const PAGE_LINKS: { path: string; key: string }[] = [
+	{ path: '/', key: 'hpe.link_home' },
+	{ path: '/forum', key: 'hpe.link_forum' },
+	{ path: '/chat', key: 'hpe.link_chat' },
+	{ path: '/calendar', key: 'hpe.link_calendar' },
+	{ path: '/members', key: 'hpe.link_members' },
+	{ path: '/wiki', key: 'hpe.link_wiki' },
+	{ path: '/polls', key: 'hpe.link_polls' },
+	{ path: '/library', key: 'hpe.link_library' },
+	{ path: '/charter', key: 'hpe.link_charter' },
+	{ path: '/auth/register', key: 'hpe.link_register' },
+	{ path: '/auth/login', key: 'hpe.link_login' },
+]
+
+export interface CategoryRef { slug: string; name: string; thread_count?: number; depth?: number }
+export interface LinkChoice { value: string; key?: string; label?: string }
+
+/** Les choix du sélecteur de lien : les pages, puis chaque catégorie du forum. */
+export function linkChoices(categories: CategoryRef[]): LinkChoice[] {
+	return [
+		...PAGE_LINKS.map(p => ({ value: p.path, key: p.key })),
+		...categories.filter(c => c.slug).map(c => ({ value: `/forum/${c.slug}`, label: c.name })),
+	]
+}
+
+/** Le lien est-il une page de la liste (sinon c'est « une adresse à moi ») ? Un champ vide compte comme une page. */
+export function isListedLink(value: unknown, choices: LinkChoice[]): boolean {
+	return value === '' || value === undefined || value === null || choices.some(c => c.value === value)
+}
+
+// ── La médiathèque ─────────────────────────────────────────────────────────────
+
+export interface AssetRef { id: string; name: string; file_path: string; thumbnail_path?: string | null }
+
+/** L'adresse d'un fichier de la médiathèque, sur l'instance elle-même (jamais d'adresse extérieure). */
+export function assetUrl(a: Pick<AssetRef, 'file_path'>): string {
+	return '/uploads/' + a.file_path.replace(/^\/+/, '')
+}
+export function assetThumb(a: AssetRef): string {
+	return assetUrl({ file_path: a.thumbnail_path || a.file_path })
+}
+
+// ── Listes : le nom d'un élément replié ─────────────────────────────────────
+
+/** Le nom d'un élément de liste replié : la valeur de `itemLabelKey`, sinon « Élément n ». */
+export function listItemLabel(item: unknown, f: FieldSchema, i: number, fallback: (n: number) => string): string {
+	const v = f.itemLabelKey && item && typeof item === 'object' ? (item as Record<string, unknown>)[f.itemLabelKey] : undefined
+	return typeof v === 'string' && v.trim() ? v.trim() : fallback(i + 1)
+}

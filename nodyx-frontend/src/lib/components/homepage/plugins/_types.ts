@@ -88,4 +88,8 @@ export interface WidgetPlugin {
 	advanced?:    FieldSchema[]
 	anatomy?:     (config: Record<string, unknown>) => AnatomyLine[]
 	checks?:      (config: Record<string, unknown>, ctx: CheckContext) => WidgetCheck[]
+	/** La forme actuelle d'une config enregistrée dans un format plus ancien (lot L1c). Pure et
+	 *  idempotente ; l'éditeur ne l'applique qu'au premier réglage modifié, pour qu'une page
+	 *  relue telle quelle reste « Publiée ». */
+	normalize?:   (config: Record<string, unknown>) => Record<string, unknown>
 }

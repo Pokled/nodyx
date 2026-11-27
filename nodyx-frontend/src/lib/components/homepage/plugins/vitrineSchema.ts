@@ -1,23 +1,59 @@
-import type { FieldSchema } from './_types'
+import type { AnatomyLine, FieldSchema } from './_types'
 
 // La vitrine de la maquette « Polygone dans l'application » (validée le 26/11/2026).
-// Libellés : des clés i18n (préfixe « hpw. »), traduites par le builder ; jamais de texte en dur.
+// Libellés : des clés i18n (préfixe « hpw. »), traduites par l'éditeur ; jamais de texte en dur.
 export const K = 'hpw.vitrine.'
 
-const tuile = (n: 1 | 2 | 3): FieldSchema[] => [
-	{ key: `img${n}`, type: 'image', label: `${K}img${n}`, hint: `${K}img_hint`, placeholder: '/uploads/…' },
-	{ key: `img${n}_kicker`, type: 'text', label: `${K}img_kicker`, placeholder: `${K}img${n}_kicker_ph` },
-	{ key: `img${n}_title`, type: 'text', label: `${K}img_title`, placeholder: `${K}img${n}_title_ph` },
-	{ key: `img${n}_link`, type: 'url', label: `${K}img_link`, placeholder: '/forum' },
-]
+export const MAX_TILES = 3
+
+/** Une affiche de la vitrine : une image de la médiathèque, une petite ligne, un nom, un lien. */
+export interface VitrineTile { img: string; kicker: string; title: string; link: string }
 
 export const VITRINE_SCHEMA: FieldSchema[] = [
-		{ key: 'title', type: 'text', label: `${K}title`, placeholder: `${K}title_ph`, required: true },
-		{ key: 'text', type: 'textarea', label: `${K}text`, placeholder: `${K}text_ph` },
-		{ key: 'cta_text', type: 'text', label: `${K}cta_text`, placeholder: `${K}cta_text_ph` },
-		{ key: 'cta_url', type: 'url', label: `${K}cta_url`, hint: `${K}url_hint`, placeholder: '/forum' },
-		{ key: 'cta2_text', type: 'text', label: `${K}cta2_text`, placeholder: `${K}cta2_text_ph` },
-		{ key: 'cta2_url', type: 'url', label: `${K}cta2_url`, placeholder: '/forum' },
-		{ key: 'img1_badge', type: 'text', label: `${K}img1_badge`, placeholder: `${K}img1_badge_ph` },
-		...tuile(1), ...tuile(2), ...tuile(3),
+	{ key: 'title', type: 'text', label: `${K}title`, example: `${K}title_ph`, required: true },
+	{ key: 'text', type: 'textarea', label: `${K}text`, example: `${K}text_ph` },
+	{ key: 'cta_text', type: 'text', label: `${K}cta_text`, example: `${K}cta_text_ph` },
+	{ key: 'cta_url', type: 'link', label: `${K}cta_url` },
+	{ key: 'cta2_text', type: 'text', label: `${K}cta2_text`, example: `${K}cta2_text_ph` },
+	{ key: 'cta2_url', type: 'link', label: `${K}cta2_url` },
+	{
+		key: 'tiles', type: 'list', label: `${K}tiles`, hint: `${K}tiles_hint`, maxItems: MAX_TILES, itemLabelKey: 'title',
+		newItem: { img: '', kicker: '', title: '', link: '' },
+		fields: [
+			{ key: 'img', type: 'media', label: `${K}img` },
+			{ key: 'kicker', type: 'text', label: `${K}img_kicker`, example: `${K}img1_kicker_ph` },
+			{ key: 'title', type: 'text', label: `${K}img_title`, example: `${K}img1_title_ph` },
+			{ key: 'link', type: 'link', label: `${K}img_link` },
+		],
+	},
+	{ key: 'badge', type: 'text', label: `${K}img1_badge`, hint: `${K}badge_hint`, example: `${K}img1_badge_ph` },
 ]
+
+/** D'où vient ce qui s'affiche (R7) : tout ce que montre la vitrine, c'est l'admin qui l'écrit. */
+export function vitrineAnatomy(): AnatomyLine[] {
+	return [
+		{ labelKey: `${K}anat_text_l`, textKey: `${K}anat_text` },
+		{ labelKey: `${K}anat_tiles_l`, textKey: `${K}anat_tiles` },
+		{ labelKey: `${K}anat_links_l`, textKey: `${K}anat_links` },
+	]
+}
+
+const s = (v: unknown) => (typeof v === 'string' ? v : '')
+
+/**
+ * La forme actuelle d'une config de vitrine. Les premières vitrines (avant le lot L1c)
+ * enregistraient leurs images à plat (img1, img1_title…, img1_badge) : on les lit comme une
+ * liste d'affiches, sans rien perdre. Une config déjà sous forme de liste est rendue telle
+ * quelle. Fonction pure, idempotente.
+ */
+export function normalizeVitrine(config: Record<string, unknown>): Record<string, unknown> {
+	if (Array.isArray(config.tiles)) return config
+	const { img1_badge, ...rest } = config
+	const tiles: VitrineTile[] = []
+	for (const n of [1, 2, 3]) {
+		const img = s(config[`img${n}`])
+		if (img) tiles.push({ img, kicker: s(config[`img${n}_kicker`]), title: s(config[`img${n}_title`]), link: s(config[`img${n}_link`]) })
+		for (const k of ['', '_kicker', '_title', '_link']) delete rest[`img${n}${k}`]
+	}
+	return { ...rest, tiles, badge: s(config.badge) || s(img1_badge) }
+}

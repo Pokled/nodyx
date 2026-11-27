@@ -86,3 +86,43 @@ describe('liens (R9 : aucun lien cassé ni piégé)', () => {
 			expect(checkLink(l)).toEqual({ ok: false })
 	})
 })
+
+import { linkChoices, isListedLink, PAGE_LINKS, assetUrl, assetThumb, listItemLabel } from './fields'
+
+describe('choisir un lien (R9)', () => {
+	const cats = [{ slug: 'presente-ton-projet', name: 'Présente ton projet', thread_count: 3 }, { slug: '', name: 'sans slug' }]
+
+	it('les pages de Nodyx, puis chaque catégorie, et aucune n’est un lien cassé', () => {
+		const c = linkChoices(cats)
+		expect(c.slice(0, PAGE_LINKS.length).map(x => x.value)).toEqual(PAGE_LINKS.map(p => p.path))
+		expect(c.at(-1)).toEqual({ value: '/forum/presente-ton-projet', label: 'Présente ton projet' })
+		expect(c.length).toBe(PAGE_LINKS.length + 1)                  // la catégorie sans adresse n'est pas proposée
+		for (const x of c) expect(checkLink(x.value).ok).toBe(true)
+	})
+
+	it('une page de la liste, ou « une adresse à moi »', () => {
+		const c = linkChoices(cats)
+		expect(isListedLink('/forum', c)).toBe(true)
+		expect(isListedLink('', c)).toBe(true)
+		expect(isListedLink('https://exemple.org', c)).toBe(false)
+		expect(isListedLink('/forum/autre', c)).toBe(false)
+	})
+})
+
+describe('la médiathèque', () => {
+	it('un fichier se lit sur l’instance, jamais ailleurs', () => {
+		expect(assetUrl({ file_path: 'assets/a.webp' })).toBe('/uploads/assets/a.webp')
+		expect(assetUrl({ file_path: '//evil.example/x.webp' })).toBe('/uploads/evil.example/x.webp')
+		expect(assetThumb({ id: '1', name: 'a', file_path: 'assets/a.webp', thumbnail_path: 'assets/a_thumb.webp' })).toBe('/uploads/assets/a_thumb.webp')
+		expect(assetThumb({ id: '1', name: 'a', file_path: 'assets/a.webp', thumbnail_path: null })).toBe('/uploads/assets/a.webp')
+	})
+})
+
+describe('listes : le nom d’un élément replié', () => {
+	const f = { key: 'items', type: 'list', label: 'x', itemLabelKey: 'title' } as const
+	it('la valeur choisie, sinon un numéro', () => {
+		expect(listItemLabel({ title: '  Cartouche ' }, f as never, 0, n => `Élément ${n}`)).toBe('Cartouche')
+		expect(listItemLabel({ title: '' }, f as never, 2, n => `Élément ${n}`)).toBe('Élément 3')
+		expect(listItemLabel(null, f as never, 0, n => `Élément ${n}`)).toBe('Élément 1')
+	})
+})
