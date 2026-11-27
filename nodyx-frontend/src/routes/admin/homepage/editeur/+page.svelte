@@ -19,6 +19,7 @@
 	import { visibleFields, defaultsFor } from '$lib/homepage/fields'
 	import { ambiancePalette, type ShellTheme } from '$lib/shellTheme'
 	import { shellPreview } from '$lib/shellPreview'
+	import FieldInput from '$lib/components/homepage/editor/FieldInput.svelte'
 	import { ArrowUp, ArrowDown, Copy, Eye, EyeOff, Trash2, Undo2, Redo2, ChevronLeft, Monitor, Tablet, Smartphone, Plus, Search } from 'lucide-svelte'
 
 	let { data } = $props()
@@ -60,9 +61,12 @@
 	function patchBlock(id: string, patch: (b: EditorBlock) => EditorBlock, mergeKey = '') {
 		commit(blocks.map(b => (b.id === id ? patch(b) : b)), mergeKey)
 	}
-	function setField(key: string, value: unknown) {
+	/** `merge` : une frappe continue dans le même champ ne fait qu'une étape d'annulation. */
+	function setField(key: string, value: unknown, merge = false) {
 		if (!selected) return
-		patchBlock(selected.id, b => ({ ...b, config: { ...b.config, [key]: value } }), `${selected.id}:${key}`)
+		// Une config d'un ancien format passe à la forme actuelle au premier réglage modifié
+		const norm = selectedPlugin?.normalize ?? ((c: Record<string, unknown>) => c)
+		patchBlock(selected.id, b => ({ ...b, config: { ...norm(b.config), [key]: value } }), merge ? `${selected.id}:${key}` : '')
 	}
 	function toggleHidden(id: string) {
 		patchBlock(id, b => ({ ...b, extra: withHidden(b.extra, !b.extra.hidden) }))
@@ -202,8 +206,11 @@
 		return parts.map((x, i) => (i ? x.toLowerCase() : x)).join(', ')
 	}
 	const hiddenCount = $derived(structure.filter(b => b.extra.hidden).length)
-	const fields = $derived(selected && selectedPlugin ? visibleFields(selectedPlugin.schema, selected.config) : [] as FieldSchema[])
-	const SIMPLE = new Set(['text', 'textarea', 'url', 'image', 'number', 'boolean', 'select', 'color'])
+	// Ce que les réglages montrent : la config sous sa forme actuelle (sans rien écrire)
+	const shownConfig = $derived(selected ? (selectedPlugin?.normalize?.(selected.config) ?? selected.config) : {})
+	const fields = $derived(selected && selectedPlugin ? visibleFields(selectedPlugin.schema, shownConfig) : [] as FieldSchema[])
+	const advanced = $derived(selected && selectedPlugin?.advanced ? visibleFields(selectedPlugin.advanced, selected.config) : [] as FieldSchema[])
+	const anatomy = $derived(selected && selectedPlugin?.anatomy ? selectedPlugin.anatomy(selected.config) : [])
 
 	let addQuery = $state('')
 	const groups = $derived(CATALOG_GROUPS.map(g => ({ g, items: catalogGroup(g, addQuery, k => tFn(k)).filter(e => PLUGIN_REGISTRY[e.id]) })).filter(x => x.items.length))
@@ -379,47 +386,50 @@
 					<h2 class="ed-h">{pluginName(selected.widget)}</h2>
 					{#if selectedDesc}<p class="ed-p">{selectedDesc}</p>{/if}
 
-					<section class="ed-sec">
-						<h3>{tFn('hpe.layout')}</h3>
-						{#if widthOf(selected.span) === 'custom'}
-							<p class="ed-p">{tFn('hpe.width_custom_note', { span: String(selected.span) })}</p>
-						{:else}
-							<div class="ed-widths" role="radiogroup" aria-label={tFn('hpe.width')}>
-								{#each (Object.keys(WIDTHS) as WidthWord[]) as w (w)}
-									<button type="button" role="radio" aria-checked={widthOf(selected.span) === w} class:on={widthOf(selected.span) === w} onclick={() => setWidth(selected!.id, w)}>{tFn(`hpe.width_${w}`)}</button>
-								{/each}
-							</div>
-						{/if}
-					</section>
+					{#if anatomy.length}
+						<!-- D'où vient ce qui s'affiche ? (R7 : le détail est replié) -->
+						<details class="ed-fold">
+							<summary>{tFn('hpe.anatomy')}</summary>
+							<dl class="ed-anatomy">
+								{#each anatomy as line, i (i)}<dt>{tFn(line.labelKey)}</dt><dd>{tFn(line.textKey, line.vars)}</dd>{/each}
+							</dl>
+						</details>
+					{/if}
 
 					<section class="ed-sec">
 						<h3>{tFn('hpe.content')}</h3>
-						{#each fields as f (f.key)}
-							{#if SIMPLE.has(f.type)}
-								<label class="ed-field">
-									<span class="ed-label">{tr(f.label)}</span>
-									{#if f.hint}<span class="ed-help">{tr(f.hint)}</span>{/if}
-									{#if f.type === 'textarea'}
-										<textarea rows="4" value={(selected.config[f.key] as string) ?? ''} placeholder={tr(f.example ?? f.placeholder)} oninput={e => setField(f.key, (e.currentTarget as HTMLTextAreaElement).value)}></textarea>
-									{:else if f.type === 'boolean'}
-										<input type="checkbox" checked={!!selected.config[f.key]} onchange={e => setField(f.key, (e.currentTarget as HTMLInputElement).checked)} />
-									{:else if f.type === 'select'}
-										<select value={(selected.config[f.key] as string) ?? (f.default as string) ?? ''} onchange={e => setField(f.key, (e.currentTarget as HTMLSelectElement).value)}>
-											{#each f.options ?? [] as o (o.value)}<option value={o.value}>{tr(o.label)}</option>{/each}
-										</select>
-									{:else if f.type === 'number'}
-										<input type="number" min={f.min} max={f.max} value={(selected.config[f.key] as number) ?? (f.default as number) ?? 0} oninput={e => setField(f.key, Number((e.currentTarget as HTMLInputElement).value))} />
-									{:else if f.type === 'color'}
-										<input type="color" value={(selected.config[f.key] as string) ?? (f.default as string) ?? '#1f56c9'} oninput={e => setField(f.key, (e.currentTarget as HTMLInputElement).value)} />
-									{:else}
-										<input type="text" value={(selected.config[f.key] as string) ?? ''} placeholder={tr(f.example ?? f.placeholder)} oninput={e => setField(f.key, (e.currentTarget as HTMLInputElement).value)} onkeydown={e => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur() }} />
-									{/if}
-								</label>
-							{/if}
+						{#each fields as f (`${selected.id}:${f.key}`)}
+							<FieldInput field={f} value={shownConfig[f.key]} onchange={(v, m) => setField(f.key, v, m)} t={tFn} {tr} categories={data.categories} token={token()} uid={`${selected.id}-${f.key}`} />
 						{:else}
 							<p class="ed-p">{tFn('hpe.no_settings')}</p>
 						{/each}
 					</section>
+
+					<section class="ed-sec">
+						<h3>{tFn('hpe.layout')}</h3>
+						<span class="ed-label">{tFn('hpe.width')}</span>
+						{#if widthOf(selected.span) === 'custom'}
+							<p class="ed-p">{tFn('hpe.width_custom_note', { span: String(selected.span) })}</p>
+						{:else}
+							<div class="ed-seg" role="radiogroup" aria-label={tFn('hpe.width')}>
+								{#each (Object.keys(WIDTHS) as WidthWord[]) as w (w)}
+									<button type="button" role="radio" aria-checked={widthOf(selected.span) === w} class:on={widthOf(selected.span) === w} onclick={() => setWidth(selected!.id, w)}>{tFn(`hpe.width_${w}`)}</button>
+								{/each}
+							</div>
+							<p class="ed-help">{tFn('hpe.width_help')}</p>
+						{/if}
+					</section>
+
+					{#if advanced.length}
+						<details class="ed-fold ed-sec">
+							<summary>{tFn('hpe.more_settings')}</summary>
+							<div class="ed-fold-body">
+								{#each advanced as f (`${selected.id}:adv:${f.key}`)}
+									<FieldInput field={f} value={shownConfig[f.key]} onchange={(v, m) => setField(f.key, v, m)} t={tFn} {tr} categories={data.categories} token={token()} uid={`${selected.id}-adv-${f.key}`} />
+								{/each}
+							</div>
+						</details>
+					{/if}
 				{:else}
 					<p class="ed-kicker">{tFn('hpe.page')}</p>
 					<h2 class="ed-h">{tFn('hpe.title')}</h2>
@@ -512,11 +522,6 @@
 	.ed-empty, .ed-hint { color: var(--nx-text-muted); font-size: 13px; line-height: 1.5; }
 	.ed-hint { margin-top: 16px; }
 
-	.ed-field input[type=text], .ed-field input[type=number], .ed-field textarea, .ed-field select {
-		width: 100%; padding: 8px 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px);
-		background: var(--nx-surface); color: var(--nx-text); font: inherit;
-	}
-	.ed-field :is(input, textarea, select):focus { outline: 2px solid var(--nx-header-accent); outline-offset: 1px; }
 	/* Ajouter un bloc (maquette) : recherche, où ira le bloc, familles, cartes à croquis */
 	.ed-search { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-surface); color: var(--nx-text-muted); }
 	.ed-search:focus-within { outline: 2px solid var(--nx-header-accent); outline-offset: 1px; }
@@ -573,12 +578,22 @@
 	.ed-p { color: var(--nx-text-muted); line-height: 1.5; margin: 0 0 8px; }
 	.ed-sec { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--nx-border); }
 	.ed-sec h3 { font-size: 13px; font-weight: 700; margin: 0 0 10px; }
-	.ed-widths { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-	.ed-widths button { padding: 8px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-surface); }
-	.ed-widths button.on { border-color: var(--nx-header-accent); background: var(--nx-header-accent-soft); font-weight: 600; }
-	.ed-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+	/* Largeur : un contrôle segmenté (maquette), quatre choix en deux rangées */
+	.ed-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 6px; padding: 3px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-bg); }
+	.ed-seg button { padding: 6px 8px; border-radius: var(--nx-r-etiquette, 4px); color: var(--nx-text-muted); }
+	.ed-seg button.on { background: var(--nx-surface); color: var(--nx-text); font-weight: 600; box-shadow: 0 0 0 1px var(--nx-border); }
+	.ed-help { display: block; margin-top: 6px; font-size: 12px; color: var(--nx-text-muted); line-height: 1.45; }
+	/* Replié : « D'où vient ce qui s'affiche ? », « Plus de réglages » */
+	.ed-fold { margin-top: 12px; }
+	.ed-fold summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 6px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
+	.ed-fold summary::-webkit-details-marker { display: none; }
+	.ed-fold summary::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+	.ed-fold[open] summary::before { transform: rotate(45deg); }
+	.ed-fold-body { padding-top: 8px; }
+	.ed-anatomy { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; font-size: 13px; }
+	.ed-anatomy dt { font-weight: 600; }
+	.ed-anatomy dd { margin: 0; color: var(--nx-text-muted); }
 	.ed-label { font-weight: 600; }
-	.ed-field input[type=checkbox] { align-self: flex-start; width: 18px; height: 18px; accent-color: var(--nx-header-accent); }
 	.ed-help { font-size: 12px; color: var(--nx-text-muted); line-height: 1.4; }
 	.ed-note { font-size: 13px; color: var(--nx-text-muted); line-height: 1.5; padding: 10px; background: var(--nx-bg); border-radius: var(--nx-r-controle, 6px); }
 	.ed-note a, .ed-right a { color: var(--nx-header-accent); }

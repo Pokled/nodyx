@@ -24,6 +24,8 @@
 	const tFn = $derived($i18n)
 	// Libellés des widgets : un widget récent donne des clés i18n (« hpw. »), les anciens du texte.
 	const tr = (s: string | undefined) => (s && s.startsWith('hpw.') ? tFn(s) : s)
+	// Les types de réglage que ce formulaire sait afficher (les autres sont ceux du nouvel éditeur)
+	const OLD_TYPES = new Set(['text', 'textarea', 'url', 'number', 'boolean', 'select', 'color', 'image'])
 
 	let { data }: { data: PageData } = $props()
 
@@ -1447,7 +1449,12 @@
 					{/if}
 
 				{:else if selPlugin && selPlugin.schema.length > 0}
-					{#each selPlugin.schema as field}
+					{#if selPlugin.schema.some(f => !OLD_TYPES.has(f.type))}
+						<!-- Réglages du nouvel éditeur (listes, médiathèque, liens) : ce formulaire ne sait
+						     pas les afficher, et les écraser abîmerait le bloc. On renvoie vers l'éditeur. -->
+						<p class="pfield-hint">{tFn('hpb.new_editor_only')} <a href="/admin/homepage/editeur">{tFn('hpb.open_new_editor')}</a></p>
+					{/if}
+					{#each selPlugin.schema.filter(f => OLD_TYPES.has(f.type)) as field}
 						<label class="pfield">
 							<span class="pfield-label-row">
 								<span>{tr(field.label)}</span>

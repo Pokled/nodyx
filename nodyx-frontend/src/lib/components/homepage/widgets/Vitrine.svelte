@@ -4,16 +4,20 @@
 	// Couleurs, police et arrondi viennent de la grille (--np, --nt, --nr…) : quand elle suit
 	// une ambiance v2, c'est la base de design, en clair comme en sombre.
 	import { safeHref, safeImg } from './vitrineUrls'
+	import { normalizeVitrine, MAX_TILES, type VitrineTile } from '../plugins/vitrineSchema'
 
-	let { config = {} }: { config?: Record<string, unknown>; instance?: Record<string, unknown>; user?: unknown } = $props()
+	let { config: raw = {} }: { config?: Record<string, unknown>; instance?: Record<string, unknown>; user?: unknown } = $props()
+	// Les anciennes vitrines (images à plat) se lisent comme une liste d'affiches
+	const config = $derived(normalizeVitrine(raw))
 
 	const str = (k: string) => (typeof config[k] === 'string' ? (config[k] as string).trim() : '')
 	const title = $derived(str('title'))
 	const text = $derived(str('text'))
 	const cta = $derived({ text: str('cta_text'), href: safeHref(str('cta_url')) })
 	const cta2 = $derived({ text: str('cta2_text'), href: safeHref(str('cta2_url')) })
-	const tiles = $derived([1, 2, 3]
-		.map(n => ({ src: safeImg(str(`img${n}`)), kicker: str(`img${n}_kicker`), name: str(`img${n}_title`), href: safeHref(str(`img${n}_link`)), badge: n === 1 ? str('img1_badge') : '' }))
+	const tiles = $derived(((config.tiles as VitrineTile[]) ?? [])
+		.slice(0, MAX_TILES)
+		.map((x, i) => ({ src: safeImg(x?.img), kicker: (x?.kicker ?? '').trim(), name: (x?.title ?? '').trim(), href: safeHref(x?.link), badge: i === 0 ? str('badge') : '' }))
 		.filter(t => t.src))
 </script>
 
