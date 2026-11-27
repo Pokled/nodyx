@@ -3,7 +3,7 @@
 // et le nom d'un bloc dans la Structure. Aucun DOM, aucune requête.
 
 import type { GridLayout } from '$lib/types/homepage'
-import type { EditorBlock } from './editorModel'
+import { moveBlock, type EditorBlock } from './editorModel'
 
 // ── Annuler, rétablir (R3) ───────────────────────────────────────────────────
 
@@ -74,4 +74,24 @@ export function structureBlocks(blocks: EditorBlock[]): EditorBlock[] {
 export function withHidden<T extends { hidden?: boolean }>(extra: T, hidden: boolean): T {
 	const { hidden: _drop, ...rest } = extra
 	return (hidden ? { ...rest, hidden: true } : rest) as T
+}
+
+/** Glisser-déposer dans la Structure : le bloc avance pas à pas (mêmes règles que les flèches,
+ *  `moveBlock`) jusqu'à la place du bloc visé. S'il ne peut plus avancer (au bord de sa rangée),
+ *  il s'arrête là : jamais de geste qui casse une rangée. */
+export function moveToward(blocks: EditorBlock[], id: string, targetId: string): EditorBlock[] {
+	const order = (bs: EditorBlock[]) => structureBlocks(bs).map(b => b.id)
+	const target = order(blocks).indexOf(targetId)
+	const start = order(blocks).indexOf(id)
+	if (target < 0 || start < 0 || target === start) return blocks
+	const dir: -1 | 1 = target > start ? 1 : -1
+	let cur = blocks
+	for (let n = 0; n < 64; n++) {
+		const next = moveBlock(cur, id, dir)
+		if (next === cur) break
+		cur = next
+		const at = order(cur).indexOf(id)
+		if (dir > 0 ? at >= target : at <= target) break
+	}
+	return cur
 }

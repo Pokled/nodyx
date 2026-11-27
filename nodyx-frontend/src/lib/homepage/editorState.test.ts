@@ -92,3 +92,32 @@ describe('masquer, réafficher', () => {
 		expect(withHidden<ColumnExtra>({ hide_mobile: true }, true)).toEqual({ hide_mobile: true, hidden: true })
 	})
 })
+
+import { moveToward } from './editorState'
+
+describe('glisser-déposer dans la Structure', () => {
+	const row = (id: string, ...cols: [string, number, string | null][]) => ({ id, gap: '1rem', padding_y: '2rem', columns: cols.map(([cid, span, widget]) => ({ id: cid, span, widget, config: {} })) })
+	const PAGE4: GridLayout = { rows: [row('r1', ['a', 12, 'vitrine']), row('r2', ['b', 12, 'stats-bar']), row('r3', ['c', 8, 'recent-threads'], ['d', 4, 'join-card']), row('r4', ['e', 12, 'header'])] }
+	const ids = (bs: ReturnType<typeof toBlocks>) => structureBlocks(bs).map(b => b.id).join('')
+
+	it('vers le bas : le bloc prend la place visée', () => {
+		expect(ids(moveToward(toBlocks(PAGE4), 'a', 'b'))).toBe('bacde')
+		expect(ids(moveToward(toBlocks(PAGE4), 'a', 'e'))).toBe('bcdea')
+	})
+
+	it('vers le haut, et une rangée de deux blocs se déplace en entier', () => {
+		expect(ids(moveToward(toBlocks(PAGE4), 'e', 'a'))).toBe('eabcd')
+		expect(ids(moveToward(toBlocks(PAGE4), 'b', 'd'))).toBe('acdbe')
+	})
+
+	it('un bloc à côté d’un voisin échange sa place, sans quitter sa rangée', () => {
+		expect(ids(moveToward(toBlocks(PAGE4), 'c', 'd'))).toBe('abdce')
+		expect(ids(moveToward(toBlocks(PAGE4), 'c', 'a'))).toBe('abcde')        // au bord : rien ne casse
+	})
+
+	it('sur lui-même ou vers un bloc inconnu : rien ne change', () => {
+		const b = toBlocks(PAGE4)
+		expect(moveToward(b, 'a', 'a')).toBe(b)
+		expect(moveToward(b, 'a', 'zzz')).toBe(b)
+	})
+})

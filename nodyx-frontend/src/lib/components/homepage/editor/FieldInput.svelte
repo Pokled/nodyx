@@ -140,6 +140,7 @@
 				{/if}
 				<option value="__custom">{t('hpe.link_custom')}</option>
 			</select>
+			{#if !customLink}<span class="fi-help">{t('hpe.link_help')}</span>{/if}
 			{#if customLink}
 				<input type="text" class="fi-mt" value={str} placeholder={t('hpe.link_custom_ph')} aria-label={t('hpe.link_custom')} oninput={e => onchange((e.currentTarget as HTMLInputElement).value, true)} />
 				{#if linkBad}<span class="fi-bad" role="alert">{t('hpe.link_bad')}</span>{/if}

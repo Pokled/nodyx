@@ -11,7 +11,7 @@ export interface VitrineTile { img: string; kicker: string; title: string; link:
 
 export const VITRINE_SCHEMA: FieldSchema[] = [
 	{ key: 'title', type: 'text', label: `${K}title`, example: `${K}title_ph`, required: true },
-	{ key: 'text', type: 'textarea', label: `${K}text`, example: `${K}text_ph` },
+	{ key: 'text', type: 'textarea', label: `${K}text`, hint: `${K}text_hint`, example: `${K}text_ph` },
 	{ key: 'cta_text', type: 'text', label: `${K}cta_text`, example: `${K}cta_text_ph` },
 	{ key: 'cta_url', type: 'link', label: `${K}cta_url` },
 	{ key: 'cta2_text', type: 'text', label: `${K}cta2_text`, example: `${K}cta2_text_ph` },
