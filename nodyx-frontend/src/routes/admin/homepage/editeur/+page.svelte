@@ -15,12 +15,12 @@
 		toBlocks, toLayout, moveBlock, removeBlock, duplicateBlock, setSpan, insertRowAfter, insertIntoEmpty,
 		widthOf, WIDTHS, type EditorBlock, type WidthWord,
 	} from '$lib/homepage/editorModel'
-	import { historyStart, historyPush, historyUndo, historyRedo, publishStatus, blockTitle, structureBlocks, withHidden } from '$lib/homepage/editorState'
+	import { historyStart, historyPush, historyUndo, historyRedo, publishStatus, blockTitle, structureBlocks, withHidden, moveToward } from '$lib/homepage/editorState'
 	import { visibleFields, defaultsFor } from '$lib/homepage/fields'
 	import { ambiancePalette, type ShellTheme } from '$lib/shellTheme'
 	import { shellPreview } from '$lib/shellPreview'
 	import FieldInput from '$lib/components/homepage/editor/FieldInput.svelte'
-	import { ArrowUp, ArrowDown, Copy, Eye, EyeOff, Trash2, Undo2, Redo2, ChevronLeft, Monitor, Tablet, Smartphone, Plus, Search } from 'lucide-svelte'
+	import { ArrowUp, ArrowDown, Copy, Eye, EyeOff, Trash2, Undo2, Redo2, ChevronLeft, ChevronRight, Monitor, Tablet, Smartphone, Plus, Search, GripVertical } from 'lucide-svelte'
 
 	let { data } = $props()
 	const tFn = $derived($t)
@@ -45,6 +45,15 @@
 	/** Où ira le prochain bloc ajouté : une place libre précise, ou après le bloc choisi */
 	let addTarget = $state<{ kind: 'empty'; emptyId: string } | { kind: 'after'; blockId: string } | null>(null)
 	let device = $state<'desktop' | 'tablet' | 'phone'>('desktop')
+	/** Aperçu : la page seule, comme un visiteur la verra (sans panneaux ni habillage). */
+	let preview = $state(false)
+	// Glisser-déposer dans la Structure
+	let dragId = $state<string | null>(null)
+	let dropId = $state<string | null>(null)
+	function drop(targetId: string) {
+		if (dragId && dragId !== targetId) commit(moveToward(blocks, dragId, targetId))
+		dragId = dropId = null
+	}
 
 	// ── Gestes, annuler, rétablir (R3) ────────────────────────────────────────
 	let lastEdit = { key: '', at: 0 }
@@ -265,7 +274,7 @@
 	{/if}
 {/snippet}
 
-<div class="ed">
+<div class="ed" class:ed--preview={preview}>
 	<!-- ── Barre du haut ── -->
 	<header class="ed-top">
 		<a class="ed-back" href="/admin"><ChevronLeft size={16} />{tFn('hpe.back_admin')}</a>
@@ -282,7 +291,7 @@
 		<div class="ed-actions">
 			<button type="button" class="ed-icon" onclick={undo} disabled={!hist.past.length} title={tFn('hpe.undo')} aria-label={tFn('hpe.undo')}><Undo2 size={17} /></button>
 			<button type="button" class="ed-icon" onclick={redo} disabled={!hist.future.length} title={tFn('hpe.redo')} aria-label={tFn('hpe.redo')}><Redo2 size={17} /></button>
-			<a class="ed-btn" href="/" target="_blank" rel="noopener">{tFn('hpe.view_site')}</a>
+			<button type="button" class="ed-btn" class:on={preview} aria-pressed={preview} onclick={() => { preview = !preview; if (preview) selectedId = null }}>{preview ? tFn('hpe.preview_back') : tFn('hpe.preview')}</button>
 			<button type="button" class="ed-btn ed-btn--main" onclick={publish} disabled={publishing || status === 'published'}>
 				{publishing ? tFn('hpe.publishing') : tFn('hpe.publish')}
 			</button>
@@ -303,17 +312,21 @@
 						<p class="ed-empty">{tFn('hpe.structure_empty')}</p>
 					{/if}
 					<ul class="ed-list">
-						{#each structure as b, i (b.id)}
-							<li class="ed-item" class:on={b.id === selectedId} class:off={b.extra.hidden}>
-								<button type="button" class="ed-item-main" onclick={() => (selectedId = b.id)}>
+						{#each structure as b (b.id)}
+							<li class="ed-item" class:on={b.id === selectedId} class:off={b.extra.hidden} class:drop={dropId === b.id && dragId !== b.id}
+								draggable="true"
+								ondragstart={e => { dragId = b.id; e.dataTransfer?.setData('text/plain', b.id); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move' }}
+								ondragover={e => { if (dragId) { e.preventDefault(); dropId = b.id } }}
+								ondragleave={() => { if (dropId === b.id) dropId = null }}
+								ondrop={e => { e.preventDefault(); drop(b.id) }}
+								ondragend={() => { dragId = dropId = null }}>
+								<span class="ed-grip" aria-hidden="true"><GripVertical size={15} /></span>
+								<button type="button" class="ed-item-main" onclick={() => (selectedId = b.id)}
+									onkeydown={e => { if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); move(b.id, e.key === 'ArrowUp' ? -1 : 1) } }}>
 									<span class="ed-item-title">{blockTitle(b) || pluginName(b.widget)}</span>
 									{#if itemSub(b)}<span class="ed-item-sub">{itemSub(b)}</span>{/if}
 								</button>
-								<span class="ed-item-tools">
-									<button type="button" onclick={() => move(b.id, -1)} disabled={i === 0} aria-label={tFn('hpe.up')} title={tFn('hpe.up')}><ArrowUp size={14} /></button>
-									<button type="button" onclick={() => move(b.id, 1)} disabled={i === structure.length - 1} aria-label={tFn('hpe.down')} title={tFn('hpe.down')}><ArrowDown size={14} /></button>
-									<button type="button" onclick={() => toggleHidden(b.id)} aria-label={b.extra.hidden ? tFn('hpe.show') : tFn('hpe.hide')} title={b.extra.hidden ? tFn('hpe.show') : tFn('hpe.hide')}>{#if b.extra.hidden}<EyeOff size={14} />{:else}<Eye size={14} />{/if}</button>
-								</span>
+								<button type="button" class="ed-eye" onclick={() => toggleHidden(b.id)} aria-label={b.extra.hidden ? tFn('hpe.show') : tFn('hpe.hide')} title={b.extra.hidden ? tFn('hpe.show') : tFn('hpe.hide')}>{#if b.extra.hidden}<EyeOff size={15} />{:else}<Eye size={15} />{/if}</button>
 							</li>
 						{/each}
 					</ul>
@@ -365,8 +378,8 @@
 						user={null}
 						installedWidgets={data.installedWidgets}
 						extensions={data.extensions}
-						blockChrome={chrome}
-						betweenRows={between}
+						blockChrome={preview ? undefined : chrome}
+						betweenRows={preview ? undefined : between}
 					/>
 				{:else}
 					<div class="ed-blank">
@@ -380,16 +393,18 @@
 
 		<!-- ── À droite : les réglages ── -->
 		<aside class="ed-right">
-			<div class="ed-scroll">
+			<div class="ed-scroll ed-scroll--flush">
 				{#if selected && selected.widget}
-					<p class="ed-kicker">{tFn('hpe.block')}</p>
-					<h2 class="ed-h">{pluginName(selected.widget)}</h2>
-					{#if selectedDesc}<p class="ed-p">{selectedDesc}</p>{/if}
+					<header class="ed-insp-head">
+						<p class="ed-type">{pluginName(selected.widget)}</p>
+						<h2 class="ed-h">{blockTitle(selected) || pluginName(selected.widget)}</h2>
+						{#if selectedDesc}<p class="ed-p">{selectedDesc}</p>{/if}
+					</header>
 
 					{#if anatomy.length}
 						<!-- D'où vient ce qui s'affiche ? (R7 : le détail est replié) -->
-						<details class="ed-fold">
-							<summary>{tFn('hpe.anatomy')}</summary>
+						<details class="ed-sec ed-fold">
+							<summary><ChevronRight size={15} />{tFn('hpe.anatomy')}</summary>
 							<dl class="ed-anatomy">
 								{#each anatomy as line, i (i)}<dt>{tFn(line.labelKey)}</dt><dd>{tFn(line.textKey, line.vars)}</dd>{/each}
 							</dl>
@@ -407,23 +422,25 @@
 
 					<section class="ed-sec">
 						<h3>{tFn('hpe.layout')}</h3>
-						<span class="ed-label">{tFn('hpe.width')}</span>
-						{#if widthOf(selected.span) === 'custom'}
-							<p class="ed-p">{tFn('hpe.width_custom_note', { span: String(selected.span) })}</p>
-						{:else}
-							<div class="ed-seg" role="radiogroup" aria-label={tFn('hpe.width')}>
-								{#each (Object.keys(WIDTHS) as WidthWord[]) as w (w)}
-									<button type="button" role="radio" aria-checked={widthOf(selected.span) === w} class:on={widthOf(selected.span) === w} onclick={() => setWidth(selected!.id, w)}>{tFn(`hpe.width_${w}`)}</button>
-								{/each}
-							</div>
-							<p class="ed-help">{tFn('hpe.width_help')}</p>
-						{/if}
+						<div class="ed-ch">
+							<span class="ed-lb">{tFn('hpe.width')}</span>
+							{#if widthOf(selected.span) === 'custom'}
+								<p class="ed-p">{tFn('hpe.width_custom_note', { span: String(selected.span) })}</p>
+							{:else}
+								<div class="ed-seg" role="radiogroup" aria-label={tFn('hpe.width')}>
+									{#each (Object.keys(WIDTHS) as WidthWord[]) as w (w)}
+										<button type="button" role="radio" aria-checked={widthOf(selected.span) === w} class:on={widthOf(selected.span) === w} onclick={() => setWidth(selected!.id, w)}>{tFn(`hpe.width_${w}`)}</button>
+									{/each}
+								</div>
+								<p class="ed-help">{tFn('hpe.width_help')}</p>
+							{/if}
+						</div>
 					</section>
 
 					{#if advanced.length}
-						<details class="ed-fold ed-sec">
-							<summary>{tFn('hpe.more_settings')}</summary>
-							<div class="ed-fold-body">
+						<details class="ed-sec ed-fold">
+							<summary><ChevronRight size={15} />{tFn('hpe.more_settings')}</summary>
+							<div>
 								{#each advanced as f (`${selected.id}:adv:${f.key}`)}
 									<FieldInput field={f} value={shownConfig[f.key]} onchange={(v, m) => setField(f.key, v, m)} t={tFn} {tr} categories={data.categories} token={token()} uid={`${selected.id}-adv-${f.key}`} />
 								{/each}
@@ -431,9 +448,11 @@
 						</details>
 					{/if}
 				{:else}
-					<p class="ed-kicker">{tFn('hpe.page')}</p>
-					<h2 class="ed-h">{tFn('hpe.title')}</h2>
-					<p class="ed-p">{tFn('hpe.nothing_selected')}</p>
+					<header class="ed-insp-head">
+						<p class="ed-type">{tFn('hpe.page')}</p>
+						<h2 class="ed-h">{tFn('hpe.title')}</h2>
+						<p class="ed-p">{tFn('hpe.nothing_selected')}</p>
+					</header>
 					<section class="ed-sec">
 						<h3>{tFn('hpe.glance')}</h3>
 						<p class="ed-p">{tFn('hpe.glance_count', { n: String(structure.length), h: String(hiddenCount) })}</p>
@@ -443,6 +462,7 @@
 						<h3>{tFn('hpe.shortcuts')}</h3>
 						<p class="ed-keys"><kbd>Ctrl</kbd> <kbd>Z</kbd> {tFn('hpe.key_undo')}</p>
 						<p class="ed-keys"><kbd>Ctrl</kbd> <kbd>⇧</kbd> <kbd>Z</kbd> {tFn('hpe.key_redo')}</p>
+						<p class="ed-keys"><kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd> {tFn('hpe.key_move')}</p>
 						<p class="ed-keys"><kbd>⌦</kbd> {tFn('hpe.key_delete')}</p>
 						<p class="ed-keys"><kbd>Esc</kbd> {tFn('hpe.key_escape')}</p>
 					</section>
@@ -506,19 +526,20 @@
 	.ed-tabs button.on { color: var(--nx-text); border-color: var(--nx-header-accent); font-weight: 600; }
 	.ed-left-foot { padding: 12px; border-top: 1px solid var(--nx-border); }
 
+	/* Structure (maquette) : poignée, nom sur deux lignes, œil ; le choisi en gris */
 	.ed-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-	.ed-item { display: flex; align-items: center; border-radius: var(--nx-r-controle, 6px); }
+	.ed-item { display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 2px; border-radius: var(--nx-r-controle, 6px); }
 	.ed-item:hover { background: var(--nx-bg); }
-	.ed-item.on { background: var(--nx-header-accent-soft); }
-	.ed-item.off .ed-item-title { color: var(--nx-text-muted); }
-	.ed-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 8px 10px; text-align: left; }
-	.ed-item-title { width: 100%; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.ed-item.on { background: var(--nx-border-soft); }
+	.ed-item.drop { box-shadow: inset 0 2px 0 var(--nx-header-accent); }
+	.ed-item.off .ed-item-main { opacity: .5; }
+	.ed-grip { display: grid; place-items: center; width: 18px; color: var(--nx-text-faint); cursor: grab; }
+	.ed-item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 6px 2px; text-align: left; }
+	.ed-item-title { width: 100%; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.ed-item-sub { font-size: 12px; color: var(--nx-text-muted); }
-	.ed-item-tools { display: flex; gap: 2px; padding-right: 6px; opacity: 0; }
-	.ed-item:hover .ed-item-tools, .ed-item.on .ed-item-tools, .ed-item:focus-within .ed-item-tools { opacity: 1; }
-	.ed-item-tools button { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--nx-r-etiquette, 4px); color: var(--nx-text-muted); }
-	.ed-item-tools button:hover:not(:disabled) { background: var(--nx-surface); color: var(--nx-text); }
-	.ed-item-tools button:disabled { opacity: .3; }
+	.ed-eye { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--nx-r-etiquette, 4px); color: var(--nx-text-muted); opacity: 0; }
+	.ed-item:hover .ed-eye, .ed-item.off .ed-eye, .ed-eye:focus-visible { opacity: 1; }
+	.ed-eye:hover { background: var(--nx-surface); color: var(--nx-text); }
 	.ed-empty, .ed-hint { color: var(--nx-text-muted); font-size: 13px; line-height: 1.5; }
 	.ed-hint { margin-top: 16px; }
 
@@ -556,14 +577,21 @@
 	.ed-page :global(.gr-between:hover::before), .ed-page :global(.gr-between:focus-within::before), .ed-page :global(.gr-between:hover button), .ed-page :global(.gr-between button:focus-visible) { opacity: 1; }
 
 	/* L'habillage des blocs (rendu dans GridRenderer, d'où :global) */
-	.ed-page :global(.gr-chrome) { position: absolute; inset: 0; pointer-events: none; outline: 1px solid transparent; outline-offset: -1px; z-index: 5; }
-	.ed-page :global(.gr-col--chrome:hover > .gr-chrome) { outline-color: var(--nx-header-accent); }
-	.ed-page :global(.gr-chrome.on) { outline: 2px solid var(--nx-header-accent); outline-offset: -2px; }
-	.ed-page :global(.gr-chrome-tag) { position: absolute; top: 6px; left: 6px; display: none; align-items: center; gap: 6px; white-space: nowrap; padding: 3px 4px 3px 8px; background: var(--nx-header-accent); color: var(--nx-on-accent); font-size: 12px; font-weight: 600; border-radius: var(--nx-r-etiquette, 4px); pointer-events: auto; }
-	.ed-page :global(.gr-col--chrome:hover > .gr-chrome .gr-chrome-tag), .ed-page :global(.gr-chrome.on .gr-chrome-tag) { display: inline-flex; }
-	.ed-page :global(.gr-chrome-tools) { display: inline-flex; gap: 2px; }
-	.ed-page :global(.gr-chrome-tools button) { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; border-radius: 3px; color: inherit; }
-	.ed-page :global(.gr-chrome-tools button:hover) { background: rgb(255 255 255 / .2); }
+	.ed-page :global(.gr-chrome) { position: absolute; inset: 0; pointer-events: none; outline: 0 solid transparent; z-index: 5; }
+	/* Un bloc seul dans sa rangée : la marge de la rangée passe dans la colonne (même rendu au
+	   pixel près), pour que son contour couvre toute la section, comme dans la maquette. */
+	.ed-page :global(.gr-design .gr-row:not(:has(> .gr-col ~ .gr-col))) { padding-left: 0; padding-right: 0; }
+	.ed-page :global(.gr-design .gr-row:not(:has(> .gr-col ~ .gr-col)) > .gr-col) { padding-left: 32px; padding-right: 32px; }
+	.ed-page--phone :global(.gr-design .gr-row:not(:has(> .gr-col ~ .gr-col)) > .gr-col) { padding-left: 16px; padding-right: 16px; }
+	.ed-page :global(.gr-col--chrome:hover > .gr-chrome) { outline: 1px solid color-mix(in srgb, var(--nx-header-accent) 55%, transparent); outline-offset: -1px; }
+	.ed-page :global(.gr-chrome.on), .ed-page :global(.gr-col--chrome:hover > .gr-chrome.on) { outline: 2px solid var(--nx-header-accent); outline-offset: -2px; }
+	.ed-page :global(.gr-chrome-tag) { position: absolute; top: 8px; left: 8px; display: none; align-items: center; gap: 2px; padding: 2px; background: var(--nx-header-accent); color: var(--nx-on-accent); font-size: 12.5px; font-weight: 500; border-radius: var(--nx-r-controle, 6px); pointer-events: auto; white-space: nowrap; }
+	.ed-page :global(.gr-chrome-tag > span:first-child) { padding: 0 8px; }
+	.ed-page :global(.gr-col--chrome:hover > .gr-chrome:not(.on) .gr-chrome-tag) { display: inline-flex; height: 24px; background: #5a6372; color: #fff; }
+	.ed-page :global(.gr-chrome.on .gr-chrome-tag) { display: inline-flex; }
+	.ed-page :global(.gr-chrome-tools) { display: inline-flex; margin-left: 2px; padding-left: 2px; border-left: 1px solid rgb(255 255 255 / .25); }
+	.ed-page :global(.gr-chrome-tools button) { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px; border-radius: 4px; color: inherit; }
+	.ed-page :global(.gr-chrome-tools button:hover) { background: rgb(255 255 255 / .16); }
 	.ed-page :global(.gr-chrome-add) {
 		width: 100%; height: 100%; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
 		border: 1px dashed var(--nx-border); color: var(--nx-text-muted);
@@ -573,27 +601,31 @@
 	.ed-page :global(.gr-chrome-add small) { font-size: 12px; }
 
 	/* ── Réglages ── */
-	.ed-kicker { font-size: 12px; color: var(--nx-text-muted); margin: 0; }
-	.ed-h { font-size: 17px; font-weight: 700; margin: 2px 0 6px; }
-	.ed-p { color: var(--nx-text-muted); line-height: 1.5; margin: 0 0 8px; }
-	.ed-sec { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--nx-border); }
-	.ed-sec h3 { font-size: 13px; font-weight: 700; margin: 0 0 10px; }
+	/* Inspecteur (maquette) : en-tête, sections d'un bord à l'autre */
+	.ed-scroll--flush { padding: 0; }
+	.ed-insp-head { padding: 14px 16px 12px; border-bottom: 1px solid var(--nx-border); }
+	.ed-type { font-size: 12.5px; color: var(--nx-text-muted); margin: 0; }
+	.ed-h { font-size: 16px; font-weight: 600; margin: 2px 0 4px; }
+	.ed-p { color: var(--nx-text-muted); font-size: 13px; line-height: 1.5; margin: 0; }
+	.ed-sec { display: grid; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--nx-border); }
+	.ed-sec > h3 { font-size: 13px; font-weight: 600; margin: 0; }
+	.ed-sec :global(.fi) { margin-bottom: 0; }
+	.ed-ch { display: grid; gap: 5px; }
+	.ed-lb { font-weight: 500; font-size: 13px; }
 	/* Largeur : un contrôle segmenté (maquette), quatre choix en deux rangées */
-	.ed-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: 6px; padding: 3px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-bg); }
+	.ed-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-bg); }
 	.ed-seg button { padding: 6px 8px; border-radius: var(--nx-r-etiquette, 4px); color: var(--nx-text-muted); }
 	.ed-seg button.on { background: var(--nx-surface); color: var(--nx-text); font-weight: 600; box-shadow: 0 0 0 1px var(--nx-border); }
-	.ed-help { display: block; margin-top: 6px; font-size: 12px; color: var(--nx-text-muted); line-height: 1.45; }
+	.ed-help { margin: 0; font-size: 12.5px; color: var(--nx-text-muted); line-height: 1.45; }
 	/* Replié : « D'où vient ce qui s'affiche ? », « Plus de réglages » */
-	.ed-fold { margin-top: 12px; }
-	.ed-fold summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 6px 0; list-style: none; display: flex; align-items: center; gap: 6px; }
-	.ed-fold summary::-webkit-details-marker { display: none; }
-	.ed-fold summary::before { content: ''; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
-	.ed-fold[open] summary::before { transform: rotate(45deg); }
-	.ed-fold-body { padding-top: 8px; }
+	.ed-fold > summary { cursor: pointer; font-weight: 600; font-size: 13px; list-style: none; display: flex; align-items: center; gap: 6px; }
+	.ed-fold > summary::-webkit-details-marker { display: none; }
+	.ed-fold > summary :global(svg) { color: var(--nx-text-muted); transition: transform .15s; }
+	.ed-fold[open] > summary :global(svg) { transform: rotate(90deg); }
+	.ed-fold:not([open]) { gap: 0; }
 	.ed-anatomy { margin: 6px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; font-size: 13px; }
 	.ed-anatomy dt { font-weight: 600; }
 	.ed-anatomy dd { margin: 0; color: var(--nx-text-muted); }
-	.ed-label { font-weight: 600; }
 	.ed-help { font-size: 12px; color: var(--nx-text-muted); line-height: 1.4; }
 	.ed-note { font-size: 13px; color: var(--nx-text-muted); line-height: 1.5; padding: 10px; background: var(--nx-bg); border-radius: var(--nx-r-controle, 6px); }
 	.ed-note a, .ed-right a { color: var(--nx-header-accent); }
@@ -606,6 +638,11 @@
 
 	.ed-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; display: flex; align-items: center; gap: 14px; padding: 10px 14px; background: var(--nx-text); color: var(--nx-bg); border-radius: var(--nx-r-controle, 6px); box-shadow: 0 8px 24px rgb(0 0 0 / .2); }
 	.ed-toast button { font-weight: 700; text-decoration: underline; color: inherit; }
+
+	/* Aperçu : la page seule, comme pour un visiteur */
+	.ed--preview .ed-body { grid-template-columns: minmax(0, 1fr); }
+	.ed--preview .ed-left, .ed--preview .ed-right { display: none; }
+	.ed-btn.on { border-color: var(--nx-header-accent); color: var(--nx-header-accent); }
 
 	button { cursor: pointer; background: none; border: 0; font: inherit; color: inherit; }
 	button:focus-visible, a:focus-visible { outline: 2px solid var(--nx-header-accent); outline-offset: 2px; }
