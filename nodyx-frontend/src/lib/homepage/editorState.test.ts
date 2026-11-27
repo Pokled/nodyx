@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { historyStart, historyPush, historyUndo, historyRedo, HISTORY_LIMIT, publishStatus, blockTitle, structureBlocks, withHidden } from './editorState'
-import { toBlocks, toLayout } from './editorModel'
+import { toBlocks, toLayout, type ColumnExtra } from './editorModel'
 import type { GridLayout } from '$lib/types/homepage'
 
 describe('annuler, rétablir (R3)', () => {
@@ -89,6 +89,6 @@ describe('masquer, réafficher', () => {
 	})
 
 	it('masqué : la marque est posée, le reste de la colonne est gardé', () => {
-		expect(withHidden({ hide_mobile: true }, true)).toEqual({ hide_mobile: true, hidden: true })
+		expect(withHidden<ColumnExtra>({ hide_mobile: true }, true)).toEqual({ hide_mobile: true, hidden: true })
 	})
 })
