@@ -17,6 +17,9 @@
 		.filter(t => t.src))
 </script>
 
+<!-- La vitrine s'adapte à SA largeur (R5) : dans une demi-colonne ou un aperçu téléphone,
+     elle s'empile comme sur un téléphone. -->
+<div class="vt-c">
 <section class="vt" class:vt--solo={tiles.length === 0}>
 	<div class="vt-text">
 		{#if title}<h1 class="vt-title">{title}</h1>{/if}
@@ -46,6 +49,7 @@
 		</div>
 	{/if}
 </section>
+</div>
 
 <style>
 	.vt {
@@ -115,7 +119,8 @@
 		font-size: .75rem; font-weight: 600; border-radius: var(--nx-r-etiquette, 4px);
 	}
 
-	@media (max-width: 860px) {
+	.vt-c { container-type: inline-size; }
+	@container (max-width: 760px) {
 		.vt { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 28px 16px 24px; }
 		.vt-mosaic { height: 260px; }
 	}

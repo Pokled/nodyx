@@ -46,6 +46,8 @@
 			items: [
 				{ href: '/admin/appearance',       labelKey: 'anav.lbl_appearance',   iconPath: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
 				{ href: '/admin/homepage',         labelKey: 'anav.lbl_homepage',     iconPath: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+				// Le nouvel éditeur (lot L1a) ; l'ancien builder reste jusqu'au lot L1d
+				{ href: '/admin/homepage/editeur', labelKey: 'anav.lbl_home_editor', iconPath: 'M3 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5zM3 9h18M9 21V9' },
 				{ href: '/admin/homepage/builder', labelKey: 'anav.lbl_grid_builder', iconPath: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' },
 				{ href: '/admin/widgets',          labelKey: 'anav.lbl_widgets',      iconPath: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },
 				{ href: '/admin/extensions',       labelKey: 'anav.lbl_extensions',   iconPath: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },
@@ -151,6 +153,9 @@
 {#if (data as { teamCharter?: boolean }).teamCharter}
 	<!-- La charte de l'équipe (lot 7e) : ni menu ni outils tant qu'elle n'est pas signée -->
 	<div class="flex flex-1 min-h-0 flex-col">{@render children()}</div>
+{:else if page.url.pathname === '/admin/homepage/editeur'}
+	<!-- Le nouvel éditeur de page d'accueil : plein écran, hors du cadre de l'admin (lot L1a) -->
+	{@render children()}
 {:else}
 <div class="adm-shell flex flex-1 min-h-0 {themed ? '' : 'nx-on-dark'}">
 
