@@ -66,7 +66,8 @@
 	.vt--solo { grid-template-columns: minmax(0, 1fr); }
 	.vt-title {
 		margin: 0;
-		font-size: clamp(2.25rem, 4.2vw, 3.5rem);
+		/* Taille selon la largeur du BLOC (cqi), pas de la fenêtre */
+		font-size: clamp(2.25rem, 7cqi, 3.5rem);
 		line-height: 1.02;
 		letter-spacing: -0.025em;
 		font-weight: 800;
@@ -120,8 +121,11 @@
 	}
 
 	.vt-c { container-type: inline-size; }
-	@container (max-width: 760px) {
+	/* En dessous de 560 px de bloc (téléphone, colonne étroite), texte puis images. Au-dessus,
+	   côte à côte : un portable en 1280 donne environ 670 px de vitrine (mesuré le 27/11). */
+	@container (max-width: 560px) {
 		.vt { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 28px 16px 24px; }
+		.vt-title { font-size: clamp(2.25rem, 12cqi, 3.25rem); }
 		.vt-mosaic { height: 260px; }
 	}
 	@media (prefers-reduced-motion: reduce) {
