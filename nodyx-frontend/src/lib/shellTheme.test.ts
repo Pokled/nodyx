@@ -333,3 +333,14 @@ describe('la grille d’accueil suit une ambiance v2', () => {
 		}
 	})
 })
+
+describe('la section au fond sombre (réglage « Fond » d’un bloc)', () => {
+	const V2: ShellTheme = { accent: '#1f56c9', backdrop: 'none', intensity: 0, default_mode: 'light', version: 2 }
+	it('v2 : la classe porte la palette sombre de la base ; v1 : elle n’existe pas', () => {
+		const css = shellThemeCss(V2)
+		const dark = deriveShellVars(V2, true)
+		expect(css).toContain(`.nx-band-dark{--nx-bg:${dark['--nx-bg']}`)
+		expect(css).toContain(`--nx-text:${dark['--nx-text']}`)
+		expect(shellThemeCss({ ...V2, version: undefined })).not.toContain('nx-band-dark')
+	})
+})

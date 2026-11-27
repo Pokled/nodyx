@@ -568,6 +568,11 @@ function designThemeCss(theme: ShellTheme, opts: { legacy?: boolean }): string {
 		`@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){${dark}}}`,
 		`:root:root[data-theme="dark"]{${dark}}`,
 		`@media (min-width: 1024px){:root:root{--shell-radius:${forme['--nx-r-fenetre']}}}`,
+		// Une section au fond sombre (réglage « Fond » d'un bloc) : la palette sombre de la base,
+		// sur cette seule section. En mode sombre, elle se détache par le plan du dessus.
+		`:root:root .nx-band-dark{${dark};background:var(--nx-bg)}`,
+		`@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]) .nx-band-dark{background:var(--nx-surface)}}`,
+		`:root:root[data-theme="dark"] .nx-band-dark{background:var(--nx-surface)}`,
 		...zoneRules(theme, false, ':root:root'),
 		...zoneRules(theme, true, '@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"])').map(r => r + '}'),
 		...zoneRules(theme, true, ':root:root[data-theme="dark"]'),

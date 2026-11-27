@@ -121,3 +121,23 @@ describe('glisser-déposer dans la Structure', () => {
 		expect(moveToward(b, 'a', 'zzz')).toBe(b)
 	})
 })
+
+import { withFond, aloneInRow } from './editorState'
+
+describe('le fond d’une section', () => {
+	it('clair, sombre, puis aucun : la clé disparaît, le bloc redevient le bloc publié', () => {
+		const b = toBlocks(PAGE)
+		b[0].extra = withFond(withFond(b[0].extra, 'sombre'), null)
+		expect(b[0].extra).toEqual({})
+		expect(publishStatus(toLayout(b), PAGE)).toBe('published')
+		expect(withFond<ColumnExtra>({ hide_mobile: true }, 'clair')).toEqual({ hide_mobile: true, fond: 'clair' })
+	})
+
+	it('ne se règle que sur un bloc seul dans sa rangée (les places libres ne comptent pas)', () => {
+		const b = toBlocks(PAGE)
+		expect(aloneInRow(b, 'c1')).toBe(true)
+		expect(aloneInRow(b, 'c2')).toBe(true)                  // « Sujets récents » + une place libre
+		const deux: GridLayout = { rows: [{ id: 'r', gap: '1rem', padding_y: '2rem', columns: [{ id: 'x', span: 6, widget: 'vitrine', config: {} }, { id: 'y', span: 6, widget: 'stats-bar', config: {} }] }] }
+		expect(aloneInRow(toBlocks(deux), 'x')).toBe(false)
+	})
+})

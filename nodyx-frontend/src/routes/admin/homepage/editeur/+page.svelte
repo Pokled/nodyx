@@ -15,7 +15,7 @@
 		toBlocks, toLayout, moveBlock, removeBlock, duplicateBlock, setSpan, insertRowAfter, insertIntoEmpty,
 		widthOf, WIDTHS, type EditorBlock, type WidthWord,
 	} from '$lib/homepage/editorModel'
-	import { historyStart, historyPush, historyUndo, historyRedo, publishStatus, blockTitle, structureBlocks, withHidden, moveToward } from '$lib/homepage/editorState'
+	import { historyStart, historyPush, historyUndo, historyRedo, publishStatus, blockTitle, structureBlocks, withHidden, moveToward, withFond, aloneInRow } from '$lib/homepage/editorState'
 	import { visibleFields, defaultsFor } from '$lib/homepage/fields'
 	import { ambiancePalette, type ShellTheme } from '$lib/shellTheme'
 	import { shellPreview } from '$lib/shellPreview'
@@ -77,6 +77,12 @@
 		const norm = selectedPlugin?.normalize ?? ((c: Record<string, unknown>) => c)
 		patchBlock(selected.id, b => ({ ...b, config: { ...norm(b.config), [key]: value } }), merge ? `${selected.id}:${key}` : '')
 	}
+	function setFond(id: string, fond: 'clair' | 'sombre' | null) {
+		patchBlock(id, b => ({ ...b, extra: withFond(b.extra, fond) }))
+	}
+	/** R6 : l'élément de liste à ouvrir dans les réglages (clic sur une affiche de la page) */
+	let focusItem = $state<{ key: string; index: number; n: number } | null>(null)
+	let focusN = 0
 	function toggleHidden(id: string) {
 		patchBlock(id, b => ({ ...b, extra: withHidden(b.extra, !b.extra.hidden) }))
 	}
@@ -175,7 +181,13 @@
 		const col = el.closest('[data-block]') as HTMLElement | null
 		const id = col?.dataset.block ?? null
 		const b = blocks.find(x => x.id === id)
-		if (b?.widget) { selectedId = b.id; tab = 'structure' }
+		if (b?.widget) {
+			selectedId = b.id; tab = 'structure'
+			// Un élément d'une liste (une affiche) : ses réglages s'ouvrent directement (R6)
+			const aff = (el.closest('[data-aff]') as HTMLElement | null)?.dataset.aff
+			const listKey = PLUGIN_REGISTRY[b.widget]?.schema.find(f => f.type === 'list')?.key
+			focusItem = aff !== undefined && listKey ? { key: listKey, index: Number(aff), n: ++focusN } : null
+		}
 		else if (!col) selectedId = null
 	}
 	function startAddHere(emptyId: string) { addTarget = { kind: 'empty', emptyId }; openAdd() }
@@ -368,7 +380,7 @@
 		<main class="ed-canvas">
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="ed-page ed-page--{device}" class:ed-page--design={designPage} style="max-width:{DEVICE_W[device]}" onclickcapture={onCanvasClick}>
+			<div class="ed-page ed-page--{device}" class:ed-page--design={designPage} style="max-width:{DEVICE_W[device]}; --tune-label:{JSON.stringify(tFn('hpe.tune_item'))}" onclickcapture={onCanvasClick}>
 				{#if layout.rows.length}
 					<GridRenderer
 						{layout}
@@ -414,7 +426,7 @@
 					<section class="ed-sec">
 						<h3>{tFn('hpe.content')}</h3>
 						{#each fields as f (`${selected.id}:${f.key}`)}
-							<FieldInput field={f} value={shownConfig[f.key]} onchange={(v, m) => setField(f.key, v, m)} t={tFn} {tr} categories={data.categories} token={token()} uid={`${selected.id}-${f.key}`} />
+							<FieldInput field={f} value={shownConfig[f.key]} onchange={(v, m) => setField(f.key, v, m)} t={tFn} {tr} categories={data.categories} token={token()} uid={`${selected.id}-${f.key}`} focus={focusItem?.key === f.key ? focusItem : null} />
 						{:else}
 							<p class="ed-p">{tFn('hpe.no_settings')}</p>
 						{/each}
@@ -435,6 +447,21 @@
 								<p class="ed-help">{tFn('hpe.width_help')}</p>
 							{/if}
 						</div>
+						{#if designPage}
+						<div class="ed-ch">
+							<span class="ed-lb">{tFn('hpe.fond')}</span>
+							{#if aloneInRow(blocks, selected.id)}
+								<div class="ed-seg ed-seg--3" role="radiogroup" aria-label={tFn('hpe.fond')}>
+									{#each ([null, 'clair', 'sombre'] as const) as f (f ?? 'none')}
+										<button type="button" role="radio" aria-checked={(selected.extra.fond ?? null) === f} class:on={(selected.extra.fond ?? null) === f} onclick={() => setFond(selected!.id, f)}>{tFn(`hpe.fond_${f ?? 'none'}`)}</button>
+									{/each}
+								</div>
+								<p class="ed-help">{tFn('hpe.fond_help')}</p>
+							{:else}
+								<p class="ed-help">{tFn('hpe.fond_alone')}</p>
+							{/if}
+						</div>
+						{/if}
 					</section>
 
 					{#if advanced.length}
@@ -576,6 +603,11 @@
 	.ed-page :global(.gr-between button) { position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; background: var(--nx-header-accent); color: var(--nx-on-accent); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .15s; }
 	.ed-page :global(.gr-between:hover::before), .ed-page :global(.gr-between:focus-within::before), .ed-page :global(.gr-between:hover button), .ed-page :global(.gr-between button:focus-visible) { opacity: 1; }
 
+	/* R6 : sur le bloc choisi, une affiche se règle d'un clic (« Régler cette affiche ») */
+	.ed-page :global(.gr-col--chrome:has(> .gr-chrome.on) [data-aff]) { cursor: pointer; }
+	.ed-page :global(.gr-col--chrome:has(> .gr-chrome.on) [data-aff]:hover) { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--nx-header-accent) 60%, white); }
+	.ed-page :global(.gr-col--chrome:has(> .gr-chrome.on) [data-aff]:hover::after) { content: var(--tune-label); position: absolute; top: 8px; right: 8px; z-index: 2; padding: 3px 8px; white-space: nowrap; border-radius: 4px; background: var(--nx-header-accent); color: var(--nx-on-accent); font: 500 12px var(--nx-font, inherit); }
+
 	/* L'habillage des blocs (rendu dans GridRenderer, d'où :global) */
 	.ed-page :global(.gr-chrome) { position: absolute; inset: 0; pointer-events: none; outline: 0 solid transparent; z-index: 5; }
 	/* Un bloc seul dans sa rangée : la marge de la rangée passe dans la colonne (même rendu au
@@ -614,6 +646,7 @@
 	.ed-lb { font-weight: 500; font-size: 13px; }
 	/* Largeur : un contrôle segmenté (maquette), quatre choix en deux rangées */
 	.ed-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-bg); }
+	.ed-seg--3 { grid-template-columns: repeat(3, 1fr); }
 	.ed-seg button { padding: 6px 8px; border-radius: var(--nx-r-etiquette, 4px); color: var(--nx-text-muted); }
 	.ed-seg button.on { background: var(--nx-surface); color: var(--nx-text); font-weight: 600; box-shadow: 0 0 0 1px var(--nx-border); }
 	.ed-help { margin: 0; font-size: 12.5px; color: var(--nx-text-muted); line-height: 1.45; }

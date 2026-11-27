@@ -7813,7 +7813,7 @@
   "hpe.width_help": "Two narrow blocks in a row sit side by side. On phones, they stack.",
   "hpe.link_custom_ph": "https://example.org/my-page",
   "hpw.vitrine.tiles": "Posters",
-  "hpw.vitrine.tiles_hint": "Three at most. The first one is the big one; the label sits on it.",
+  "hpw.vitrine.tiles_hint": "Six at most. The first one is the big one; the label sits on it. Click a poster on the page to set it up.",
   "hpw.vitrine.img": "Image",
   "hpw.vitrine.badge_hint": "It sits on the first poster. Leave empty to show nothing.",
   "hpw.vitrine.anat_text_l": "Title, text",
@@ -7828,5 +7828,16 @@
   "hpe.preview_back": "Back to editing",
   "hpe.key_move": "move the block up or down (in the Structure)",
   "hpe.link_help": "Only pages that exist: a link can’t be broken.",
-  "hpw.vitrine.text_hint": "Two lines are enough: who your community is for, and what people do there."
+  "hpw.vitrine.text_hint": "Two lines are enough: who your community is for, and what people do there.",
+  "hpw.vitrine.disp": "Poster layout",
+  "hpw.vitrine.disp_grande": "One big",
+  "hpw.vitrine.disp_egales": "All equal",
+  "hpw.vitrine.disp_bande": "In a row",
+  "hpe.fond": "Background",
+  "hpe.fond_none": "None",
+  "hpe.fond_clair": "Light",
+  "hpe.fond_sombre": "Dark",
+  "hpe.fond_help": "The background covers the whole section, edge to edge.",
+  "hpe.fond_alone": "The background is set on a block alone in its row.",
+  "hpe.tune_item": "Set up this poster"
 }

@@ -15,6 +15,8 @@
 	const text = $derived(str('text'))
 	const cta = $derived({ text: str('cta_text'), href: safeHref(str('cta_url')) })
 	const cta2 = $derived({ text: str('cta2_text'), href: safeHref(str('cta2_url')) })
+	/** Disposition des affiches : une grande et les autres autour, toutes égales, ou en bande */
+	const disp = $derived((['grande', 'egales', 'bande'] as const).find(d => d === config.disp) ?? 'grande')
 	const tiles = $derived(((config.tiles as VitrineTile[]) ?? [])
 		.slice(0, MAX_TILES)
 		.map((x, i) => ({ src: safeImg(x?.img), kicker: (x?.kicker ?? '').trim(), name: (x?.title ?? '').trim(), href: safeHref(x?.link), badge: i === 0 ? str('badge') : '' }))
@@ -37,9 +39,10 @@
 	</div>
 
 	{#if tiles.length}
-		<div class="vt-mosaic vt-mosaic--{tiles.length}">
+		<div class="vt-mosaic vt-mosaic--n{tiles.length} vt-mosaic--{disp}" style="--n:{tiles.length}">
 			{#each tiles as t, i (i)}
-				<svelte:element this={t.href ? 'a' : 'div'} class="vt-tile" class:vt-tile--big={i === 0 && tiles.length > 1} href={t.href || undefined}>
+				<!-- data-aff : l'éditeur ouvre les réglages de CETTE affiche au clic (R6) -->
+				<svelte:element this={t.href ? 'a' : 'div'} class="vt-tile" href={t.href || undefined} data-aff={i}>
 					<img src={t.src} alt={t.name || t.kicker || ''} loading={i === 0 ? 'eager' : 'lazy'} />
 					{#if t.badge}<span class="vt-badge">{t.badge}</span>{/if}
 					{#if t.kicker || t.name}
@@ -56,68 +59,74 @@
 </div>
 
 <style>
+	/* D'après la maquette « Vitrine en affiches » (builder-maquette, 21/11) */
 	.vt {
 		/* Le coin coupé de la base (--nx-coupe, 0 si l'admin n'en veut pas) */
 		--cut: var(--nx-coupe, 0px);
 		--clip: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-		gap: 40px;
+		grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+		gap: 32px;
 		align-items: center;
 		padding: 40px 32px 32px;
 		color: var(--nt);
 	}
 	.vt--solo { grid-template-columns: minmax(0, 1fr); }
 	.vt-title {
-		margin: 0;
+		margin: 0 0 14px;
 		/* Taille selon la largeur du BLOC (cqi), pas de la fenêtre */
-		font-size: clamp(2.25rem, 7cqi, 3.5rem);
+		font-size: clamp(2rem, 5.2cqi, 4rem);
 		line-height: 1.02;
 		letter-spacing: -0.025em;
-		font-weight: 800;
+		font-weight: 700;
 		color: var(--nt);
 		text-wrap: balance;
 	}
-	.vt-lead {
-		margin: 20px 0 0;
-		max-width: 36ch;
-		font-size: 1.0625rem;
-		line-height: 1.6;
-		color: var(--ntm);
-	}
-	.vt-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-top: 28px; }
+	.vt-lead { margin: 0; max-width: 46ch; font-size: 1rem; line-height: 1.6; color: var(--ntm); }
+	.vt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 22px; }
 	.vt-btn {
-		display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
+		display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px;
 		font-weight: 600; font-size: 0.9375rem; text-decoration: none;
 		border-radius: var(--nx-r-controle, 6px);
 		transition: background-color .15s, border-color .15s;
 	}
 	.vt-btn--main { background: var(--np); color: var(--nx-on-accent, #fff); clip-path: var(--clip); }
 	.vt-btn--main:hover { background: var(--nx-header-accent-strong, var(--np)); }
-	.vt-btn--second { background: var(--nc); color: var(--nt); border: var(--nbw, 1px) solid var(--nborder); }
+	.vt-btn--second { background: transparent; color: var(--nt); border: var(--nbw, 1px) solid var(--nborder); }
 	.vt-btn--second:hover { border-color: var(--ntm); }
 	.vt-btn:focus-visible { outline: 2px solid var(--np); outline-offset: 2px; }
 
-	.vt-mosaic { display: grid; gap: 8px; height: 308px; grid-template-columns: 1.35fr 1fr; grid-template-rows: 1fr 1fr; }
-	.vt-mosaic--1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
-	.vt-mosaic--2 { grid-template-rows: 1fr; }
+	/* La mosaïque : une grande affiche sur deux rangées, les autres autour (2 à 6) */
+	.vt-mosaic { display: grid; grid-template-columns: 1.3fr 1fr; grid-auto-rows: 150px; gap: 10px; }
+	.vt-mosaic--grande .vt-tile:first-child { grid-row: span 2; }
+	.vt-mosaic--n1 { grid-template-columns: 1fr; grid-auto-rows: 300px; }
+	.vt-mosaic--n2 { grid-auto-rows: 300px; }
+	.vt-mosaic--n2 .vt-tile:first-child { grid-row: auto; }
+	.vt-mosaic--grande.vt-mosaic--n4, .vt-mosaic--grande.vt-mosaic--n5 { grid-template-columns: 1.3fr 1fr 1fr; }
+	.vt-mosaic--grande.vt-mosaic--n4 .vt-tile:nth-child(4) { grid-column: span 2; }
+	.vt-mosaic--grande.vt-mosaic--n6 { grid-template-columns: repeat(3, 1fr); }
+	.vt-mosaic--grande.vt-mosaic--n6 .vt-tile:first-child { grid-row: auto; }
+	/* Toutes égales : deux colonnes */
+	.vt-mosaic--egales { grid-template-columns: repeat(2, 1fr); }
+	/* En bande : toutes sur une ligne */
+	.vt-mosaic--bande { grid-template-columns: repeat(var(--n), 1fr); grid-auto-rows: 300px; }
+
 	.vt-tile {
 		position: relative; display: block; overflow: hidden; min-height: 0;
 		background: var(--nc); clip-path: var(--clip); color: #fff; text-decoration: none;
 	}
-	.vt-tile--big { grid-row: 1 / span 2; }
-	.vt-mosaic--2 .vt-tile--big { grid-row: auto; }
 	.vt-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .4s var(--ease-out-soft, ease); }
 	a.vt-tile:hover img { transform: scale(1.03); }
 	a.vt-tile:focus-visible { outline: 2px solid var(--np); outline-offset: 2px; }
 	/* Légende lisible sur n'importe quelle photo : un voile en bas, pas un décor */
 	.vt-cap {
-		position: absolute; left: 0; right: 0; bottom: 0; padding: 32px 14px 12px;
-		display: flex; flex-direction: column; gap: 2px;
-		background: linear-gradient(to top, rgb(0 0 0 / .72), rgb(0 0 0 / 0));
+		position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 12px 10px;
+		display: flex; flex-direction: column; gap: 1px;
+		background: linear-gradient(transparent, rgb(10 12 16 / .82));
 	}
-	.vt-kicker { font-size: .8125rem; opacity: .92; }
-	.vt-name { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+	.vt-kicker { font-size: 12px; color: #d4d9e2; }
+	.vt-name { font-size: 17px; font-weight: 700; line-height: 1.2; }
+	.vt-tile:first-child .vt-name { font-size: 22px; }
 	.vt-badge {
 		position: absolute; top: 10px; left: 10px; padding: 3px 8px;
 		background: var(--nx-surface, #fff); color: var(--nx-text, #111);
@@ -128,9 +137,12 @@
 	/* En dessous de 560 px de bloc (téléphone, colonne étroite), texte puis images. Au-dessus,
 	   côte à côte : un portable en 1280 donne environ 670 px de vitrine (mesuré le 27/11). */
 	@container (max-width: 560px) {
-		.vt { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 28px 16px 24px; }
-		.vt-title { font-size: clamp(2.25rem, 12cqi, 3.25rem); }
-		.vt-mosaic { height: 260px; }
+		.vt { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 28px 16px 24px; }
+		.vt-title { font-size: clamp(2rem, 11cqi, 3rem); }
+		.vt-mosaic, .vt-mosaic--bande, .vt-mosaic--grande.vt-mosaic--n4, .vt-mosaic--grande.vt-mosaic--n5, .vt-mosaic--grande.vt-mosaic--n6 { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 120px; }
+		.vt-mosaic--n1 { grid-template-columns: 1fr; grid-auto-rows: 200px; }
+		.vt-mosaic .vt-tile { grid-column: auto !important; }
+		.vt-mosaic--n4 .vt-tile:first-child, .vt-mosaic--n6 .vt-tile:first-child { grid-row: auto; }
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.vt-tile img { transition: none; }

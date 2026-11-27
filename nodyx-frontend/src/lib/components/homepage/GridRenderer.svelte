@@ -113,6 +113,16 @@
 		`--nsh: ${t.shadow}`,
 	].join('; '))
 
+	// ── Fond d'une section (base de design v2) ─────────────────────────────
+	// Un bloc seul dans sa rangée peut avoir un fond clair ou sombre : il s'applique à toute
+	// la rangée, d'un bord à l'autre. Seulement quand la grille suit la base de design.
+	function rowFondClass(row: GridRow): string {
+		if (!design) return ''
+		const ws = row.columns.filter(c => c.widget)
+		const f = ws.length === 1 ? ws[0].fond : undefined
+		return f === 'sombre' ? 'gr-row--fond gr-row--fond-sombre nx-band-dark' : f === 'clair' ? 'gr-row--fond gr-row--fond-clair' : ''
+	}
+
 	// ── Helpers span responsive ──────────────────────────────────────────────
 	function colSpanMd(col: GridColumn): number {
 		return col.span_md ?? autoSpanMd(col.span)
@@ -145,7 +155,7 @@
 	{#each layout.rows as row, rowIdx (row.id)}
 		<!-- ── ROW ─────────────────────────────────────────────────────────── -->
 		<div
-			class="gr-row"
+			class="gr-row {rowFondClass(row)}"
 			class:gr-row--edit={editMode}
 			class:gr-row--dragover={dragOverRowId === row.id}
 			style="
@@ -511,4 +521,13 @@
 	   pour l'admin, estompé. */
 	.gr-col--chrome { position: relative; min-height: 56px; }
 	.gr-col--hidden > :global(:not(.gr-chrome)) { opacity: .35; }
+	/* Section au fond clair ou sombre : la palette de la section (.nx-band-dark la redéfinit)
+	   se recopie dans les variables de la grille, figées sinon sur celles de la page. */
+	.gr-design .gr-row--fond {
+		--np: var(--nx-header-accent); --na: var(--nx-header-accent); --nl: var(--nx-header-accent);
+		--np-rgb: var(--nx-header-accent-rgb); --na-rgb: var(--nx-header-accent-rgb); --nl-rgb: var(--nx-header-accent-rgb);
+		--nt: var(--nx-text); --ntm: var(--nx-text-muted); --nc: var(--nx-surface); --nborder: var(--nx-border);
+		color: var(--nx-text);
+	}
+	.gr-design .gr-row--fond-clair { background: var(--nx-surface); }
 </style>

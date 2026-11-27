@@ -24,7 +24,8 @@ export interface FieldSchema {
 	placeholder?: string
 	default?:     unknown
 	required?:    boolean
-	options?:     { value: string; label: string }[]
+	/** `sketch` (choice-visual) : un petit croquis, rectangles dans un cadre de 100 × 56 */
+	options?:     { value: string; label: string; sketch?: { x: number; y: number; w: number; h: number; tone: 'ink' | 'accent' | 'soft' }[] }[]
 	min?:         number
 	max?:         number
 	hint?:        string
