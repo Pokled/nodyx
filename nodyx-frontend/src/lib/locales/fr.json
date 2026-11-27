@@ -7813,7 +7813,7 @@
   "hpe.width_help": "Deux blocs étroits qui se suivent se placent côte à côte. Sur téléphone, ils passent l’un sous l’autre.",
   "hpe.link_custom_ph": "https://exemple.org/ma-page",
   "hpw.vitrine.tiles": "Les affiches",
-  "hpw.vitrine.tiles_hint": "Trois au plus. La première est la grande ; l’étiquette se pose dessus.",
+  "hpw.vitrine.tiles_hint": "Six au plus. La première est la grande ; l’étiquette se pose dessus. Clique sur une affiche de la page pour la régler.",
   "hpw.vitrine.img": "Image",
   "hpw.vitrine.badge_hint": "Elle se pose sur la première affiche. Laisse vide pour ne rien afficher.",
   "hpw.vitrine.anat_text_l": "Le titre, le texte",
@@ -7828,5 +7828,16 @@
   "hpe.preview_back": "Revenir à l’édition",
   "hpe.key_move": "monter ou descendre le bloc (dans la Structure)",
   "hpe.link_help": "Seulement des pages qui existent : un lien ne peut pas être cassé.",
-  "hpw.vitrine.text_hint": "Deux lignes suffisent : à qui s’adresse ta communauté, et ce qu’on y fait."
+  "hpw.vitrine.text_hint": "Deux lignes suffisent : à qui s’adresse ta communauté, et ce qu’on y fait.",
+  "hpw.vitrine.disp": "Disposition des affiches",
+  "hpw.vitrine.disp_grande": "Une grande",
+  "hpw.vitrine.disp_egales": "Toutes égales",
+  "hpw.vitrine.disp_bande": "En bande",
+  "hpe.fond": "Fond",
+  "hpe.fond_none": "Aucun",
+  "hpe.fond_clair": "Clair",
+  "hpe.fond_sombre": "Sombre",
+  "hpe.fond_help": "Le fond couvre toute la section, d’un bord à l’autre.",
+  "hpe.fond_alone": "Le fond se règle sur un bloc seul dans sa rangée.",
+  "hpe.tune_item": "Régler cette affiche"
 }

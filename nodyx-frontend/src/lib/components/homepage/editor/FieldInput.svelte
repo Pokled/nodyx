@@ -20,8 +20,10 @@
 		token: string
 		/** identifiant unique, pour relier libellé et champ */
 		uid: string
+		/** Liste : l'élément à ouvrir (clic sur cet élément dans la page, R6) ; `n` change à chaque demande */
+		focus?: { index: number; n: number } | null
 	}
-	let { field, value, onchange, t, tr, categories, token, uid }: Props = $props()
+	let { field, value, onchange, t, tr, categories, token, uid, focus = null }: Props = $props()
 
 	const id = $derived(`f-${uid}`)
 	const str = $derived(typeof value === 'string' ? value : '')
@@ -39,6 +41,19 @@
 	// ── Liste ──
 	const items = $derived(Array.isArray(value) ? (value as Record<string, unknown>[]) : [])
 	let open = $state<number | null>(null)
+	let listEl = $state<HTMLUListElement | null>(null)
+	// R6 : un clic sur un élément de la page ouvre SES réglages, fait défiler jusqu'à lui et le fait briller
+	$effect(() => {
+		if (!focus || field.type !== 'list') return
+		open = focus.index
+		const n = focus.n
+		queueMicrotask(() => {
+			const li = listEl?.children[focus!.index] as HTMLElement | undefined
+			if (!li || n !== focus?.n) return
+			li.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+			li.classList.remove('flash'); void li.offsetWidth; li.classList.add('flash')
+		})
+	})
 	function setItem(i: number, key: string, v: unknown, merge = false) {
 		onchange(items.map((it, k) => (k === i ? { ...it, [key]: v } : it)), merge)
 	}
@@ -66,7 +81,7 @@
 			{#if field.maxItems}<span class="fi-count">{t('hpe.list_count', { n: String(items.length), max: String(field.maxItems) })}</span>{/if}
 		</div>
 		{#if field.hint}<span class="fi-help">{tr(field.hint)}</span>{/if}
-		<ul class="fi-list">
+		<ul class="fi-list" bind:this={listEl}>
 			{#each items as item, i (i)}
 				<li class="fi-item" class:on={open === i}>
 					<div class="fi-item-head">
@@ -113,7 +128,14 @@
 		{:else if field.type === 'choice-visual'}
 			<div class="fi-choices" role="radiogroup" aria-label={tr(field.label)}>
 				{#each field.options ?? [] as o (o.value)}
-					<button type="button" role="radio" aria-checked={value === o.value} class:on={value === o.value} onclick={() => onchange(o.value)}>{tr(o.label)}</button>
+					<button type="button" role="radio" aria-checked={(value ?? field.default) === o.value} class:on={(value ?? field.default) === o.value} class:fi-sketchy={!!o.sketch} onclick={() => onchange(o.value)}>
+						{#if o.sketch}
+							<svg viewBox="0 0 100 56" aria-hidden="true">
+								{#each o.sketch as rc, i (i)}<rect x={rc.x} y={rc.y} width={rc.w} height={rc.h} rx="2" fill={rc.tone === 'accent' ? 'var(--nx-header-accent)' : rc.tone === 'ink' ? 'var(--nx-text)' : 'var(--nx-border)'} fill-opacity={rc.tone === 'accent' ? 0.55 : rc.tone === 'ink' ? 0.7 : 1} />{/each}
+							</svg>
+						{/if}
+						<span>{tr(o.label)}</span>
+					</button>
 				{/each}
 			</div>
 		{:else if field.type === 'number'}
@@ -192,6 +214,11 @@
 	.fi-choices { display: flex; flex-wrap: wrap; gap: 6px; }
 	.fi-choices button { padding: 6px 10px; border: 1px solid var(--nx-border); border-radius: var(--nx-r-controle, 6px); background: var(--nx-surface); }
 	.fi-choices button.on { border-color: var(--nx-header-accent); background: var(--nx-header-accent-soft); font-weight: 600; }
+	.fi-choices:has(.fi-sketchy) { display: grid; grid-template-columns: repeat(3, 1fr); }
+	.fi-choices .fi-sketchy { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; font-size: 12px; }
+	.fi-choices .fi-sketchy svg { width: 100%; height: auto; padding: 4px; border-radius: var(--nx-r-etiquette, 4px); background: var(--nx-bg); box-sizing: border-box; }
+	@keyframes fi-flash { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--nx-header-accent) 45%, transparent); } to { box-shadow: 0 0 0 1px var(--nx-header-accent); } }
+	.fi-item:global(.flash) { animation: fi-flash .9s ease-out; }
 
 	/* Image */
 	.fi-media { display: flex; align-items: center; gap: 8px; }

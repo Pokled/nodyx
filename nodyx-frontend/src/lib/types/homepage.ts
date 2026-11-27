@@ -192,6 +192,9 @@ export interface GridColumn {
 	hide_tablet?: boolean;
 	/** Masqué sans être supprimé (l'œil du nouvel éditeur) : les visiteurs ne le voient pas. */
 	hidden?:      boolean;
+	/** Le fond de la section (base de design v2) : clair ou sombre, d'un bord à l'autre de la
+	 *  rangée quand le bloc y est seul. Absent = le fond de la page. */
+	fond?:        'clair' | 'sombre';
 }
 
 export interface GridRow {

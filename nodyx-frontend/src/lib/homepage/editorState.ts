@@ -3,7 +3,7 @@
 // et le nom d'un bloc dans la Structure. Aucun DOM, aucune requête.
 
 import type { GridLayout } from '$lib/types/homepage'
-import { moveBlock, type EditorBlock } from './editorModel'
+import { moveBlock, groupRows, type EditorBlock } from './editorModel'
 
 // ── Annuler, rétablir (R3) ───────────────────────────────────────────────────
 
@@ -94,4 +94,16 @@ export function moveToward(blocks: EditorBlock[], id: string, targetId: string):
 		if (dir > 0 ? at >= target : at <= target) break
 	}
 	return cur
+}
+
+/** Le fond d'une section : « Aucun » RETIRE la clé (le bloc redevient exactement le bloc publié). */
+export function withFond<T extends { fond?: 'clair' | 'sombre' }>(extra: T, fond: 'clair' | 'sombre' | null): T {
+	const { fond: _drop, ...rest } = extra
+	return (fond ? { ...rest, fond } : rest) as T
+}
+
+/** Le bloc est-il seul dans sa rangée (sans compter les places libres) ? Le fond ne se règle que là. */
+export function aloneInRow(blocks: EditorBlock[], id: string): boolean {
+	const row = groupRows(blocks).find(g => g.some(b => b.id === id))
+	return !!row && row.filter(b => b.widget !== null).length === 1
 }

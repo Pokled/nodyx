@@ -4,7 +4,9 @@ import type { AnatomyLine, FieldSchema } from './_types'
 // Libellés : des clés i18n (préfixe « hpw. »), traduites par l'éditeur ; jamais de texte en dur.
 export const K = 'hpw.vitrine.'
 
-export const MAX_TILES = 3
+export const MAX_TILES = 6
+
+const r = (x: number, y: number, w: number, h: number, tone: 'ink' | 'accent' | 'soft') => ({ x, y, w, h, tone })
 
 /** Une affiche de la vitrine : une image de la médiathèque, une petite ligne, un nom, un lien. */
 export interface VitrineTile { img: string; kicker: string; title: string; link: string }
@@ -24,6 +26,14 @@ export const VITRINE_SCHEMA: FieldSchema[] = [
 			{ key: 'kicker', type: 'text', label: `${K}img_kicker`, example: `${K}img1_kicker_ph` },
 			{ key: 'title', type: 'text', label: `${K}img_title`, example: `${K}img1_title_ph` },
 			{ key: 'link', type: 'link', label: `${K}img_link` },
+		],
+	},
+	{
+		key: 'disp', type: 'choice-visual', label: `${K}disp`, default: 'grande',
+		options: [
+			{ value: 'grande', label: `${K}disp_grande`, sketch: [r(0, 0, 44, 56, 'accent'), r(48, 0, 24, 26, 'soft'), r(76, 0, 24, 26, 'soft'), r(48, 30, 52, 26, 'soft')] },
+			{ value: 'egales', label: `${K}disp_egales`, sketch: [r(0, 0, 48, 26, 'accent'), r(52, 0, 48, 26, 'soft'), r(0, 30, 48, 26, 'soft'), r(52, 30, 48, 26, 'soft')] },
+			{ value: 'bande', label: `${K}disp_bande`, sketch: [r(0, 8, 23, 40, 'accent'), r(25.6, 8, 23, 40, 'soft'), r(51.2, 8, 23, 40, 'soft'), r(76.8, 8, 23.2, 40, 'soft')] },
 		],
 	},
 	{ key: 'badge', type: 'text', label: `${K}img1_badge`, hint: `${K}badge_hint`, example: `${K}img1_badge_ph` },
