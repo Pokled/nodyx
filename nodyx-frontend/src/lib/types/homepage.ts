@@ -190,6 +190,8 @@ export interface GridColumn {
 	title?:       string | null;
 	hide_mobile?: boolean;
 	hide_tablet?: boolean;
+	/** Masqué sans être supprimé (l'œil du nouvel éditeur) : les visiteurs ne le voient pas. */
+	hidden?:      boolean;
 }
 
 export interface GridRow {

@@ -735,7 +735,9 @@
 	const isBareRoute = $derived(
 		page.url.pathname.startsWith('/overlay/') ||
 		page.url.pathname.startsWith('/deck/') ||
-		page.url.pathname === '/translate',
+		page.url.pathname === '/translate' ||
+		// Le nouvel éditeur de page d'accueil : plein écran, sa propre barre (lot L1a)
+		page.url.pathname === '/admin/homepage/editeur',
 	)
 
 	// Active channel ID from URL (used on /chat to highlight the current channel)

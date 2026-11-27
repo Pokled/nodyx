@@ -9,6 +9,7 @@
 	import ExtensionSurface from '$lib/components/ExtensionSurface.svelte'
 	import { extensionIndex, type PublicExtension } from './extensionCatalog'
 	import { t as i18n } from '$lib/i18n'   // `t` est déjà utilisé pour le thème
+	import type { Snippet } from 'svelte'
 
 	const tFn = $derived($i18n)
 
@@ -33,6 +34,9 @@
 		selectedColKey?:   string | null  // 'rowId:colId'
 		/** Palette de l'ambiance (sombre), utilisée si le thème « suit l'ambiance ». */
 		ambiance?:         AmbiancePalette | null
+		/** Nouvel éditeur (lot L1a) : l'habillage d'un bloc (contour, nom, outils), posé par
+		 *  l'éditeur sur chaque colonne. La page s'affiche sinon comme pour les visiteurs. */
+		blockChrome?:      Snippet<[GridColumn]>
 	}
 
 	let {
@@ -52,6 +56,7 @@
 		dragOverRowId = null,
 		selectedColKey = null,
 		ambiance = null,
+		blockChrome,
 	}: Props = $props()
 
 	// « Suivre l'ambiance » : TOUTE la palette (accent, textes, cartes,
@@ -177,6 +182,9 @@
 					class:gr-col--selected={isSelected}
 					class:hide-mobile={col.hide_mobile}
 					class:hide-tablet={col.hide_tablet}
+					class:gr-col--chrome={!!blockChrome}
+					class:gr-col--hidden={!!blockChrome && col.hidden}
+					data-block={blockChrome ? col.id : undefined}
 					style="
 						--col-span: {col.span};
 						--col-span-md: {colSpanMd(col)};
@@ -185,7 +193,9 @@
 					onclick={() => editMode && col.widget && onColClick?.(row.id, col.id)}
 					role={editMode && col.widget ? 'button' : undefined}
 				>
-					{#if plugin}
+					{#if col.hidden && !blockChrome}
+						<!-- Masqué par l'éditeur : rien pour les visiteurs, la place reste -->
+					{:else if plugin}
 						<plugin.component
 							config={col.config}
 							{instance}
@@ -221,6 +231,8 @@
 							<span class="gr-col-empty-hint">span {col.span}/12</span>
 						</button>
 					{/if}
+
+					{#if blockChrome}{@render blockChrome(col)}{/if}
 
 					{#if editMode && col.widget}
 						<!-- Badge edit/supprimer sur le widget -->
@@ -491,4 +503,8 @@
 	   s'alignent sur un seul bord), 32 px au bureau, 16 px au téléphone. */
 	.gr-design .gr-row { padding-left: 32px; padding-right: 32px; }
 	@media (max-width: 860px) { .gr-design .gr-row { padding-left: 16px; padding-right: 16px; } }
+	/* Nouvel éditeur : l'habillage se pose sur la colonne ; un bloc masqué reste visible
+	   pour l'admin, estompé. */
+	.gr-col--chrome { position: relative; min-height: 56px; }
+	.gr-col--hidden > :global(:not(.gr-chrome)) { opacity: .35; }
 </style>
